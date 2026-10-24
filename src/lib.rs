@@ -28,10 +28,13 @@
 //! times in seconds. Field names carry the unit (`_nm`, `_s`).
 
 mod errors;
+pub mod formats;
+mod io;
 mod reader;
 mod types;
 
 pub use errors::{Error, Result};
+pub use formats::open;
 pub use reader::{ImageReader, ImageReaderExt};
 pub use types::{
     ByteOrder, ChannelMeta, ColorModel, Geometry, LevelMeta, ObjectiveMeta, PhysicalSize, PixelBuf, PixelType,
