@@ -1,0 +1,24 @@
+# Known differences between scopeio and the reference readers. Every synthetic
+# file in tests/data/bmp decodes to the spec-derived truth in truth.tsv, so these
+# are reference-reader behaviours. The test fails if a listed difference vanishes.
+file	tool	reason
+tests/data/bmp/pal1_color.bmp	bioformats	returns palette indices for 1-bit data even with -expand; scopeio expands the colour palette to RGB
+tests/data/bmp/pal1_color.bmp	bioformats-rs	returns palette indices; scopeio expands the colour palette to RGB
+tests/data/bmp/pal4_color.bmp	bioformats	returns palette indices for 4-bit data even with -expand; scopeio expands the colour palette to RGB
+tests/data/bmp/pal4_color.bmp	bioformats-rs	returns palette indices; scopeio expands the colour palette to RGB
+tests/data/bmp/pal4_gray.bmp	bioformats	returns palette indices; scopeio returns the gray palette values (index * 17)
+tests/data/bmp/pal4_gray.bmp	bioformats-rs	returns palette indices; scopeio returns the gray palette values (index * 17)
+tests/data/bmp/pal8_color_clrused.bmp	bioformats	expands to RGB but with different values; not explained by BGR order, row flip or planar layout
+tests/data/bmp/pal8_color_clrused.bmp	bioformats-rs	returns palette indices; scopeio expands the colour palette to RGB
+tests/data/bmp/rgb16_555.bmp	bioformats-rs	returns the raw 16-bit words; scopeio splits them into 8-bit RGB
+tests/data/bmp/rgb16_565.bmp	bioformats-rs	returns the raw 16-bit words; scopeio splits them by the bit masks into 8-bit RGB
+tests/data/bmp/rgb16_565_v4.bmp	bioformats-rs	returns the raw 16-bit words; scopeio splits them by the bit masks into 8-bit RGB
+tests/data/bmp/rgb32_bitfields_swapped.bmp	bioformats	4 channels with values not matching the bit masks; scopeio returns RGB per the masks (no alpha mask)
+tests/data/bmp/rgb32_bitfields_swapped.bmp	bioformats-rs	4 channels with values not matching the bit masks; scopeio returns RGB per the masks (no alpha mask)
+tests/data/bmp/rgb32_unused_byte.bmp	bioformats	returns the unused high byte as 4th channel; the spec says it is not used
+tests/data/bmp/rgb32_unused_byte.bmp	bioformats-rs	returns the unused high byte as 4th channel; the spec says it is not used
+tests/data/bmp/rgba32_v5.bmp	bioformats	RGBA values do not match the V5 bit masks; scopeio follows the masks
+tests/data/bmp/rgba32_v5.bmp	bioformats-rs	RGBA values do not match the V5 bit masks; scopeio follows the masks
+tests/data/bmp/rle4.bmp	bioformats-rs	returns palette indices; scopeio expands the colour palette to RGB
+tests/data/bmp/rle8.bmp	bioformats	rows are vertically flipped: RLE data is bottom-up like uncompressed data
+tests/data/bmp/rle8.bmp	bioformats-rs	returns palette indices; scopeio returns the gray palette values (index * 10)

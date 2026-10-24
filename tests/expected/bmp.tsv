@@ -1,0 +1,35 @@
+file	tool	series	status	channels	width	height	size_z	size_t	pixel_type	phys_x_nm	phys_y_nm	crc32
+tests/data/bmp/core_pal8.bmp	bioformats	0	error: java.lang.IllegalArgumentException: newPosition > limit: (872 > 818)	-	-	-	-	-	-	-	-	-
+tests/data/bmp/core_pal8.bmp	bioformats-rs	0	error: Error opening <file>: Invalid data: BMP: unsupported bits per pixel 1792	-	-	-	-	-	-	-	-	-
+tests/data/bmp/pal1_color.bmp	bioformats	0	ok	1	13	5	1	1	U8	352733.686	352733.686	d67a389b
+tests/data/bmp/pal1_color.bmp	bioformats-rs	0	ok	1	13	5	1	1	U8	-	-	d9162617
+tests/data/bmp/pal4_color.bmp	bioformats	0	ok	1	9	3	1	1	U8	352733.686	352733.686	f437749c
+tests/data/bmp/pal4_color.bmp	bioformats-rs	0	ok	1	9	3	1	1	U8	-	-	5b08c3c0
+tests/data/bmp/pal4_gray.bmp	bioformats	0	ok	1	7	4	1	1	U8	352733.686	352733.686	0d797145
+tests/data/bmp/pal4_gray.bmp	bioformats-rs	0	ok	1	7	4	1	1	U8	-	-	a4bbef14
+tests/data/bmp/pal8_color_clrused.bmp	bioformats	0	ok	3	5	6	1	1	U8	352733.686	352733.686	08524442
+tests/data/bmp/pal8_color_clrused.bmp	bioformats-rs	0	ok	1	5	6	1	1	U8	-	-	d76beed2
+tests/data/bmp/pal8_gray_topdown.bmp	bioformats	0	ok	3	6	4	1	1	U8	352733.686	352733.686	85ca74eb
+tests/data/bmp/pal8_gray_topdown.bmp	bioformats-rs	0	ok	1	6	4	1	1	U8	-	-	a17aea97
+tests/data/bmp/rgb16_555.bmp	bioformats	0	error: java.lang.IllegalArgumentException: newPosition > limit: (144 > 90)	-	-	-	-	-	-	-	-	-
+tests/data/bmp/rgb16_555.bmp	bioformats-rs	0	ok	1	5	3	1	1	U16	-	-	c4832a38
+tests/data/bmp/rgb16_565.bmp	bioformats	0	error: java.lang.IllegalArgumentException: newPosition > limit: (156 > 102)	-	-	-	-	-	-	-	-	-
+tests/data/bmp/rgb16_565.bmp	bioformats-rs	0	ok	1	5	3	1	1	U16	-	-	00043eb5
+tests/data/bmp/rgb16_565_v4.bmp	bioformats	0	error: java.lang.IllegalArgumentException: newPosition > limit: (200 > 146)	-	-	-	-	-	-	-	-	-
+tests/data/bmp/rgb16_565_v4.bmp	bioformats-rs	0	ok	1	6	2	1	1	U16	-	-	a3c1ca20
+tests/data/bmp/rgb24_odd_width.bmp	bioformats	0	ok	3	3	4	1	1	U8	352733.686	352733.686	7d37b4ca
+tests/data/bmp/rgb24_odd_width.bmp	bioformats-rs	0	ok	3	3	4	1	1	U8	-	-	7d37b4ca
+tests/data/bmp/rgb32_bitfields_swapped.bmp	bioformats	0	ok	4	4	3	1	1	U8	352733.686	352733.686	f288b395
+tests/data/bmp/rgb32_bitfields_swapped.bmp	bioformats-rs	0	ok	4	4	3	1	1	U8	-	-	f288b395
+tests/data/bmp/rgb32_unused_byte.bmp	bioformats	0	ok	4	4	3	1	1	U8	352733.686	352733.686	fc0513b5
+tests/data/bmp/rgb32_unused_byte.bmp	bioformats-rs	0	ok	4	4	3	1	1	U8	-	-	fc0513b5
+tests/data/bmp/rgba32_v5.bmp	bioformats	0	ok	4	4	3	1	1	U8	352733.686	352733.686	f288b395
+tests/data/bmp/rgba32_v5.bmp	bioformats-rs	0	ok	4	4	3	1	1	U8	-	-	f288b395
+tests/data/bmp/rle4.bmp	bioformats	0	error: java.lang.ArrayIndexOutOfBoundsException: Index 16 out of bounds for length 16	-	-	-	-	-	-	-	-	-
+tests/data/bmp/rle4.bmp	bioformats-rs	0	ok	1	8	2	1	1	U8	-	-	a6f7cf7a
+tests/data/bmp/rle8.bmp	bioformats	0	ok	3	16	3	1	1	U8	352733.686	352733.686	decc9e9e
+tests/data/bmp/rle8.bmp	bioformats-rs	0	ok	1	16	3	1	1	U8	-	-	99b74e98
+tests/reference/ome/Leica-XLEF/format test/format test BMP/mono 8bit.bmp	bioformats	0	ok	3	1600	1200	1	1	U8	264550.265	264550.265	2e1a8b85
+tests/reference/ome/Leica-XLEF/format test/format test BMP/mono 8bit.bmp	bioformats-rs	0	ok	1	1600	1200	1	1	U8	-	-	13af7572
+tests/reference/ome/Leica-XLEF/format test/format test BMP/rgb 8bit.bmp	bioformats	0	ok	3	1600	1200	1	1	U8	264550.265	264550.265	1114ae51
+tests/reference/ome/Leica-XLEF/format test/format test BMP/rgb 8bit.bmp	bioformats-rs	0	ok	3	1600	1200	1	1	U8	-	-	1114ae51

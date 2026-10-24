@@ -1,0 +1,16 @@
+file	samples	crc32
+core_pal8.bmp	3	b1b33327
+pal1_color.bmp	3	8df2ec91
+pal4_color.bmp	3	08e8aab9
+pal4_gray.bmp	1	85916a07
+pal8_color_clrused.bmp	3	8a3c5d6d
+pal8_gray_topdown.bmp	1	a17aea97
+rgb16_555.bmp	3	f9e621b9
+rgb16_565.bmp	3	8a90ae57
+rgb16_565_v4.bmp	3	fd763065
+rgb24_odd_width.bmp	3	7d37b4ca
+rgb32_bitfields_swapped.bmp	3	c3b63875
+rgb32_unused_byte.bmp	3	c3b63875
+rgba32_v5.bmp	4	c93a9268
+rle4.bmp	3	793ce3a2
+rle8.bmp	1	964b4092
