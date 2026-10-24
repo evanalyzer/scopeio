@@ -66,6 +66,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+    #[cfg(feature = "lsm")]
+    if first.ifds[0].has(super::lsm::TAG_LSMINFO) {
+        return Ok(Some(FormatId::Lsm));
+    }
     #[cfg(feature = "svs")]
     if super::svs::matches(&description) {
         return Ok(Some(FormatId::Svs));

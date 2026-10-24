@@ -138,6 +138,17 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written from that model by
   `tests/scripts/make_mrxs_samples.py` (JPEGs by ImageMagick, run as a program).
 
+## Zeiss LSM (`src/formats/lsm.rs`)
+
+- Carl Zeiss "File Format Description - LSM 5xx Release 2.0"
+  (`doc/zeiss-lsm/Lsmfile.doc`): directory order, CZ_LSMINFO structure,
+  channel colours and names, time stamps.
+- Own analysis of sample files: the photometric tag (RGB or a 256-entry
+  palette, also for 16-bit data) is for display only; samples are
+  intensities.
+- Synthetic sample written from the specification by
+  `tests/scripts/make_lsm_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

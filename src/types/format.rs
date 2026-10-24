@@ -25,6 +25,7 @@ pub enum FormatId {
     Svs,
     Ndpi,
     Mrxs,
+    Lsm,
 }
 
 /// Identification of the reader that produced the data, for

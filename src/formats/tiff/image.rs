@@ -146,6 +146,13 @@ impl TiffImage {
     /// interpretations this reader does not handle, [`Error::Corrupt`] for
     /// inconsistent tags.
     pub fn new(tiff: &TiffFile, ifd: &Ifd) -> Result<Self> {
+        Self::with_photometric(tiff, ifd, None)
+    }
+
+    /// Like [`TiffImage::new`], reading the samples as `photometric` instead
+    /// of the tag's value (e.g. raw intensities of files with display
+    /// palettes).
+    pub fn with_photometric(tiff: &TiffFile, ifd: &Ifd, photometric_override: Option<u16>) -> Result<Self> {
         let uint = |t: u16, default: u64| -> Result<u64> { Ok(tiff.uint(ifd, t)?.unwrap_or(default)) };
         let width = uint(tag::IMAGE_WIDTH, 0)? as u32;
         let height = uint(tag::IMAGE_LENGTH, 0)? as u32;
@@ -176,7 +183,10 @@ impl TiffImage {
         };
         let compression = uint(tag::COMPRESSION, 1)? as u16;
         let default_photometric = if spp >= 3 { photometric::RGB } else { photometric::MIN_IS_BLACK };
-        let photometric = uint(tag::PHOTOMETRIC, default_photometric as u64)? as u16;
+        let photometric = match photometric_override {
+            Some(p) => p,
+            None => uint(tag::PHOTOMETRIC, default_photometric as u64)? as u16,
+        };
         let separate = uint(tag::PLANAR_CONFIGURATION, 1)? == 2 && spp > 1;
 
         let stored = pixel_type;
