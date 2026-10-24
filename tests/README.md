@@ -56,6 +56,7 @@ python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
 python3 -I tests/scripts/make_nd2_samples.py
 python3 -I tests/scripts/make_czi_samples.py
+python3 -I tests/scripts/make_lif_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -94,6 +95,16 @@ python3 -I tests/scripts/oracle.py czi --series 0 --crop 12288,8192,2048,2048 --
 python3 -I tests/scripts/oracle.py czi --series 0 --crop 3000,2000,2048,2048 --append tests/reference/zenodo-8305531/test_gray.czi
 python3 -I tests/scripts/oracle.py czi --repeat 1 --series 6 --ours-series assoc:label --append $R
 python3 -I tests/scripts/oracle.py czi --repeat 1 --series 7 --ours-series assoc:macro --append $R
+```
+
+LIF (Bio-Formats fails on the whole FRET project, "Invalid plane index",
+but converts each of its series):
+
+```sh
+L=tests/reference/ome/Leica-LIF
+F="$L/imagesc-30856/20191025 Test FRET 585. 423, 426.lif"
+python3 -I tests/scripts/oracle.py lif --per-series tests/external/laica_01.lif $L/michael/PR2729_frameOrderCombinedScanTypes.lif "$F" $L/zenodo-6606445/Project007.lif
+for k in 0 1 2 3 4 5 6 7; do python3 -I tests/scripts/oracle.py lif --repeat 1 --series $k --append "$F"; done
 ```
 
 Divergence files may name one reference series in an optional `series`

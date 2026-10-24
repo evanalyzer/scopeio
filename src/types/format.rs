@@ -21,6 +21,7 @@ pub enum FormatId {
     Vsi,
     Nd2,
     Czi,
+    Lif,
 }
 
 /// Identification of the reader that produced the data, for

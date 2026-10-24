@@ -84,6 +84,17 @@ as black-box command-line tools to produce reference output
 - Synthetic samples written from the documented layout by
   `tests/scripts/make_czi_samples.py`.
 
+## Leica LIF (`src/formats/lif.rs`)
+
+- OpenReadout LIF format notes and provenance log (MIT OR Apache-2.0;
+  derived from public samples and liffile's BSD-3 documentation) in
+  `doc/leica-lif/`. readlif (GPL) was not used.
+- Own analysis of sample files: memory block headers (version 2, 64-bit
+  lengths), planar and interleaved channels addressed by `BytesInc`, tile
+  scans as one series per tile (as Bio-Formats lists them).
+- Synthetic samples written from the documented layout by
+  `tests/scripts/make_lif_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
