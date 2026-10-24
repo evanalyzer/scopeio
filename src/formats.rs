@@ -18,6 +18,8 @@ mod bmp;
 mod cfb;
 #[cfg(feature = "oif")]
 mod oif;
+#[cfg(feature = "stk")]
+mod nd;
 #[cfg(feature = "oir")]
 mod oir;
 #[cfg(feature = "zvi")]
@@ -76,6 +78,10 @@ static SUPPORTED: &[FormatInfo] = &[
     tiff::FORMAT,
     #[cfg(feature = "tiff")]
     tiff::OME_FORMAT,
+    #[cfg(feature = "stk")]
+    tiff::STK_FORMAT,
+    #[cfg(feature = "stk")]
+    nd::FORMAT,
     #[cfg(feature = "zarr")]
     zarr::FORMAT,
     #[cfg(feature = "vsi")]
@@ -168,6 +174,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if oir::matches(&head) {
         return Ok(Some(FormatId::Oir));
     }
+    #[cfg(feature = "stk")]
+    if nd::matches(path, &head) {
+        return Ok(Some(FormatId::Nd));
+    }
     #[cfg(feature = "zvi")]
     if zvi::matches(path, &head) {
         return Ok(Some(FormatId::Zvi));
@@ -250,9 +260,11 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         #[cfg(feature = "bmp")]
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
-        Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
         #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
         Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
+        #[cfg(feature = "stk")]
+        Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "zvi")]
         Some(FormatId::Zvi) => Ok(Arc::new(Reader(zvi::Zvi::open(path)?))),
         #[cfg(feature = "dicom")]

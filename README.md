@@ -66,6 +66,7 @@ compared, "n/a" means the reader cannot open the format.
 | DICOM | 17 | 55 ms | 18 MiB | 38× / 10× | 2.6× / 2.5× | – |
 | Zeiss ZVI | 14 | 8 ms | 6.7 MiB | 230× / 33× | 3.2× / 5.0× | – |
 | Leica LOF/XLEF | 49 | 41 ms | 7.3 MiB | 138× / 45× | 2.7× / 13× | – |
+| MetaMorph STK/ND | 4 | 23 ms | 5.0 MiB | 228× / 66× | 4.1× / 15× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -178,7 +179,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Li-Cor L2D** | `.l2d, .tif, .scn` |  |
 | **LIM (Laboratory Imaging/Nikon)** | `.lim` |  |
 | **MetaMorph 7.5 TIFF** | `.tiff` |  |
-| **MetaMorph Stack (STK)** | `.stk, .nd` |  |
+| **MetaMorph Stack (STK)** | `.stk, .nd` | ✅ |
 | **MetaXpress** | — |  |
 | **MIAS (Maia Scientific)** | `.tif` |  |
 | **Micro-Manager** | `.tif, .txt, .xml` |  |

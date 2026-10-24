@@ -325,6 +325,21 @@ as black-box command-line tools to produce reference output
   compound-file writer `cfbwriter.py` orders directory siblings as
   [MS-CFB] 2.6.4 requires).
 
+## MetaMorph STK and ND (`src/formats/tiff/stk.rs`, `src/formats/nd.rs`)
+
+- Molecular Devices "MetaMorph STK and TIFF file formats" (T10243,
+  `doc/metamorph-stk/`): UIC1 and UIC2 tags, planes stored after the
+  first one.
+- tifffile (BSD-3-Clause, Christoph Gohlke; notice in
+  THIRD_PARTY_NOTICES.md) read as documentation of the UIC tag layouts.
+- ND files: own analysis of the OME `Metamorph/zenodo-13642395` acquisition
+  (CC0): keys and data file names.
+- Public STK files from Figshare (CC BY 4.0 / CC0, fetched by
+  `tests/scripts/fetch_figshare.py`) and the ND acquisition: pixels
+  identical to Bio-Formats and bioformats-rs (black boxes). Bio-Formats
+  reports 1 um for a stack calibrated in "pixel"; scopeio reports none.
+- Synthetic samples written by `tests/scripts/make_stk_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

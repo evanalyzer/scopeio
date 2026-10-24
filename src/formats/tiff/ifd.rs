@@ -245,6 +245,22 @@ impl TiffFile {
         Ok((Ifd { entries }, next))
     }
 
+    /// Position of an entry's value if it is stored outside the IFD (the
+    /// offset field, for values that do not fit it).
+    pub fn value_offset(&self, e: &Entry) -> u64 {
+        if self.big || self.ndpi { self.u64(&e.value) } else { self.u32(&e.value) as u64 }
+    }
+
+    /// `len` bytes at `at`, bounded by the file size.
+    pub fn read_bytes(&self, at: u64, len: usize) -> Result<Vec<u8>> {
+        if at.checked_add(len as u64).is_none_or(|e| e > self.len) {
+            return Err(Error::Corrupt(format!("TIFF read of {len} bytes at {at} beyond the end")));
+        }
+        let mut buf = vec![0u8; len];
+        read_exact_at(&self.file, &mut buf, at)?;
+        Ok(buf)
+    }
+
     /// Raw bytes of an entry's value, in file byte order.
     pub fn raw(&self, e: &Entry) -> Result<Vec<u8>> {
         let size = type_size(e.typ).unwrap_or(1).checked_mul(e.count).filter(|&s| s <= self.len);

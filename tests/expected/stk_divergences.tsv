@@ -1,0 +1,3 @@
+# Known differences for MetaMorph STK.
+file	tool	series	tolerance	reason
+tests/reference/figshare/6852419/20160824_idv12_cng_mm_AFDAIY_ramp_14_24_17C.stk	bioformats	-		calibrated as 1 pixel per pixel (UIC1 unit "pixel"): Bio-Formats reports its default of 1 um, scopeio no pixel size

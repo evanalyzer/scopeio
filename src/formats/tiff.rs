@@ -27,6 +27,8 @@
 pub(super) mod ifd;
 pub(super) mod image;
 mod imagej;
+#[cfg(feature = "stk")]
+mod stk;
 mod ome;
 
 use std::path::Path;
@@ -44,6 +46,7 @@ use crate::{
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Tiff, "TIFF", "1");
 pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1");
+pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1");
 
 /// Detects TIFF, OME-TIFF and OME-XML companion files.
 pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
@@ -101,6 +104,8 @@ pub(super) struct Tiff {
     ome: Option<ome::Source>,
     /// Why OME metadata was ignored, if it was.
     ome_error: Option<String>,
+    /// A MetaMorph STK stack.
+    stk: bool,
 }
 
 /// Image of one plane at one level: file index and image.
@@ -208,11 +213,22 @@ impl Tiff {
 
     fn open_plain(tiff: TiffFile, description: &str, ome_error: Option<String>) -> Result<Self> {
         let mut series = plain_series(&tiff, 0)?;
-        if let Some(ij) = imagej::parse(description)
+        let mut stk = false;
+        #[cfg(feature = "stk")]
+        if let [s] = series.as_mut_slice() {
+            stk = stk::apply(s, &tiff)?;
+            if let Some((x, y)) = stk::metaseries_calibration(description) {
+                s.meta.physical_size.x_nm = Some(x);
+                s.meta.physical_size.y_nm = Some(y);
+            }
+        }
+        if let Some(ij) = imagej::parse(description).filter(|_| !stk)
             && let [s] = series.as_mut_slice() {
                 imagej::apply(&ij, s, &tiff)?;
             }
-        Ok(Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error))
+        let mut t = Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error);
+        t.stk = stk;
+        Ok(t)
     }
 
     fn finish(
@@ -223,13 +239,19 @@ impl Tiff {
         ome_error: Option<String>,
     ) -> Self {
         let metas = series.iter_mut().map(|s| std::mem::take(&mut s.meta)).collect();
-        Self { files, series, metas, plates, ome, ome_error }
+        Self { files, series, metas, plates, ome, ome_error, stk: false }
     }
 }
 
 impl Backend for Tiff {
     fn format(&self) -> &'static FormatInfo {
-        if self.ome.is_some() { &OME_FORMAT } else { &FORMAT }
+        if self.ome.is_some() {
+            &OME_FORMAT
+        } else if self.stk {
+            &STK_FORMAT
+        } else {
+            &FORMAT
+        }
     }
 
     fn series(&self) -> &[SeriesMeta] {
