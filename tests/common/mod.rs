@@ -235,7 +235,7 @@ fn compare(ours: &Series, r: &HashMap<String, String>, tolerance: Option<f64>) -
 /// Series `series` of a reference that lists every pyramid level as a
 /// series of its own (Bio-Formats' default), when `total` reference series
 /// equal the levels of all our series.
-fn flattened_level(path: &Path, total: usize, series: usize) -> Option<Series> {
+fn flattened_level(path: &Path, total: usize, series: usize) -> Option<(Series, f64)> {
     let reader = scopeio::open(path).ok()?;
     let flat: Vec<(usize, usize)> = (0..reader.series_count())
         .flat_map(|s| (0..reader.series_meta(s).map(|m| m.levels.len()).unwrap_or(1)).map(move |l| (s, l)))
@@ -244,7 +244,8 @@ fn flattened_level(path: &Path, total: usize, series: usize) -> Option<Series> {
         return None;
     }
     let &(s, l) = flat.get(series)?;
-    decode_level(reader.as_ref(), s, l).ok()
+    let f = downsample(reader.as_ref(), s, l);
+    decode_level(reader.as_ref(), s, l).ok().map(|d| (d, f))
 }
 
 /// Downsample of `level`, 1 if unknown.
@@ -446,8 +447,9 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             Err(_) => continue,
         };
         let total = rows.iter().filter(|o| o["file"] == r["file"] && o["tool"] == r["tool"] && o.get("crop").is_none_or(|c| c == "-")).count();
-        let diffs = match flattened_level(&path, total, series).as_ref().or(ours.get(series)) {
-            Some(s) => compare(s, r, tolerance),
+        let flat = flattened_level(&path, total, series);
+        let diffs = match flat.map(|(s, f)| compare_level(s, r, tolerance, f)).or_else(|| ours.get(series).map(|s| compare(s, r, tolerance))) {
+            Some(d) => d,
             // Bio-Formats returns pyramid levels as extra series by default;
             // compare them with the levels of the last series instead.
             None => match level_of_last_series(&path, ours.len(), series) {

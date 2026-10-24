@@ -16,6 +16,8 @@ mod bif;
 mod bmp;
 #[cfg(feature = "czi")]
 mod czi;
+#[cfg(feature = "ims")]
+mod ims;
 #[cfg(feature = "lif")]
 mod lif;
 #[cfg(feature = "tiff")]
@@ -84,6 +86,8 @@ static SUPPORTED: &[FormatInfo] = &[
     scn::FORMAT,
     #[cfg(feature = "bif")]
     bif::FORMAT,
+    #[cfg(feature = "ims")]
+    ims::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -119,6 +123,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "bmp")]
     if bmp::matches(&head) {
         return Ok(Some(FormatId::Bmp));
+    }
+    #[cfg(feature = "ims")]
+    if ims::matches(path, &head) {
+        return Ok(Some(FormatId::Ims));
     }
     #[cfg(feature = "lif")]
     if lif::matches(&head) {
@@ -171,6 +179,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "ims")]
+        Some(FormatId::Ims) => Ok(Arc::new(Reader(ims::Ims::open(path, opts)?))),
         #[cfg(feature = "bif")]
         Some(FormatId::Bif) => Ok(Arc::new(Reader(bif::Bif::open(path, opts)?))),
         #[cfg(feature = "scn")]

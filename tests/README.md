@@ -77,6 +77,7 @@ python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
 python3 -I tests/scripts/make_scn_samples.py
 python3 -I tests/scripts/make_bif_samples.py
+python3 -I tests/scripts/make_ims_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -174,7 +175,8 @@ LSM:
 
 QPTIFF: `sh tests/scripts/oracle_qptiff.sh`; SCN: `sh tests/scripts/oracle_scn.sh`
 (Bio-Formats lists SCN macro images as series); BIF: `sh tests/scripts/oracle_bif.sh`
-(OpenSlide 3.4.1 rejects the sample; `REP=3` for timings).
+(OpenSlide 3.4.1 rejects the sample); IMS: `sh tests/scripts/oracle_ims.sh`
+(`REP=3` for timings).
 
 MIRAX: Bio-Formats and bioformats-rs only read the preview JPEG that the
 `.mrxs` file is, so OpenSlide (`apt install openslide-tools`, run as a black

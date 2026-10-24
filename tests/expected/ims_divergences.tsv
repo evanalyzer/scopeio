@@ -1,0 +1,5 @@
+# Known differences between scopeio and the reference readers.
+file	tool	series	tolerance	reason
+tests/reference/ome/Imaris-IMS/davemason/Convallaria_3C_1T_2x2grid_confocal.ims	bioformats-rs		bioformats-rs returns the stored volume padded to whole chunks (2048 x 2048) instead of the extent of the ImageSizeX/Y attributes (1949 x 1949), which Bio-Formats also reports
+tests/reference/ome/Imaris-IMS/eliana/retina_large.ims	bioformats-rs		bioformats-rs returns the stored volume padded to whole chunks (height 1792) instead of the ImageSizeY extent (1567)
+tests/reference/ome/Imaris-IMS/eliana/2016-07-26_17.11.03_Sample Prefix_5P298C2_Protocol.ims	bioformats-rs		bioformats-rs returns the padded z extent (48 planes) instead of ImageSizeZ (47)

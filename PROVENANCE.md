@@ -187,6 +187,22 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written from that model by
   `tests/scripts/make_bif_samples.py`.
 
+## Imaris IMS (`src/formats/ims.rs`, `src/formats/ims/hdf5.rs`)
+
+- HDF5 File Format Specification version 3 (The HDF Group) in `doc/hdf5/`:
+  the read-only subset in `ims/hdf5.rs` (superblocks, object headers,
+  groups, attributes, layouts, version 1/2 B-trees, fractal heaps, filter
+  pipeline). Own implementation instead of a crate: the pure-Rust readers
+  checked (hdf5-reader, hdf5-pure, rust-hdf5) bring their own I/O, caches
+  and array types (ndarray), or do not expose chunk addresses for
+  positional, cache-free reads; libhdf5 bindings need C.
+- Imaris file format description (Bitplane) and the ImarisWriter paper in
+  `doc/bitplane-imaris-ims/`; OpenReadout IMS notes (MIT OR Apache-2.0):
+  group layout, `|S1` attributes, HDF5 LZ4 filter framing (32004).
+- Own analysis of sample files (OME sample server, CC BY 4.0).
+- Synthetic sample written by `tests/scripts/make_ims_samples.py` (its own
+  minimal HDF5 writer from the specification).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
