@@ -22,6 +22,8 @@ mod oif;
 mod oir;
 #[cfg(feature = "czi")]
 mod czi;
+#[cfg(feature = "dicom")]
+mod dicom;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "lif")]
@@ -106,6 +108,8 @@ static SUPPORTED: &[FormatInfo] = &[
     oif::OIF_FORMAT,
     #[cfg(feature = "oir")]
     oir::FORMAT,
+    #[cfg(feature = "dicom")]
+    dicom::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -147,6 +151,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "bmp")]
     if bmp::matches(&head) {
         return Ok(Some(FormatId::Bmp));
+    }
+    #[cfg(feature = "dicom")]
+    if dicom::matches(&head) {
+        return Ok(Some(FormatId::Dicom));
     }
     #[cfg(feature = "oir")]
     if oir::matches(&head) {
@@ -225,6 +233,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
         #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
         Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
+        #[cfg(feature = "dicom")]
+        Some(FormatId::Dicom) => Ok(Arc::new(Reader(dicom::Dicom::open(path)?))),
         #[cfg(feature = "oir")]
         Some(FormatId::Oir) => Ok(Arc::new(Reader(oir::Oir::open(path)?))),
         #[cfg(feature = "oif")]

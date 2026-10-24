@@ -63,6 +63,7 @@ compared, "n/a" means the reader cannot open the format.
 | JPEG 2000 | 3 | 1 ms | 3.7 MiB | 147× / 10× | 2.2× / 2.0× | – |
 | Olympus OIB/OIF | 3 | 1 ms | 3.7 MiB | 244× / 64× | 7.0× / 4.3× | – |
 | Olympus OIR | 15 | 18 ms | 11 MiB | 244× / 51× | 2.8× / 6.1× | – |
+| DICOM | 17 | 55 ms | 18 MiB | 38× / 10× | 2.6× / 2.5× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -121,7 +122,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **CellVoyager** | `.xml, .tif` |  |
 | **CV7000** | `.wpi, .tif` |  |
 | **DeltaVision** | `.dv, .r3d` |  |
-| **DICOM** | `.dcm, .dicom` |  |
+| **DICOM** (incl. whole-slide imaging) | `.dcm, .dicom` | ✅ |
 | **ECAT7** | `.v` |  |
 | **EPS (Encapsulated PostScript)** | `.eps, .epsi, .ps` |  |
 | **Evotec/PerkinElmer Opera Flex** | `.flex, .mea, .res` |  |

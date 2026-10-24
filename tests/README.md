@@ -67,6 +67,7 @@ python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
 python3 -I tests/scripts/make_plain_samples.py    # PNG, JPEG, JPEG 2000; needs ImageMagick
 python3 -I tests/scripts/make_oif_samples.py      # Olympus OIF/OIB (own compound-file writer)
 python3 -I tests/scripts/make_oir_samples.py      # Olympus OIR with a continuation file
+python3 -I tests/scripts/make_dicom_samples.py    # DICOM WSI (native, RLE, sparse, fluorescence) and plain
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -105,6 +106,24 @@ find tests/reference/ome/Olympus-OIR -name "*.oir" ! -name "*0002.oir" ! -name "
 python3 -I tests/scripts/oracle.py oir --repeat 1 --series 0 --crop 1500,1000,512,512 --append \
     tests/reference/ome/Olympus-OIR/gh-4205/zenodo-13680725/Stitch_A01_G001.oir
 python3 -I tests/scripts/oracle.py oir --append tests/data/oir/synthetic.oir
+# DICOM: OpenSlide test slides (fetch_openslide.py) and the synthetic files
+D=tests/reference/openslide/DICOM; O="python3 -I tests/scripts/oracle.py dicom --append"
+python3 -I tests/scripts/oracle.py dicom --series 0 --crop 20000,15000,2048,2048 $D/CMU-1-JP2K-33005/DCM_0.dcm
+$O --series 1 --ours-series 0/1 --crop 4000,3000,1024,1024 $D/CMU-1-JP2K-33005/DCM_0.dcm
+$O --repeat 1 --series 2 --ours-series 0/2 $D/CMU-1-JP2K-33005/DCM_0.dcm
+$O --repeat 1 --series 3 --ours-series assoc:thumbnail $D/CMU-1-JP2K-33005/DCM_0.dcm
+$O --repeat 1 --series 4 --ours-series assoc:macro $D/CMU-1-JP2K-33005/DCM_0.dcm
+$O --repeat 1 --series 5 --ours-series assoc:label $D/CMU-1-JP2K-33005/DCM_0.dcm
+L=$(ls $D/Leica-4/*.dcm | head -1); H="$D/Hamamatsu-2/A1 - 2026-05-29 10.08.06.1.dcm"
+$O --series 0 --crop 10000,10000,2048,2048 "$L"
+$O --repeat 1 --series 1 --ours-series 0/1 --crop 2000,2000,1024,1024 "$L"
+$O --repeat 1 --series 2 --ours-series 0/2 "$L"
+$O --series 0 --crop 15000,20000,2048,2048 "$H"
+$O --repeat 1 --series 3 --ours-series 0/3 "$H"
+$O --repeat 1 --series 7 --ours-series 0/7 "$H"
+$O --series 0 --crop 28000,30000,2048,2048 $D/3DHISTECH-1/000001.dcm
+$O --repeat 1 --series 4 --ours-series 0/4 $D/3DHISTECH-1/000001.dcm
+$O --repeat 1 tests/data/dicom/wsi/level0.dcm tests/data/dicom/fluo/level0.dcm tests/data/dicom/plain.dcm
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

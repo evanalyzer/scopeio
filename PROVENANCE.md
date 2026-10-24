@@ -289,6 +289,20 @@ as black-box command-line tools to produce reference output
 - Synthetic sample with a continuation file written by
   `tests/scripts/make_oir_samples.py`.
 
+## DICOM (`src/formats/dicom.rs`, `src/formats/dicom/elements.rs`)
+
+- DICOM PS3.3 (C.7.6 image modules, C.7.6.17.3 TILED_FULL frame order,
+  C.8.12.4 whole slide microscopy), PS3.5 (encoding, A.4 encapsulation,
+  Annex G RLE) and PS3.10 (Part 10 files) in `doc/dicom/` and
+  dicom.nema.org: our own element parser.
+- Checked against Bio-Formats and bioformats-rs (black boxes) on the
+  OpenSlide DICOM test slides (CC0: CMU-1-JP2K-33005, Leica-4, Hamamatsu-2,
+  3DHISTECH-1): level sizes identical, pixels within JPEG/JPEG 2000 decoder
+  rounding, associated images identical. On a synthetic fluorescence image
+  Bio-Formats maps optical paths by their identifier value instead of the
+  sequence order (see `tests/expected/dicom_divergences.tsv`).
+- Synthetic samples written by `tests/scripts/make_dicom_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

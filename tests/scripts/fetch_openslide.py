@@ -25,6 +25,7 @@ DEFAULT = [
     "Mirax/CMU-1-Saved-1_16.zip", "Mirax/Mirax2-Fluorescence-2.zip", "Mirax/CMU-1-Saved-1_2.zip",
     "Leica/Leica-Fluorescence-1.scn", "Leica/Leica-1.scn",
     "Ventana/Ventana-1.bif",
+    "DICOM/CMU-1-JP2K-33005.zip", "DICOM/Leica-4.zip", "DICOM/Hamamatsu-2.zip", "DICOM/3DHISTECH-1.zip",
 ]
 # Large files with layouts the default set lacks (NDPI offsets above 4 GiB,
 # MIRAX slide version 2.2, iScan BIF).

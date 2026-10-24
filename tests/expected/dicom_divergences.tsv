@@ -1,0 +1,15 @@
+# Known differences for DICOM.
+file	tool	series	crop	tolerance	reason
+tests/reference/openslide/DICOM/CMU-1-JP2K-33005/DCM_0.dcm	bioformats	0	20000,15000,2048,2048	1.0	JPEG 2000 frames: Bio-Formats decoder rounding differs (see svs_divergences.tsv)
+tests/reference/openslide/DICOM/CMU-1-JP2K-33005/DCM_0.dcm	bioformats	1	4000,3000,1024,1024	1.0	JPEG 2000 frames: Bio-Formats decoder rounding differs (see svs_divergences.tsv)
+tests/reference/openslide/DICOM/CMU-1-JP2K-33005/DCM_0.dcm	bioformats	2	-	1.0	JPEG 2000 frames: Bio-Formats decoder rounding differs (see svs_divergences.tsv)
+tests/reference/openslide/DICOM/Leica-4/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm	bioformats	0	10000,10000,2048,2048	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/Leica-4/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm	bioformats	1	2000,2000,1024,1024	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/Leica-4/1.3.6.1.4.1.36533.116129230228107214763613716719238114924751.dcm	bioformats	2	-	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/Hamamatsu-2/A1 - 2026-05-29 10.08.06.1.dcm	bioformats	0	15000,20000,2048,2048	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/Hamamatsu-2/A1 - 2026-05-29 10.08.06.1.dcm	bioformats	3	-	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/Hamamatsu-2/A1 - 2026-05-29 10.08.06.1.dcm	bioformats	7	-	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/openslide/DICOM/3DHISTECH-1/000001.dcm	bioformats	0	28000,30000,2048,2048	1.0	JPEG 4:2:0 frames: chroma upsampling differs (zune-jpeg against the Java decoder, see scn_divergences.tsv)
+tests/reference/openslide/DICOM/3DHISTECH-1/000001.dcm	bioformats	4	-	1.0	JPEG 4:2:0 frames: chroma upsampling differs (zune-jpeg against the Java decoder, see scn_divergences.tsv)
+tests/data/dicom/fluo/level0.dcm	bioformats	-	-		Bio-Formats uses the Optical Path Identifier values ("1", "2") as channel indices: its channel 0 is empty and channel 1 holds path "1"; scopeio follows the order of the Optical Path Sequence and the TILED_FULL frame order of PS3.3 C.7.6.17.3
+tests/data/dicom/fluo/level0.dcm	bioformats-rs	-	-		bioformats-rs reads one optical path and one focal plane of a TILED_FULL image
