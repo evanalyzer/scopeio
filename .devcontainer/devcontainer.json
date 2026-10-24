@@ -1,0 +1,29 @@
+{
+"name": "evanalyzer",
+    "image": "joda001/evanalyzer-toolchain:0.2.0",
+    "runArgs": [
+        "--privileged",
+        "--network=host",
+        "--ipc=host", // Essential for X11 shared memory
+        "-e", "DISPLAY=:1" // Use your host's specific display number
+    ],
+    "containerEnv": {
+        "SLINT_BACKEND": "software",
+        "QT_X11_NO_MITSHM": "1"
+    },
+    "postStartCommand": "mkdir -p ${containerWorkspaceFolder}/.claude/memory && mkdir -p ~/.claude/projects/-workspaces-evanalyzer && rm -rf ~/.claude/projects/-workspaces-evanalyzer/memory && ln -sfn ${containerWorkspaceFolder}/.claude/memory ~/.claude/projects/-workspaces-evanalyzer/memory",
+    "customizations": {
+        "settings": {
+            "terminal.integrated.shell.linux": "/bin/bash"
+        },
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "ChrisBeard.rustdocstring",
+                "slint.slint",
+                "fill-labs.dependi"
+            ]
+        }
+    }
+}
