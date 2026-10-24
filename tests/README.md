@@ -35,10 +35,24 @@ cd ../..
 cargo install bioformats --version 0.1.8 --locked --root tests/tools/bioformats-rs
 ```
 
+## Downloaded samples
+
+Larger public samples are not committed; scripts download them into
+gitignored folders:
+
+```sh
+# OME-Zarr from IDR (CC BY 4.0): v0.4 image, v0.5 sharded image, v0.4 plate
+python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0062A/6001240.zarr --levels 2
+python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.5/idr0062A/6001240_labels.zarr --levels 2
+python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0001A/2551.zarr --levels 1 --wells 2
+```
+
 ## Regenerating references
 
 ```sh
 python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
+python3 -I tests/scripts/make_tiff_samples.py
+python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

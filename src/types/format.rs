@@ -17,6 +17,7 @@ pub enum FormatId {
     Bmp,
     Tiff,
     OmeTiff,
+    OmeZarr,
 }
 
 /// Identification of the reader that produced the data, for

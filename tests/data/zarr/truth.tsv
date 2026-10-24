@@ -1,0 +1,16 @@
+file	series	channels	size_z	size_t	crc32
+v2_raw_cyx.zarr	0	2	1	1	95196f98
+v2_zlib_tczyx.zarr	0	2	3	2	150f2574
+v2_gzip_dot_sep.zarr	0	1	3	1	8d5381e4
+v2_fortran_be.zarr	0	3	1	1	535a1da5
+v2_missing_chunks.zarr	0	2	1	1	209ceae4
+v2_yx.zarr	0	1	1	1	2dc7e851
+v3_gzip_crc.zarr	0	2	1	1	0cba0dc1
+v3_shard_gzip.zarr	0	2	1	1	f75e5cf9
+v3_big_endian.zarr	0	2	1	1	0cba0dc1
+plate.zarr	0	1	1	1	c7432289
+plate.zarr	1	1	1	1	c7432289
+plate.zarr	2	1	1	1	c7432289
+plate.zarr	3	1	1	1	c7432289
+bioformats2raw.zarr	0	1	1	1	f82a6a77
+bioformats2raw.zarr	1	1	1	1	6d55e5d7

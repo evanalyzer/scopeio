@@ -164,6 +164,8 @@ def parse_ics(path, int32_little=None, planar_colour=False):
 
 def source_little(src):
     """Byte order of a TIFF source file, None for other formats."""
+    if Path(src).is_dir():
+        return None
     with open(src, "rb") as f:
         magic = f.read(2)
     return {b"II": True, b"MM": False}.get(magic)
@@ -311,7 +313,8 @@ def main():
                                                           for i in (1, 2, 3)))
             runs = [ours(src) for _ in range(args.repeat)]
             stats["scopeio"] = (runs[0][0], *(statistics.median(r[i] for r in runs) for i in (1, 2, 3)))
-            bench.append((rel, src.stat().st_size, stats))
+            size = sum(f.stat().st_size for f in src.rglob("*") if f.is_file()) if src.is_dir() else src.stat().st_size
+            bench.append((rel, size, stats))
 
     EXPECTED.mkdir(exist_ok=True)
     with open(EXPECTED / f"{args.format}.tsv", "w") as f:

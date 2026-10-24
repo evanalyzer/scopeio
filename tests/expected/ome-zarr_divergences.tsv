@@ -1,0 +1,6 @@
+# Known differences between scopeio and the reference readers.
+# Bio-Formats 8.5 (bftools) has no OME-Zarr reader.
+file	tool	tolerance	reason
+tests/data/zarr/v3_big_endian.zarr	bioformats-rs		ignores the NGFF 0.5 axes (c, y, x) and reports the first dimension as z; pixel bytes are identical
+tests/data/zarr/v3_gzip_crc.zarr	bioformats-rs		ignores the NGFF 0.5 axes (c, y, x) and reports the first dimension as z; pixel bytes are identical
+tests/data/zarr/v3_shard_gzip.zarr	bioformats-rs		ignores the NGFF 0.5 axes (c, y, x) and reports the first dimension as z; pixel bytes are identical

@@ -14,6 +14,8 @@
 mod bmp;
 #[cfg(feature = "tiff")]
 mod tiff;
+#[cfg(feature = "zarr")]
+mod zarr;
 
 use std::fs::File;
 use std::io::Read;
@@ -34,6 +36,8 @@ static SUPPORTED: &[FormatInfo] = &[
     tiff::FORMAT,
     #[cfg(feature = "tiff")]
     tiff::OME_FORMAT,
+    #[cfg(feature = "zarr")]
+    zarr::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -51,6 +55,14 @@ pub fn supported_formats() -> &'static [FormatInfo] {
 ///
 /// Returns [`Error::Io`] if the file cannot be read.
 pub fn probe(path: &Path) -> Result<Option<FormatId>> {
+    // Directory-based formats first: a directory cannot be read as a file.
+    #[cfg(feature = "zarr")]
+    if let Some(id) = zarr::probe(path) {
+        return Ok(Some(id));
+    }
+    if path.is_dir() {
+        return Ok(None);
+    }
     let mut head = Vec::with_capacity(MAGIC_LEN);
     File::open(path)?.take(MAGIC_LEN as u64).read_to_end(&mut head)?;
     #[cfg(feature = "bmp")]
@@ -91,6 +103,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "zarr")]
+        Some(FormatId::OmeZarr) => Ok(Arc::new(Reader(zarr::Zarr::open(path, opts)?))),
         _ => Err(Error::UnsupportedFormat(path.display().to_string())),
     }
 }

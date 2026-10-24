@@ -14,6 +14,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "blosc")]
+pub(crate) mod blosc;
 #[cfg(feature = "jpeg")]
 pub(crate) mod jpeg;
 
@@ -109,15 +111,48 @@ pub(crate) fn deflate(_src: &[u8], _out: &mut [u8], _zlib_header: bool) -> Resul
     Err(disabled("deflate"))
 }
 
-/// Decodes Zstandard frames (RFC 8878).
-#[cfg(feature = "zstd")]
-pub(crate) fn zstd(src: &[u8], out: &mut [u8]) -> Result<usize> {
-    ruzstd::decoding::FrameDecoder::new()
-        .decode_all(src, out)
-        .map_err(|e| Error::Corrupt(format!("Zstandard: {e}")))
+/// Decodes a gzip member (RFC 1952): skips the header, inflates the data.
+pub(crate) fn gzip(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    let bad = || Error::Corrupt("invalid gzip header".into());
+    if src.len() < 18 || src[0] != 0x1F || src[1] != 0x8B || src[2] != 8 {
+        return Err(bad());
+    }
+    let flags = src[3];
+    let mut pos = 10;
+    if flags & 0x04 != 0 {
+        let xlen = u16::from_le_bytes([*src.get(pos).ok_or_else(bad)?, *src.get(pos + 1).ok_or_else(bad)?]) as usize;
+        pos += 2 + xlen;
+    }
+    for flag in [0x08, 0x10] {
+        if flags & flag != 0 {
+            // Zero-terminated file name or comment.
+            pos += src.get(pos..).ok_or_else(bad)?.iter().position(|&b| b == 0).ok_or_else(bad)? + 1;
+        }
+    }
+    if flags & 0x02 != 0 {
+        pos += 2;
+    }
+    deflate(src.get(pos..).ok_or_else(bad)?, out, false)
 }
 
-#[cfg(not(feature = "zstd"))]
+/// Decodes Zstandard frames (RFC 8878).
+#[cfg(feature = "zstd-c")]
+pub(crate) fn zstd(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    zstd_c_lib::bulk::decompress_to_buffer(src, out).map_err(|e| Error::Corrupt(format!("Zstandard: {e}")))
+}
+
+/// Decodes Zstandard frames (RFC 8878).
+#[cfg(all(feature = "zstd", not(feature = "zstd-c")))]
+pub(crate) fn zstd(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    use std::cell::RefCell;
+    thread_local! {
+        // Reused per thread: a new decoder allocates its window buffers.
+        static DECODER: RefCell<ruzstd::decoding::FrameDecoder> = RefCell::new(ruzstd::decoding::FrameDecoder::new());
+    }
+    DECODER.with(|d| d.borrow_mut().decode_all(src, out)).map_err(|e| Error::Corrupt(format!("Zstandard: {e}")))
+}
+
+#[cfg(not(any(feature = "zstd", feature = "zstd-c")))]
 pub(crate) fn zstd(_src: &[u8], _out: &mut [u8]) -> Result<usize> {
     Err(disabled("zstd"))
 }
@@ -153,7 +188,19 @@ mod tests {
         assert_eq!(&out, b"abc");
     }
 
-    #[cfg(feature = "zstd")]
+    #[cfg(feature = "deflate")]
+    #[test]
+    fn gzip_stored_block_with_name() {
+        // Header with FNAME "a", one stored block "hi", CRC-32 and size.
+        let mut src = vec![0x1F, 0x8B, 8, 0x08, 0, 0, 0, 0, 0, 3, b'a', 0];
+        src.extend_from_slice(&[0x01, 0x02, 0x00, 0xFD, 0xFF, b'h', b'i']);
+        src.extend_from_slice(&[0xAC, 0x2A, 0x93, 0xD8, 2, 0, 0, 0]);
+        let mut out = [0u8; 2];
+        assert_eq!(gzip(&src, &mut out).unwrap(), 2);
+        assert_eq!(&out, b"hi");
+    }
+
+    #[cfg(any(feature = "zstd", feature = "zstd-c"))]
     #[test]
     fn zstd_raw_block() {
         // Frame header with single segment and 3-byte content, one raw last block.

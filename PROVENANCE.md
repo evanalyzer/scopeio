@@ -33,6 +33,22 @@ as black-box command-line tools to produce reference output
   documentation and `ome_2016-06.xsd` (`doc/ome-tiff/`, `doc/ome-xml/`).
 - Official OME-TIFF sample data (downloads.openmicroscopy.org).
 
+## OME-Zarr (`src/formats/zarr.rs`)
+
+- OME-NGFF 0.4 and 0.5 specifications, Zarr v2 specification, Zarr v3 core
+  specification and the v3 codec specifications for sharding, blosc, bytes,
+  gzip, crc32c and transpose (`doc/ome-zarr/`, CC BY 3.0).
+- numcodecs documentation of the Blosc and LZ4 codecs.
+- Public IDR OME-Zarr data (idr0062A/6001240 v0.4 and v0.5, idr0001A/2551
+  plate), downloaded by `tests/scripts/fetch_ome_zarr.py`; synthetic stores
+  written from the specifications by `tests/scripts/make_zarr_samples.py`.
+
+## Blosc (`src/codecs/blosc.rs`)
+
+- c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
+  public data: block start offsets count from the start of the chunk
+  (the document says from the end of the offset table).
+
 ## Codecs (`src/codecs*`)
 
 Implemented by permissively licensed crates (see THIRD_PARTY_NOTICES.md);
@@ -44,7 +60,15 @@ the wrappers follow the specifications in `doc/codecs/`:
 | LZW | weezl | MIT/Apache-2.0 | TIFF code-size switch built in |
 | PackBits | own (Apple TN1023) | - | a few lines |
 | JPEG (8-bit baseline, progressive) | zune-jpeg | MIT/Apache-2.0/Zlib | decodes into caller buffers, SIMD |
-| Zstandard | ruzstd | MIT | pure Rust |
+| Zstandard | ruzstd (default), zstd + libzstd (`zstd-c`) | MIT; BSD-3-Clause | see below |
+| LZ4 (Blosc, numcodecs) | lz4_flex | MIT | fastest Rust LZ4 |
+| Blosc 1 | own (chunk format document) | - | no mature pure-Rust crate; blusc depends on C zstd |
+
+Zstandard benchmark (2026-10-24, Intel Core Ultra 9 185H, one thread):
+reading all planes of idr0062A/6001240 v0.5 (sharded, Blosc/zstd, 70 MB
+decoded) takes 1.40 s CPU with ruzstd and 0.21 s with libzstd; output is
+identical. ruzstd stays the default to keep the default build pure Rust;
+`--features zstd-c` selects libzstd.
 
 JPEG 2000 and JPEG-XR are not supported yet; options are evaluated with
 the formats that need them (VSI, CZI, SVS).
