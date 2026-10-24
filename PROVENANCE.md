@@ -158,6 +158,20 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written from the specification by
   `tests/scripts/make_qptiff_samples.py`.
 
+## Leica SCN (`src/formats/scn.rs`)
+
+- openslide.org Leica format page (prose, CC BY-SA 4.0) in `doc/leica-scn/`:
+  collection XML, images, dimensions with TIFF directory numbers, macro
+  image at the collection's origin and size. OpenSlide's C code (LGPL) was
+  not consulted.
+- Own analysis of sample files (fluorescence channels `c`, channel
+  settings, exposure in microseconds).
+- Synthetic sample written from the documented layout by
+  `tests/scripts/make_scn_samples.py`.
+- JPEG note: on 4:2:0 tiles zune-jpeg's chroma upsampling differs from
+  libjpeg-turbo (which Bio-Formats matches exactly) by a mean of up to 0.4
+  per channel; recorded as tolerance in `tests/expected/scn_divergences.tsv`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

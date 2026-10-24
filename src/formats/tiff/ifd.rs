@@ -206,7 +206,8 @@ impl TiffFile {
         let mut buf = [0u8; 8];
         read_exact_at(&self.file, &mut buf[..count_size], offset)?;
         let n = if self.big { self.u64(&buf) } else { self.u16(&buf) as u64 };
-        if n == 0 || offset + (count_size + link_size) as u64 + n * entry_size as u64 > self.len {
+        let end = n.checked_mul(entry_size as u64).and_then(|e| e.checked_add(offset + (count_size + link_size) as u64));
+        if n == 0 || end.is_none_or(|e| e > self.len) {
             return Err(Error::Corrupt(format!("invalid IFD at offset {offset}")));
         }
         // NDPI: the high 32 bits of each entry's value follow the link.

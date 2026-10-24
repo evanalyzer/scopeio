@@ -24,6 +24,8 @@ mod lsm;
 mod mrxs;
 #[cfg(feature = "qptiff")]
 mod qptiff;
+#[cfg(feature = "scn")]
+mod scn;
 #[cfg(feature = "ndpi")]
 mod ndpi;
 #[cfg(feature = "svs")]
@@ -76,6 +78,8 @@ static SUPPORTED: &[FormatInfo] = &[
     lsm::FORMAT,
     #[cfg(feature = "qptiff")]
     qptiff::FORMAT,
+    #[cfg(feature = "scn")]
+    scn::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -163,6 +167,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "scn")]
+        Some(FormatId::Scn) => Ok(Arc::new(Reader(scn::open(path, opts)?))),
         #[cfg(feature = "qptiff")]
         Some(FormatId::Qptiff) => Ok(Arc::new(Reader(qptiff::open(path, opts)?))),
         #[cfg(feature = "lsm")]

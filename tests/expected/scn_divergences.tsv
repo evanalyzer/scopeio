@@ -1,0 +1,11 @@
+# JPEG tiles: Bio-Formats equals libjpeg-turbo (ImageMagick) exactly; zune-jpeg's 4:2:0 chroma
+# upsampling rounds differently (mean bias up to 0.4 per channel, max 4). Gray (fluorescence)
+# tiles differ only by IDCT rounding.
+file	tool	series	tolerance	reason
+tests/reference/openslide/Leica/Leica-1.scn	bioformats	3	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Leica/Leica-1.scn	bioformats	5	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Leica/Leica-1.scn	bioformats	0	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Leica/Leica-Fluorescence-1.scn	bioformats	6	0.2	JPEG IDCT rounding
+tests/reference/openslide/Leica/Leica-Fluorescence-1.scn	bioformats	7	0.2	JPEG IDCT rounding
+tests/reference/openslide/Leica/Leica-Fluorescence-1.scn	bioformats	0	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Leica/Leica-Fluorescence-1.scn	bioformats	3	1.0	JPEG 4:2:0 chroma upsampling
