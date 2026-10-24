@@ -1,0 +1,3 @@
+# Known differences between scopeio and the reference readers.
+file	tool	series	tolerance	reason
+tests/reference/ome/Vectra-QPTIFF/perkinelmer/PKI_scans/HandEcompressed_Scan1.qptiff	bioformats	-	0.2	JPEG IDCT rounding

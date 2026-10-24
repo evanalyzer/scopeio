@@ -66,6 +66,13 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+    #[cfg(feature = "qptiff")]
+    {
+        let software = first.string(&first.ifds[0], tag::SOFTWARE)?.unwrap_or_default();
+        if super::qptiff::matches(&software, &description) {
+            return Ok(Some(FormatId::Qptiff));
+        }
+    }
     #[cfg(feature = "lsm")]
     if first.ifds[0].has(super::lsm::TAG_LSMINFO) {
         return Ok(Some(FormatId::Lsm));

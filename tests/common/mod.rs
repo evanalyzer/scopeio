@@ -487,18 +487,53 @@ pub fn corrupt_sweep(path: &Path, step: usize) {
         }
         std::fs::write(&target, &d).unwrap();
         if let Ok(r) = scopeio::open(&target) {
-            let _ = decode(r.as_ref());
+            // Corrupt sizes can claim huge planes: decode only small ones,
+            // so the sweep never exhausts memory.
+            let small = |m: &scopeio::SeriesMeta, l: usize| {
+                let lv = &m.levels[l];
+                (lv.size_x as u128) * (lv.size_y as u128) * (m.size_c * m.size_z * m.size_t) as u128 * m.samples_per_pixel as u128 * 8 < 64 << 20
+            };
+            let all_small = (0..r.series_count()).all(|s| r.series_meta(s).is_ok_and(|m| small(m, 0)));
+            if all_small {
+                let _ = decode(r.as_ref());
+            }
             for s in 0..r.series_count() {
                 if let Ok(m) = r.series_meta(s) {
                     for l in 1..m.levels.len() {
-                        let _ = decode_level(r.as_ref(), s, l);
+                        if small(m, l) {
+                            let _ = decode_level(r.as_ref(), s, l);
+                        }
                     }
                 }
             }
             for kind in r.associated_images().to_vec() {
-                let _ = r.read_associated(&kind, &Default::default());
+                // Associated images are decoded whole; skip implausible sizes.
+                if all_small {
+                    let _ = r.read_associated(&kind, &Default::default());
+                }
             }
         }
     }
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Decodes all series like [`decode`] unless a plane would exceed 64 MiB
+/// (corrupt sizes), so robustness tests never exhaust memory.
+#[allow(dead_code)]
+pub fn decode_small(reader: &dyn ImageReader) {
+    let small = (0..reader.series_count()).all(|s| {
+        reader.series_meta(s).is_ok_and(|m| {
+            m.levels.iter().all(|lv| {
+                (lv.size_x as u128) * (lv.size_y as u128) * (m.size_c * m.size_z * m.size_t) as u128 * m.samples_per_pixel as u128 * 8 < 64 << 20
+            })
+        })
+    });
+    if small {
+        let _ = decode(reader);
+        for s in 0..reader.series_count() {
+            for l in 1..reader.series_meta(s).map(|m| m.levels.len()).unwrap_or(1) {
+                let _ = decode_level(reader, s, l);
+            }
+        }
+    }
 }

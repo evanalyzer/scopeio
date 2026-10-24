@@ -22,6 +22,8 @@ mod slide;
 mod lsm;
 #[cfg(feature = "mrxs")]
 mod mrxs;
+#[cfg(feature = "qptiff")]
+mod qptiff;
 #[cfg(feature = "ndpi")]
 mod ndpi;
 #[cfg(feature = "svs")]
@@ -72,6 +74,8 @@ static SUPPORTED: &[FormatInfo] = &[
     mrxs::FORMAT,
     #[cfg(feature = "lsm")]
     lsm::FORMAT,
+    #[cfg(feature = "qptiff")]
+    qptiff::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -159,6 +163,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "qptiff")]
+        Some(FormatId::Qptiff) => Ok(Arc::new(Reader(qptiff::open(path, opts)?))),
         #[cfg(feature = "lsm")]
         Some(FormatId::Lsm) => Ok(Arc::new(Reader(lsm::open(path, opts)?))),
         #[cfg(feature = "mrxs")]

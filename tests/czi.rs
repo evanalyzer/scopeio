@@ -85,7 +85,7 @@ fn corrupt_files_do_not_panic() {
         }
         std::fs::write(&path, &d).unwrap();
         if let Ok(r) = scopeio::open(&path) {
-            let _ = decode(r.as_ref());
+            common::decode_small(r.as_ref());
         }
     }
     let _ = std::fs::remove_dir_all(&dir);

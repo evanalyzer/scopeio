@@ -53,6 +53,9 @@ python3 -I tests/scripts/fetch_zenodo.py 14510432 10-01.lsm
 python3 -I tests/scripts/fetch_zenodo.py 10046394 "Suppl Fig 1B.lsm" "Fig 4A.lsm"
 python3 -I tests/scripts/fetch_zenodo.py 16916709 Lan_Larval_Chitin_DMSO_control_01.lsm
 python3 -I tests/scripts/fetch_zenodo.py 13286257 "sofa eye_zebrafish_spectral and zstack_01.lsm"
+# OME sample server (check each folder's readme/COPYING; QPTIFF: CC BY 4.0)
+P=Vectra-QPTIFF/perkinelmer
+python3 -I tests/scripts/fetch_ome.py $P/PKI_fields/HnE_3_1x1component_data.tif "$P/PKI_fields/LuCa-7color_[13860,52919]_1x1component_data.tif" $P/PKI_scans/HandEcompressed_Scan1.qptiff $P/PKI_scans/LuCa-7color_Scan1.qptiff
 # OpenSlide test slides (CC0-1.0 or "distributable", SHA-256 checked); --large adds multi-GB NDPI files
 python3 -I tests/scripts/fetch_openslide.py
 ```
@@ -71,6 +74,7 @@ python3 -I tests/scripts/make_svs_samples.py
 python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
+python3 -I tests/scripts/make_qptiff_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -162,6 +166,8 @@ LSM:
 ```sh
 (ls tests/reference/zenodo-*/*.lsm; echo tests/data/lsm/synthetic.lsm) | tr '\n' '\0' | xargs -0 python3 -I tests/scripts/oracle.py lsm
 ```
+
+QPTIFF: `sh tests/scripts/oracle_qptiff.sh` (`REP=3` for timings).
 
 MIRAX: Bio-Formats and bioformats-rs only read the preview JPEG that the
 `.mrxs` file is, so OpenSlide (`apt install openslide-tools`, run as a black

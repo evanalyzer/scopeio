@@ -552,7 +552,8 @@ fn jpeg_size(b: &[u8]) -> Option<(usize, usize)> {
         if matches!(marker, 0xC0..=0xCF) && !matches!(marker, 0xC4 | 0xC8 | 0xCC) {
             let h = u16::from_be_bytes([b[pos + 5], b[pos + 6]]) as usize;
             let w = u16::from_be_bytes([b[pos + 7], b[pos + 8]]) as usize;
-            return (w > 0 && h > 0 && w * h <= 1 << 28).then_some((w, h));
+            // Thumbnails are small; larger sizes come from corrupt files.
+            return (w > 0 && h > 0 && w * h <= 1 << 26).then_some((w, h));
         }
         pos += 2 + len;
     }

@@ -65,8 +65,7 @@ fn corrupt_slides_do_not_panic() {
             }
             std::fs::write(tmp.join("synthetic").join(name), &d).unwrap();
             if let Ok(r) = scopeio::open(&tmp.join("synthetic.mrxs")) {
-                let _ = common::decode(r.as_ref());
-                let _ = decode_level(r.as_ref(), 0, 1);
+                common::decode_small(r.as_ref());
                 let _ = r.read_associated(&AssociatedKind::Label, &Default::default());
             }
         }

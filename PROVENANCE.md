@@ -149,6 +149,15 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written from the specification by
   `tests/scripts/make_lsm_samples.py`.
 
+## Akoya QPTIFF (`src/formats/qptiff.rs`)
+
+- Akoya "QPTIFF Specification" (appendix A of the PhenoImager HT user
+  manual) in `doc/perkinelmer-qptiff/`: directory order, ImageDescription
+  XML (ImageType, Name, Color, Objective, ExposureTime), resolution tags.
+- Own analysis of sample files (OME sample server, CC BY 4.0).
+- Synthetic sample written from the specification by
+  `tests/scripts/make_qptiff_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

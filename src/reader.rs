@@ -115,14 +115,24 @@ pub(crate) struct NativeImage {
 }
 
 /// Decodes `region` with `read` into a native buffer.
+/// Largest decoded associated image (label, macro, thumbnail).
+const MAX_ASSOCIATED_BYTES: u128 = 1 << 30;
+
 pub(crate) fn native_image(
     region: Region,
     spp: u8,
     pixel_type: PixelType,
     read: impl FnOnce(&mut Sink) -> Result<()>,
 ) -> Result<NativeImage> {
-    let (w, h) = (region.width as usize, region.height as usize);
-    let mut data = vec![0u8; w * h * spp as usize * pixel_type.bytes()];
+    let w = region.width as usize;
+    // Associated images are small; larger sizes come from corrupt files.
+    let len = (region.width as u128) * (region.height as u128) * spp as u128 * pixel_type.bytes() as u128;
+    if len > MAX_ASSOCIATED_BYTES {
+        return Err(Error::Corrupt(format!("associated image of {} x {} pixels", region.width, region.height)));
+    }
+    let mut data = Vec::new();
+    data.try_reserve_exact(len as usize).map_err(|_| Error::OutOfRange(format!("associated image of {len} bytes cannot be allocated")))?;
+    data.resize(len as usize, 0u8);
     let map: Vec<u8> = (0..spp).collect();
     let mut sink = Sink::new(
         &mut data,
