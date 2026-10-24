@@ -303,6 +303,21 @@ as black-box command-line tools to produce reference output
   sequence order (see `tests/expected/dicom_divergences.tsv`).
 - Synthetic samples written by `tests/scripts/make_dicom_samples.py`.
 
+## Zeiss AxioVision ZVI (`src/formats/zvi.rs`)
+
+- OpenReadout ZVI notes (MIT OR Apache-2.0) in `doc/zeiss-zvi/`: streams,
+  typed values, tag lists, raw-image header, tag ids.
+- Microsoft [MS-CFB] (container, `cfb.rs`) and [MS-OAUT] (`VARENUM` type
+  codes of the typed values).
+- Public sample files from Figshare (CC BY 4.0, one CC0; fetched by
+  `tests/scripts/fetch_figshare.py`): pixels identical to Bio-Formats
+  (black box) on all eleven files it opens; `a1.zvi`, which neither
+  Bio-Formats nor bioformats-rs opens, is read. Bio-Formats reports 1 um
+  for uncalibrated files where scopeio reports no pixel size.
+- Synthetic samples written by `tests/scripts/make_zvi_samples.py` (its
+  compound-file writer `cfbwriter.py` orders directory siblings as
+  [MS-CFB] 2.6.4 requires).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

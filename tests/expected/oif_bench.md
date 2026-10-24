@@ -14,9 +14,9 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/ome/Olympus-FluoView/imagesc-71616/20220824_4492_cord_dapi__iba568_60x.oib | 25392 KiB | scopeio | ok | 0.021 | 0.022 | 9.9 |
 | tests/reference/ome/Olympus-FluoView/imagesc-71616/20220824_4492_cord_dapi__iba568_60x.oib | 25392 KiB | bioformats | ok | 5.120 | 1.304 | 636.5 |
 | tests/reference/ome/Olympus-FluoView/imagesc-71616/20220824_4492_cord_dapi__iba568_60x.oib | 25392 KiB | bioformats-rs | ok | 0.139 | 0.141 | 62.8 |
-| tests/data/oif/synthetic.oib | 31 KiB | scopeio | ok | 0.001 | 0.002 | 3.7 |
-| tests/data/oif/synthetic.oib | 31 KiB | bioformats | error: java.lang.NumberFormatException: Cannot parse null st | 0.755 | 0.415 | 102.2 |
-| tests/data/oif/synthetic.oib | 31 KiB | bioformats-rs | ok | 0.017 | 0.018 | 13.3 |
-| tests/data/oif/synthetic.oif | 6 KiB | scopeio | ok | 0.001 | 0.002 | 3.7 |
-| tests/data/oif/synthetic.oif | 6 KiB | bioformats | error: java.lang.NumberFormatException: Cannot parse null st | 0.717 | 0.402 | 101.6 |
-| tests/data/oif/synthetic.oif | 6 KiB | bioformats-rs | ok | 0.003 | 0.004 | 13.0 |
+| tests/data/oif/synthetic.oib | 31 KiB | scopeio | ok | 0.001 | 0.002 | 3.9 |
+| tests/data/oif/synthetic.oib | 31 KiB | bioformats | error: java.lang.NumberFormatException: Cannot parse null st | 0.724 | 0.402 | 102.2 |
+| tests/data/oif/synthetic.oib | 31 KiB | bioformats-rs | ok | 0.018 | 0.019 | 13.2 |
+| tests/data/oif/synthetic.oif | 6 KiB | scopeio | ok | 0.001 | 0.002 | 3.9 |
+| tests/data/oif/synthetic.oif | 6 KiB | bioformats | error: java.lang.NumberFormatException: Cannot parse null st | 0.695 | 0.394 | 101.6 |
+| tests/data/oif/synthetic.oif | 6 KiB | bioformats-rs | ok | 0.003 | 0.004 | 12.9 |

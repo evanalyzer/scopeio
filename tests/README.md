@@ -68,6 +68,7 @@ python3 -I tests/scripts/make_plain_samples.py    # PNG, JPEG, JPEG 2000; needs 
 python3 -I tests/scripts/make_oif_samples.py      # Olympus OIF/OIB (own compound-file writer)
 python3 -I tests/scripts/make_oir_samples.py      # Olympus OIR with a continuation file
 python3 -I tests/scripts/make_dicom_samples.py    # DICOM WSI (native, RLE, sparse, fluorescence) and plain
+python3 -I tests/scripts/make_zvi_samples.py      # Zeiss ZVI (shares cfbwriter.py with the OIF generator)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -124,6 +125,11 @@ $O --repeat 1 --series 7 --ours-series 0/7 "$H"
 $O --series 0 --crop 28000,30000,2048,2048 $D/3DHISTECH-1/000001.dcm
 $O --repeat 1 --series 4 --ours-series 0/4 $D/3DHISTECH-1/000001.dcm
 $O --repeat 1 tests/data/dicom/wsi/level0.dcm tests/data/dicom/fluo/level0.dcm tests/data/dicom/plain.dcm
+# Zeiss ZVI: Figshare deposits (CC BY 4.0 / CC0) and the synthetic files
+python3 -I tests/scripts/fetch_figshare.py "26880337:Figure 1A+I.zvi" "26880337:Figure 4C.zvi" 24769857 15042921 \
+    12133278 11341661 32769939 31813711 10732844 6798824 6840530 12132993
+find tests/reference/figshare -name "*.zvi" -print0 | sort -z | xargs -0 python3 -I tests/scripts/oracle.py zvi --repeat 3
+python3 -I tests/scripts/oracle.py zvi --append --repeat 1 tests/data/zvi/gray.zvi tests/data/zvi/colour.zvi
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

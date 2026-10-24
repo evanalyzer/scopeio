@@ -1,0 +1,7 @@
+# Known differences for Zeiss ZVI.
+file	tool	series	tolerance	reason
+tests/reference/figshare/6840530/SNAP-102235-0001.zvi	bioformats	-		uncalibrated (scale unit 0): Bio-Formats reports its default of 1 um, scopeio no pixel size
+tests/data/zvi/gray.zvi	bioformats	-		the minimal synthetic item lacks the typed values real files place before the raw-image header (at offset 296); Bio-Formats misreads it, the spec-derived truth is the reference
+tests/data/zvi/gray.zvi	bioformats-rs	-		see above: bioformats-rs finds no image planes in the minimal synthetic items
+tests/data/zvi/colour.zvi	bioformats	-		see gray.zvi
+tests/data/zvi/colour.zvi	bioformats-rs	-		see gray.zvi

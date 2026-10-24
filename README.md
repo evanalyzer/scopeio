@@ -64,6 +64,7 @@ compared, "n/a" means the reader cannot open the format.
 | Olympus OIB/OIF | 3 | 1 ms | 3.7 MiB | 244× / 64× | 7.0× / 4.3× | – |
 | Olympus OIR | 15 | 18 ms | 11 MiB | 244× / 51× | 2.8× / 6.1× | – |
 | DICOM | 17 | 55 ms | 18 MiB | 38× / 10× | 2.6× / 2.5× | – |
+| Zeiss ZVI | 14 | 8 ms | 6.7 MiB | 230× / 33× | 3.2× / 5.0× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -250,7 +251,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Windows Bitmap** | `.bmp` | ✅ |
 | **Zeiss Axio CSM** | `.lms` |  |
 | **Zeiss AxioVision TIFF** | `.xml, .tif` |  |
-| **Zeiss AxioVision ZVI** | `.zvi` |  |
+| **Zeiss AxioVision ZVI** | `.zvi` | ✅ |
 | **Zeiss CZI** | `.czi` | ✅ |
 | **Zeiss LSM 510/710** | `.lsm` | ✅ |
 | **Zeiss XRM** | `.txm, .txrm` |  |

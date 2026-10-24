@@ -19,7 +19,7 @@ zstd-c-lib = { package = "zstd", version = "0.13", default-features = false, opt
 zune-jpeg = { version = "0.5", optional = true }
 
 [features]
-default = ["bmp", "tiff", "zarr", "vsi", "nd2", "czi", "lif", "svs", "ndpi", "mrxs", "lsm", "qptiff", "scn", "bif", "ims", "png", "jpg", "jp2", "oif", "oir", "dicom", "deflate", "lzw", "jpeg", "jpeg2000", "jpegxr", "zstd", "lz4", "blosc"]
+default = ["bmp", "tiff", "zarr", "vsi", "nd2", "czi", "lif", "svs", "ndpi", "mrxs", "lsm", "qptiff", "scn", "bif", "ims", "png", "jpg", "jp2", "oif", "oir", "dicom", "zvi", "deflate", "lzw", "jpeg", "jpeg2000", "jpegxr", "zstd", "lz4", "blosc"]
 # Formats.
 bmp = []
 tiff = ["dep:roxmltree"]
@@ -40,6 +40,7 @@ ims = ["deflate", "lz4"]
 png = ["dep:png"]
 # Olympus FluoView OIB (compound file) and OIF (folder).
 oif = ["tiff"]
+zvi = []
 oir = ["dep:roxmltree"]
 # DICOM: own Part 10 parser; JPEG and JPEG 2000 frames use the codecs below.
 dicom = []

@@ -170,7 +170,6 @@ impl Cfb {
     }
 
     /// All streams.
-    #[cfg(test)]
     pub fn streams(&self) -> &[Stream] {
         &self.streams
     }
@@ -213,6 +212,48 @@ impl Cfb {
         }
         out.truncate(s.size as usize);
         Ok(out)
+    }
+
+    /// The sectors of a stream stored outside the mini stream, for
+    /// [`read_at`](Self::read_at); `None` for streams in the mini stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Corrupt`] for broken chains.
+    pub fn sectors(&self, s: &Stream) -> Result<Option<Vec<u32>>> {
+        if s.size < self.mini_cutoff {
+            return Ok(None);
+        }
+        let ids = self.chain(s.start, s.size.div_ceil(self.sector))?;
+        if (ids.len() as u64) * self.sector < s.size {
+            return Err(Error::Corrupt(format!("compound file stream {} ends early", s.path)));
+        }
+        Ok(Some(ids))
+    }
+
+    /// Reads `buf.len()` bytes at offset `at` of a stream whose sectors are
+    /// `sectors` (see [`sectors`](Self::sectors)), reading runs of
+    /// consecutive sectors at once.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Corrupt`] if the range is outside the stream.
+    pub fn read_at(&self, sectors: &[u32], at: u64, buf: &mut [u8]) -> Result<()> {
+        let end = at.checked_add(buf.len() as u64).filter(|&e| e <= sectors.len() as u64 * self.sector);
+        if end.is_none() {
+            return Err(Error::Corrupt("compound file read beyond its stream".into()));
+        }
+        let mut done = 0usize;
+        while done < buf.len() {
+            let pos = at + done as u64;
+            let i = (pos / self.sector) as usize;
+            let run = sectors[i..].windows(2).take_while(|w| w[1] == w[0] + 1).count() + 1;
+            let within = pos % self.sector;
+            let n = ((run as u64 * self.sector - within) as usize).min(buf.len() - done);
+            read_exact_at(&self.file, &mut buf[done..done + n], (sectors[i] as u64 + 1) * self.sector + within)?;
+            done += n;
+        }
+        Ok(())
     }
 
     /// Sector ids of the chain starting at `start`, at most `max` sectors.

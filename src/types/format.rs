@@ -42,6 +42,7 @@ pub enum FormatId {
     Oif,
     Oir,
     Dicom,
+    Zvi,
 }
 
 /// Identification of the reader that produced the data, for
