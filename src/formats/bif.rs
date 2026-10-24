@@ -12,7 +12,16 @@
 //! but were made from the unstitched grid, so each level-0 tile column's
 //! footprint is moved to its stitched position (as Bio-Formats does), and
 //! levels are cropped to the stitched size. Unscanned tiles (no data) read as
-//! the `ScanWhitePoint`. Only the nominal focus plane is read.
+//! the `ScanWhitePoint`.
+//!
+//! Volumetric scans (tag `ImageDepth` 32997, `Z-layers` > 1) store the
+//! nominal focus plane first in the tile tables, then the near planes, then
+//! the far ones, each a block of the same tiles with the same overlaps.
+//! They are returned as z planes from near to far, the nominal plane in the
+//! middle; within the near and far blocks the planes are assumed to run
+//! outward from the nominal one (the white paper does not say, and no
+//! public volumetric sample exists). Levels without further planes return
+//! their nominal plane for every z.
 //!
 //! Provenance: Roche "BIF image file format for digital pathology" white
 //! paper (`doc/ventana-bif/`); openslide.org Ventana page (prose, CC BY-SA
@@ -44,6 +53,15 @@ pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bif, "Ventana B
 
 /// XMP packet tag.
 const TAG_XMP: u16 = 700;
+/// Focal planes of a volumetric scan (SGI ImageDepth).
+const TAG_IMAGE_DEPTH: u16 = 32997;
+
+/// Storage block of focal plane `z` of `depth` (near to far): the nominal
+/// plane first, then the near planes, then the far ones.
+fn storage_block(z: usize, depth: usize) -> usize {
+    let nominal = (depth - 1) / 2;
+    if z < nominal { nominal - z } else if z == nominal { 0 } else { z }
+}
 
 /// Returns `true` if the XMP of a directory holds Ventana `iScan` metadata.
 pub(super) fn matches(tiff: &TiffFile) -> bool {
@@ -77,7 +95,8 @@ struct Placed {
 #[derive(Debug)]
 pub(super) struct Bif {
     tiff: TiffFile,
-    levels: Vec<TiffImage>,
+    /// Each level's focal planes, near to far.
+    levels: Vec<Vec<TiffImage>>,
     /// Level-0 tiles by tile row.
     rows: Vec<Vec<Placed>>,
     tile: (u32, u32),
@@ -196,14 +215,27 @@ impl Bif {
                 "Probability_Image" => associated.push((AssociatedKind::Other("probability".into()), image)),
                 d if d.starts_with("level=") => {
                     scan_ifd.get_or_insert(i);
-                    levels.push(image);
+                    levels.push((i, image));
                 }
                 _ => {}
             }
         }
         let scan_ifd = scan_ifd.ok_or_else(|| Error::Corrupt("BIF without scan image".into()))?;
-        levels.sort_by_key(|l| std::cmp::Reverse(l.width));
-        let base = &levels[0];
+        levels.sort_by_key(|(_, l)| std::cmp::Reverse(l.width));
+        let depth_of = |i: usize| -> Result<usize> {
+            let d = tiff.floats(&tiff.ifds[i], TAG_IMAGE_DEPTH)?.and_then(|v| v.first().copied()).unwrap_or(1.0);
+            Ok(if (1.0..=1024.0).contains(&d) { d as usize } else { 1 })
+        };
+        let depth = depth_of(levels[0].0)?;
+        let levels: Vec<Vec<TiffImage>> = levels
+            .into_iter()
+            .map(|(i, img)| {
+                // A level without the further planes repeats its nominal one.
+                let planes = if depth_of(i)? == depth { (0..depth).map(|z| img.layer(storage_block(z, depth))).collect::<Result<_>>()? } else { vec![img; depth] };
+                Ok(planes)
+            })
+            .collect::<Result<_>>()?;
+        let base = &levels[0][0];
         let xmp = |i: usize| {
             tiff.ifds[i].entry(TAG_XMP).and_then(|e| tiff.raw(e).ok()).map(|x| String::from_utf8_lossy(&x).trim_end_matches('\0').to_string())
         };
@@ -216,20 +248,22 @@ impl Bif {
         let height = if rows.is_empty() { base.height } else { rows.len() as u32 * tile.1 };
         // iScan attributes of the label directory.
         let iscan = xmp(0).unwrap_or_default();
-        let (mut mpp, mut mag, mut white) = (None, None, 255u8);
+        let (mut mpp, mut mag, mut white, mut z_spacing) = (None, None, 255u8, None);
         let mut pairs = original_meta(&tiff, &tiff.ifds[scan_ifd])?;
         if let Ok(doc) = Document::parse(&iscan) {
             if let Some(n) = child(doc.root_element(), "iScan").or_else(|| (doc.root_element().tag_name().name() == "iScan").then(|| doc.root_element())) {
                 mpp = num::<f64>(n, "ScanRes").filter(|v| *v > 0.0);
                 mag = num::<f64>(n, "Magnification").filter(|v| *v > 0.0);
                 white = num::<u8>(n, "ScanWhitePoint").unwrap_or(255);
+                z_spacing = num::<f64>(n, "Z-spacing").filter(|v| *v > 0.0 && depth > 1);
                 pairs.extend(n.attributes().map(|a| (format!("ventana.{}", a.name()), a.value().to_string())));
             }
         }
         let level_metas: Vec<LevelMeta> = levels
             .iter()
             .enumerate()
-            .map(|(l, img)| {
+            .map(|(l, planes)| {
+                let img = &planes[0];
                 let f = (1u64 << l) as f64;
                 let (w, h) = if l == 0 { (width as u64, height as u64) } else { ((width as f64 / f) as u64, (height as f64 / f) as u64) };
                 LevelMeta { size_x: w.min(img.width as u64), size_y: h.min(img.height as u64), tile: Some((img.chunk_w, img.chunk_h)), downsample: f }
@@ -238,12 +272,12 @@ impl Bif {
         let meta = SeriesMeta {
             acquisition_date: tiff.string(&tiff.ifds[scan_ifd], tag::DATE_TIME)?.and_then(|d| tiff_date(&d)),
             size_c: 1,
-            size_z: 1,
+            size_z: depth as u32,
             size_t: 1,
             pixel_type: base.pixel_type,
             samples_per_pixel: base.samples_out,
             levels: level_metas,
-            physical_size: PhysicalSize { x_nm: mpp.map(|v| v * 1e3), y_nm: mpp.map(|v| v * 1e3), z_nm: None },
+            physical_size: PhysicalSize { x_nm: mpp.map(|v| v * 1e3), y_nm: mpp.map(|v| v * 1e3), z_nm: z_spacing.map(|v| v * 1e3) },
             channels: vec![ChannelMeta::default()],
             objective: mag.map(|m| ObjectiveMeta { magnification: Some(m), ..Default::default() }),
             ..Default::default()
@@ -268,9 +302,9 @@ impl Bif {
         Ok(bif)
     }
 
-    /// Stitched level 0.
-    fn read_stitched(&self, region: Region, sink: &mut Sink) -> Result<()> {
-        let base = &self.levels[0];
+    /// Stitched level 0 of focal plane `z`.
+    fn read_stitched(&self, z: usize, region: Region, sink: &mut Sink) -> Result<()> {
+        let base = &self.levels[0][z];
         let (tw, th) = self.tile;
         let px = base.samples_out as usize * base.pixel_type.bytes();
         let (x0, y0) = (region.x as u32, region.y as u32);
@@ -303,8 +337,8 @@ impl Bif {
     /// A lower level: the stored pyramid was made from the unstitched tile
     /// grid, so the footprint of each level-0 tile column is moved to its
     /// stitched position, scaled to the level.
-    fn read_shifted(&self, level: usize, region: Region, sink: &mut Sink) -> Result<()> {
-        let img = &self.levels[level];
+    fn read_shifted(&self, level: usize, z: usize, region: Region, sink: &mut Sink) -> Result<()> {
+        let img = &self.levels[level][z];
         let f = 1u64 << level.min(30);
         let (tw, th) = (self.tile.0 as u64, self.tile.1 as u64);
         let px = img.samples_out as usize * img.pixel_type.bytes();
@@ -375,14 +409,15 @@ impl Backend for Bif {
         native_image(region, img.samples_out, img.pixel_type, |sink| img.read_native(&self.tiff, region, samples, sink))
     }
 
-    fn read_native(&self, _series: usize, level: usize, _plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
+    fn read_native(&self, _series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
+        let z = plane.z as usize;
         if level == 0 && !self.rows.is_empty() {
-            return self.read_stitched(region, sink);
+            return self.read_stitched(z, region, sink);
         }
         if !self.rows.is_empty() {
-            return self.read_shifted(level, region, sink);
+            return self.read_shifted(level, z, region, sink);
         }
-        let img = &self.levels[level];
+        let img = &self.levels[level][z];
         let samples = if img.samples_out == 1 { Samples::One(0) } else { Samples::All };
         img.read_native(&self.tiff, region, samples, sink)
     }
@@ -393,6 +428,13 @@ impl Backend for Bif {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn focal_planes_near_to_far() {
+        // Storage: nominal, near -1, near -2, far +1, far +2.
+        assert_eq!((0..5).map(|z| storage_block(z, 5)).collect::<Vec<_>>(), [2, 1, 0, 3, 4]);
+        assert_eq!(storage_block(0, 1), 0);
+    }
 
     #[test]
     fn stitches_rows_with_overlap() {

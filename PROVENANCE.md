@@ -203,7 +203,14 @@ as black-box command-line tools to produce reference output
   of the `Frame` nodes), and the stored lower levels were made from the
   unstitched grid, so their tile-column footprints are moved to the
   stitched positions.
-- Synthetic sample written from that model by
+- Volumetric scans from the white paper: ImageDepth tag 32997, tile tables
+  holding the nominal plane, then the near planes, then the far planes,
+  `Z-layers` (odd) and `Z-spacing` in the iScan node. The order within the
+  near and far blocks is not documented; outward from the nominal plane is
+  assumed. No public volumetric BIF exists; on the synthetic
+  `volumetric.bif` Bio-Formats (black box) returns the same three planes in
+  the same order (near, nominal, far).
+- Synthetic samples written from that model by
   `tests/scripts/make_bif_samples.py`.
 
 ## Imaris IMS (`src/formats/ims.rs`, `src/formats/ims/hdf5.rs`)

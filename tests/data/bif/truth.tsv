@@ -1,4 +1,7 @@
-image	width	crc32
-level0	40	fbf9b7fe
-level1	20	b84d7c46
-macro	8	9651a7a8
+file	image	width	crc32
+synthetic.bif	level0	40	fbf9b7fe
+synthetic.bif	level1	20	b84d7c46
+synthetic.bif	macro	8	9651a7a8
+volumetric.bif	level0	40	00a24f04
+volumetric.bif	level1	20	05bb88d9
+volumetric.bif	macro	8	9651a7a8

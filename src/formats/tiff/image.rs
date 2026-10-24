@@ -77,6 +77,8 @@ pub(crate) struct TiffImage {
     offsets_entry: Entry,
     counts_entry: Option<Entry>,
     chunks: usize,
+    /// Table entries before this image's chunks (BIF focal planes).
+    skip: usize,
     /// Added to every chunk offset (ImageJ planes following the first).
     shift: u64,
     tables: OnceLock<std::result::Result<Tables, String>>,
@@ -305,6 +307,7 @@ impl TiffImage {
             offsets_entry,
             counts_entry,
             chunks: n,
+            skip: 0,
             shift: 0,
             tables: OnceLock::new(),
             compression,
@@ -340,6 +343,8 @@ impl TiffImage {
                         // Allowed for a single uncompressed chunk.
                         None => vec![tiff.len.saturating_sub(offsets.first().copied().unwrap_or(0))],
                     };
+                    offsets.drain(..self.skip.min(offsets.len()));
+                    counts.drain(..self.skip.min(counts.len()));
                     // Missing entries become empty chunks, which decode as zeros.
                     offsets.resize(self.chunks, 0);
                     counts.resize(self.chunks, 0);
@@ -382,6 +387,24 @@ impl TiffImage {
         img.shift += delta;
         img.tables = OnceLock::new();
         img
+    }
+
+    /// A copy reading block `layer` of [`chunk_count`](Self::chunk_count)
+    /// entries of the chunk tables (layer 0 is this image), as volumetric
+    /// BIF files store their further focal planes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Corrupt`] if the tables are too short.
+    pub fn layer(&self, layer: usize) -> Result<Self> {
+        let skip = layer
+            .checked_mul(self.chunks)
+            .filter(|s| s.checked_add(self.chunks).is_some_and(|end| end as u64 <= self.offsets_entry.count))
+            .ok_or_else(|| Error::Corrupt(format!("TIFF chunk tables without layer {layer}")))?;
+        let mut img = self.clone();
+        img.skip = skip;
+        img.tables = OnceLock::new();
+        Ok(img)
     }
 
     /// Number of channels this image contributes (1 for colour images).
