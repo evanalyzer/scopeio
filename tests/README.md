@@ -47,6 +47,11 @@ python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/z
 python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/zarr/v0.4/idr0001A/2551.zarr --levels 1 --wells 2
 ```
 
+```sh
+# OpenSlide test slides (CC0-1.0 or "distributable", SHA-256 checked); --large adds multi-GB NDPI files
+python3 -I tests/scripts/fetch_openslide.py
+```
+
 ## Regenerating references
 
 ```sh
@@ -57,6 +62,7 @@ python3 -I tests/scripts/make_vsi_samples.py
 python3 -I tests/scripts/make_nd2_samples.py
 python3 -I tests/scripts/make_czi_samples.py
 python3 -I tests/scripts/make_lif_samples.py
+python3 -I tests/scripts/make_svs_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -105,6 +111,24 @@ L=tests/reference/ome/Leica-LIF
 F="$L/imagesc-30856/20191025 Test FRET 585. 423, 426.lif"
 python3 -I tests/scripts/oracle.py lif --per-series tests/external/laica_01.lif $L/michael/PR2729_frameOrderCombinedScanTypes.lif "$F" $L/zenodo-6606445/Project007.lif
 for k in 0 1 2 3 4 5 6 7; do python3 -I tests/scripts/oracle.py lif --repeat 1 --series $k --append "$F"; done
+```
+
+SVS (`--ours-series 0/2` compares a Bio-Formats pyramid series with level 2
+of series 0; slides are compared on crops):
+
+```sh
+A=tests/reference/openslide/Aperio
+python3 -I tests/scripts/oracle.py svs --keep-series 0 $A/CMU-1-Small-Region.svs
+python3 -I tests/scripts/oracle.py svs --repeat 1 --series 1 --ours-series assoc:label --append $A/CMU-1-Small-Region.svs
+python3 -I tests/scripts/oracle.py svs --repeat 1 --series 2 --ours-series assoc:macro --append $A/CMU-1-Small-Region.svs
+for f in CMU-1 CMU-1-JP2K-33005; do
+  python3 -I tests/scripts/oracle.py svs --series 0 --crop 20000,15000,2048,2048 --append $A/$f.svs
+  python3 -I tests/scripts/oracle.py svs --series 2 --ours-series 0/2 --append $A/$f.svs
+  python3 -I tests/scripts/oracle.py svs --repeat 1 --series 3 --ours-series assoc:label --append $A/$f.svs
+  python3 -I tests/scripts/oracle.py svs --repeat 1 --series 4 --ours-series assoc:macro --append $A/$f.svs
+done
+python3 -I tests/scripts/oracle.py svs --series 0 --crop 6000,8000,2048,2048 --append $A/JP2K-33003-1.svs
+python3 -I tests/scripts/oracle.py svs --series 0 --crop 30000,20000,2048,2048 --append tests/reference/ome/SVS/77928.svs
 ```
 
 Divergence files may name one reference series in an optional `series`

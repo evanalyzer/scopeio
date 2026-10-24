@@ -38,7 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // `--meta` prints the series metadata.
     let show_meta = args.iter().any(|a| a == "--meta");
     args.retain(|a| a != "--meta");
-    // `--series N` reads one series, `--crop x,y,w,h` one region of level 0.
+    // `--series N` reads one series, `--level L` one pyramid level (default
+    // 0), `--crop x,y,w,h` one region of that level.
     let mut option = |name: &str| {
         args.iter().position(|a| a == name).map(|i| {
             let v = args.get(i + 1).cloned().unwrap_or_default();
@@ -47,6 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
     };
     let only_series = option("--series").map(|v| v.parse::<usize>()).transpose()?;
+    let level_index = option("--level").map(|v| v.parse::<usize>()).transpose()?.unwrap_or(0);
     let crop = option("--crop")
         .map(|v| {
             let n: Vec<u64> = v.split(',').filter_map(|p| p.trim().parse().ok()).collect();
@@ -66,8 +68,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             original.documents.iter_mut().for_each(|(_, d)| d.truncate(200));
             println!("{original:#?}");
         }
-        let level = &meta.levels[0];
-        let mut req = RegionRequest::new(series, 0, crop.unwrap_or(Region::new(0, 0, level.size_x, level.size_y)));
+        let Some(level) = meta.levels.get(level_index) else { continue };
+        let mut req = RegionRequest::new(series, level_index, crop.unwrap_or(Region::new(0, 0, level.size_x, level.size_y)));
         req.output = OutputSpec { keep_alpha: true, ..Default::default() };
         let shape = reader.output_shape(&req)?;
         // One buffer, reused for every plane.

@@ -257,7 +257,12 @@ def bf_physical_sizes(src):
 
 
 def ours(src, series=None, crop=None):
-    opts = [*(["--series", str(series)] if series is not None else []), *(["--crop", crop] if crop else [])]
+    # `series` may be "S/L": series S, pyramid level L.
+    level = None
+    if isinstance(series, str) and "/" in series:
+        series, level = series.split("/")
+    opts = [*(["--series", str(series)] if series is not None else []), *(["--level", level] if level else []),
+            *(["--crop", crop] if crop else [])]
     code, out, cpu, wall, rss = run([str(SCOPEIO), "--no-checksum", *opts, str(src)])
     status = "ok" if code == 0 else "error: " + out.strip().splitlines()[-1][:200]
     return status, cpu, wall, rss
@@ -298,7 +303,8 @@ def main():
     ap.add_argument("--series", type=int, help="convert only this Bio-Formats series")
     ap.add_argument("--crop", help="convert only this region, x,y,w,h at full resolution")
     ap.add_argument("--ours-series",
-                    help="scopeio series compared with --series (default: the same index), or "
+                    help="scopeio series compared with --series (default: the same index), S/L for "
+                         "level L of series S, or "
                          "assoc:<kind> for an associated image (label, macro, thumbnail)")
     ap.add_argument("--keep-series", type=int,
                     help="record only this series of the reference output")
@@ -343,7 +349,7 @@ def main():
                 stats[tool] = (runs[0][0][0]["status"], *(statistics.median(r[i] for r in runs)
                                                           for i in (1, 2, 3)))
             ours_series = args.ours_series if args.ours_series is not None else args.series
-            if isinstance(ours_series, str) and not ours_series.isdigit():
+            if isinstance(ours_series, str) and not ours_series.isdigit() and "/" not in ours_series:
                 ours_series = None
             runs = [ours(src, ours_series, args.crop) for _ in range(args.repeat)]
             stats["scopeio"] = (runs[0][0], *(statistics.median(r[i] for r in runs) for i in (1, 2, 3)))

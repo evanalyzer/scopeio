@@ -73,10 +73,10 @@ pub fn read(reader: &dyn ImageReader, series: usize, level: usize, plane: Plane,
     Ok(reader.read_region(&req)?.as_bytes().to_vec())
 }
 
-/// Decodes `region` of level 0 of one series.
-pub fn decode_region(reader: &dyn ImageReader, s: usize, region: Region) -> scopeio::Result<Series> {
+/// Decodes `region` of one level of one series.
+pub fn decode_region(reader: &dyn ImageReader, s: usize, level: usize, region: Region) -> scopeio::Result<Series> {
     let meta = reader.series_meta(s)?;
-    let mut req = RegionRequest::new(s, 0, region);
+    let mut req = RegionRequest::new(s, level, region);
     (req.channels, req.output) = all_channels(meta.size_c);
     let mut pixels = Vec::new();
     for t in 0..meta.size_t {
@@ -305,7 +305,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
         let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
         let cropped = r.get("crop").is_some_and(|c| c.as_str() != "-")
-            || r.get("ours_series").is_some_and(|v| v.starts_with("assoc:"));
+            || r.get("ours_series").is_some_and(|v| v.starts_with("assoc:") || v.contains('/'));
         if (r["status"] != "ok" || cropped) && !unsupported {
             if r["status"] != "ok" {
                 continue;
@@ -368,20 +368,37 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             }
             continue;
         }
-        let series: usize = match r.get("ours_series").map(String::as_str) {
-            Some(v) if v != "-" => v.parse().expect("ours_series index"),
-            _ => r["series"].parse().expect("series index"),
+        // `ours_series` is a series index or `S/L` for level L of series S.
+        let (series, level): (usize, usize) = match r.get("ours_series").map(String::as_str) {
+            Some(v) if v.contains('/') => {
+                let (s, l) = v.split_once('/').expect("S/L");
+                (s.parse().expect("ours_series index"), l.parse().expect("ours_series level"))
+            }
+            Some(v) if v != "-" => (v.parse().expect("ours_series index"), 0),
+            _ => (r["series"].parse().expect("series index"), 0),
         };
-        // Cropped references compare the same region of level 0.
+        // Cropped references compare the same region of the level.
         if let Some(crop) = r.get("crop").filter(|c| c.as_str() != "-") {
             let n: Vec<u64> = crop.split(',').map(|v| v.parse().expect("crop x,y,w,h")).collect();
             let region = Region::new(n[0], n[1], n[2], n[3]);
-            let diffs = match scopeio::open(&path).and_then(|reader| decode_region(reader.as_ref(), series, region)) {
+            let diffs = match scopeio::open(&path).and_then(|reader| decode_region(reader.as_ref(), series, level, region)) {
                 Ok(s) => compare(&s, r, tolerance),
                 Err(e) => vec![format!("crop {crop}: {e}")],
             };
             match (diffs.is_empty(), listed) {
                 (false, false) => failures.push(format!("{} vs {} crop {crop}: {}", r["file"], r["tool"], diffs.join("; "))),
+                (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
+                _ => {}
+            }
+            continue;
+        }
+        if level > 0 {
+            let diffs = match scopeio::open(&path).and_then(|reader| decode_level(reader.as_ref(), series, level)) {
+                Ok(s) => compare(&s, r, tolerance),
+                Err(e) => vec![format!("level {level}: {e}")],
+            };
+            match (diffs.is_empty(), listed) {
+                (false, false) => failures.push(format!("{} vs {} level {level}: {}", r["file"], r["tool"], diffs.join("; "))),
                 (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
                 _ => {}
             }

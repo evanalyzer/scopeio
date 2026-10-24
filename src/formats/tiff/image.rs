@@ -35,6 +35,12 @@ mod compression {
     pub const PACKBITS: u16 = 32773;
     pub const DEFLATE_OLD: u16 = 32946;
     pub const ZSTD: u16 = 50000;
+    /// JPEG 2000 codestream (Adobe registration).
+    pub const JPEG2000: u16 = 34712;
+    /// Aperio JPEG 2000 with YCbCr samples, no colour transform in the stream.
+    pub const JP2K_YCBCR: u16 = 33003;
+    /// Aperio JPEG 2000 with RGB samples (colour transform in the stream).
+    pub const JP2K_RGB: u16 = 33005;
 }
 
 /// Photometric interpretations, TIFF tag 262.
@@ -181,7 +187,9 @@ impl TiffImage {
         let mut ycbcr = None;
         let samples_out = match photometric {
             photometric::RGB | photometric::YCBCR => {
-                if photometric == photometric::YCBCR && compression != compression::JPEG {
+                // JPEG and JPEG 2000 streams carry their own colour model.
+                let codestream = matches!(compression, compression::JPEG | compression::JPEG2000 | compression::JP2K_YCBCR | compression::JP2K_RGB);
+                if photometric == photometric::YCBCR && !codestream {
                     if bits != 8 || spp != 3 || separate {
                         return Err(Error::UnsupportedVariant("TIFF YCbCr layout other than 8-bit chunky".into()));
                     }
@@ -507,6 +515,9 @@ impl TiffImage {
         if self.compression == compression::JPEG {
             return self.decode_jpeg(file, offset, count, rows, row_values, out);
         }
+        if matches!(self.compression, compression::JPEG2000 | compression::JP2K_YCBCR | compression::JP2K_RGB) {
+            return self.decode_jpeg2000(file, offset, count, rows, row_values, out);
+        }
         if self.compression == compression::NONE && self.predictor == 1 && self.ycbcr.is_none() {
             // Read only the requested rows.
             let start = rows.start as usize * stored_row;
@@ -633,6 +644,50 @@ impl TiffImage {
         {
             let _ = (file, offset, count, rows, row_values, out);
             Err(Error::UnsupportedVariant("jpeg compression (enable the `jpeg` feature)".into()))
+        }
+    }
+
+    /// Decodes a JPEG 2000 chunk; Aperio 33003 chunks hold YCbCr samples.
+    fn decode_jpeg2000(&self, file: &File, offset: u64, count: u64, rows: Range<u32>, row_values: usize, out: &mut [u8]) -> Result<()> {
+        #[cfg(feature = "jpeg2000")]
+        {
+            let comps = if self.separate { 1 } else { self.spp as usize };
+            let bytes = self.stored.bytes();
+            let cap = self.chunk_w as usize * self.chunk_h as usize * comps * bytes;
+            scratch::with(count as usize, |src| {
+                read_exact_at(file, src, offset)?;
+                scratch::with(cap, |buf| {
+                    let info = codecs::jpeg2000::decode(src, self.stored, buf)?;
+                    if info.components != comps {
+                        return Err(Error::Corrupt(format!("JPEG 2000 has {} components, TIFF {comps}", info.components)));
+                    }
+                    if self.compression == compression::JP2K_YCBCR && comps == 3 && bytes == 1 {
+                        for px in buf[..info.width * info.height * 3].chunks_exact_mut(3) {
+                            let (y, cb, cr) = (px[0] as f32, px[1] as f32 - 128.0, px[2] as f32 - 128.0);
+                            px[0] = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
+                            px[1] = (y - 0.344_136 * cb - 0.714_136 * cr).round().clamp(0.0, 255.0) as u8;
+                            px[2] = (y + 1.772 * cb).round().clamp(0.0, 255.0) as u8;
+                        }
+                    }
+                    let src_stride = info.width * comps * bytes;
+                    let row_bytes = row_values * bytes;
+                    for (r, dst) in rows.clone().zip(out.chunks_exact_mut(row_bytes)) {
+                        let n = row_bytes.min(src_stride);
+                        if (r as usize) < info.height {
+                            dst[..n].copy_from_slice(&buf[r as usize * src_stride..][..n]);
+                            dst[n..].fill(0);
+                        } else {
+                            dst.fill(0);
+                        }
+                    }
+                    Ok(())
+                })
+            })
+        }
+        #[cfg(not(feature = "jpeg2000"))]
+        {
+            let _ = (file, offset, count, rows, row_values, out);
+            Err(Error::UnsupportedVariant("jpeg2000 compression (enable the `jpeg2000` feature)".into()))
         }
     }
 

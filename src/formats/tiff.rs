@@ -55,6 +55,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+    #[cfg(feature = "svs")]
+    if super::svs::matches(&description) {
+        return Ok(Some(FormatId::Svs));
+    }
     Ok(Some(if description.contains("<OME") { FormatId::OmeTiff } else { FormatId::Tiff }))
 }
 
@@ -351,7 +355,7 @@ fn sub_ifd_levels(tiff: &TiffFile, ifds: &[&Ifd], pages: &[TiffImage]) -> Result
 }
 
 /// Level metadata of one image; strips count as tiles of full width.
-fn level_meta(image: &TiffImage, full_width: u32) -> LevelMeta {
+pub(super) fn level_meta(image: &TiffImage, full_width: u32) -> LevelMeta {
     let tile = (image.tiled || image.chunk_h < image.height).then_some((image.chunk_w, image.chunk_h));
     LevelMeta {
         size_x: image.width as u64,
@@ -395,7 +399,7 @@ fn make_series(tiff: &TiffFile, file: usize, ifd_index: usize, levels: Vec<Vec<T
 }
 
 /// Pixel size from XResolution, YResolution and ResolutionUnit.
-fn resolution(tiff: &TiffFile, ifd: &Ifd) -> Result<PhysicalSize> {
+pub(super) fn resolution(tiff: &TiffFile, ifd: &Ifd) -> Result<PhysicalSize> {
     let unit_nm = match tiff.uint(ifd, tag::RESOLUTION_UNIT)?.unwrap_or(2) {
         2 => 25.4e6,
         3 => 1e7,
@@ -408,7 +412,7 @@ fn resolution(tiff: &TiffFile, ifd: &Ifd) -> Result<PhysicalSize> {
 }
 
 /// Converts a TIFF date "YYYY:MM:DD HH:MM:SS" to ISO 8601.
-fn tiff_date(d: &str) -> Option<String> {
+pub(super) fn tiff_date(d: &str) -> Option<String> {
     let b = d.trim().as_bytes();
     if b.len() < 19 || b[4] != b':' || b[7] != b':' || b[10] != b' ' || !d.is_char_boundary(19) {
         return None;
@@ -417,7 +421,7 @@ fn tiff_date(d: &str) -> Option<String> {
 }
 
 /// Selected tags as key-value pairs for [`OriginalMeta::pairs`].
-fn original_meta(tiff: &TiffFile, ifd: &Ifd) -> Result<Vec<(String, String)>> {
+pub(super) fn original_meta(tiff: &TiffFile, ifd: &Ifd) -> Result<Vec<(String, String)>> {
     let mut v = vec![
         ("Byte order".to_string(), if tiff.little { "little-endian" } else { "big-endian" }.to_string()),
         ("BigTIFF".to_string(), tiff.big.to_string()),

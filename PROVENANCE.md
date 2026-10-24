@@ -95,6 +95,19 @@ as black-box command-line tools to produce reference output
 - Synthetic samples written from the documented layout by
   `tests/scripts/make_lif_samples.py`.
 
+## Aperio SVS (`src/formats/svs.rs`, `src/formats/slide.rs`)
+
+- Aperio "Digital Slides and Third-Party Data Interchange" (2008) in
+  `doc/aperio-svs/`: IFD order (baseline, thumbnail, pyramid, label, macro).
+- openslide.org Aperio format page (prose, CC BY-SA 4.0): subfile types of
+  label (1) and macro (9), JPEG 2000 compressions 33003 (YCbCr, no colour
+  transform) and 33005 (RGB). OpenSlide's C code (LGPL) was not consulted.
+- Own analysis of sample files; the YCbCr samples of 33003 tiles were
+  checked against OpenJPEG (ImageMagick, black box): identical components,
+  JFIF YCbCr to RGB conversion.
+- Synthetic sample written from the documented layout by
+  `tests/scripts/make_svs_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
