@@ -1,5 +1,11 @@
 # JPEG 4:2:0 tiles: zune-jpeg's chroma upsampling differs from libjpeg-turbo by a mean of up to
 # 0.4 per channel (see scn_divergences.tsv); the label and probability images are exact.
-file	tool	series	tolerance	reason
-tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	0	1.0	JPEG 4:2:0 chroma upsampling
-tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	3	1.0	JPEG 4:2:0 chroma upsampling
+# OS-2 (iScan, fetch_openslide.py --large) is compared with OpenSlide crops.
+file	tool	series	crop	tolerance	reason
+tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	0	-	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	3	-	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Ventana/OS-2.bif	openslide	-	69000,37000,2048,2048	2.5	OpenSlide draws iScan tiles at fractional lattice positions with interpolation, scopeio snaps them to whole pixels (alignment checked, channel means within 0.4); JPEG decoder rounding
+tests/reference/openslide/Ventana/OS-2.bif	openslide	-	2000,34000,1024,1024	2.5	OpenSlide draws iScan tiles at fractional lattice positions with interpolation, scopeio snaps them to whole pixels (alignment checked, channel means within 0.4); JPEG decoder rounding
+tests/reference/openslide/Ventana/OS-2.bif	openslide	-	14000,9000,1024,1024	2.5	OpenSlide draws iScan tiles at fractional lattice positions with interpolation, scopeio snaps them to whole pixels (alignment checked, channel means within 0.4); JPEG decoder rounding
+tests/reference/openslide/Ventana/OS-2.bif	openslide	-	1000,600,512,512	2.5	OpenSlide draws iScan tiles at fractional lattice positions with interpolation, scopeio snaps them to whole pixels (alignment checked, channel means within 0.4); JPEG decoder rounding
+tests/reference/openslide/Ventana/OS-2.bif	openslide	-	0,0,449,299	2.5	OpenSlide draws iScan tiles at fractional lattice positions with interpolation, scopeio snaps them to whole pixels (alignment checked, channel means within 0.4); JPEG decoder rounding

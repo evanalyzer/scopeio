@@ -1,5 +1,7 @@
 #!/bin/sh
-# Regenerates the Ventana BIF references (OpenSlide test data, CC0).
+# Regenerates the Ventana BIF references (OpenSlide test data, CC0 and
+# distributable); OS-2 (iScan) needs fetch_openslide.py --large and is
+# compared with OpenSlide crops.
 #
 # Usage: REP=3 sh tests/scripts/oracle_bif.sh
 set -e
@@ -11,3 +13,10 @@ python3 -I tests/scripts/oracle.py bif --repeat 1 --series 0 --crop 0,0,2048,102
 python3 -I tests/scripts/oracle.py bif --repeat 1 --series 3 --ours-series 0/3 --append $V
 python3 -I tests/scripts/oracle.py bif --repeat 1 --series 8 --ours-series assoc:macro --append $V
 python3 -I tests/scripts/oracle.py bif --repeat 1 --series 9 --ours-series assoc:probability --append $V
+O=tests/reference/openslide/Ventana/OS-2.bif
+if [ -f $O ]; then
+  for c in "0 69000,37000,2048,2048" "0 2000,34000,1024,1024" "2 14000,9000,1024,1024" "5 1000,600,512,512" "8 0,0,449,299"; do
+    set -- $c
+    python3 -I tests/scripts/oracle.py bif --repeat 1 --tools openslide --ours-series 0/$1 --crop $2 --append $O
+  done
+fi

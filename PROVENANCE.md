@@ -215,6 +215,17 @@ as black-box command-line tools to produce reference output
   assumed. No public volumetric BIF exists; on the synthetic
   `volumetric.bif` Bio-Formats (black box) returns the same three planes in
   the same order (near, nominal, far).
+- iScan slides (OpenSlide's OS-2 sample, iScan software 3.3, no `Frame`
+  nodes, several AOIs, overlaps in both directions): the placement was
+  derived by locating stored tiles in renderings of OpenSlide 3.4.1 run as a
+  black box: one lattice per scanned AOI with the tile size less the mean
+  overlap of all joined `TileJointInfo` entries as pitch (fitted pitch
+  911.11 px against 911.11 from the mean, residual under 1 px), AOI
+  positions from `Pos-X`/`Pos-Y` with stage y pointing up, the stored grid
+  position from `AoiOrigin`, and later tiles (rows from the top, columns
+  from the left) on top. Bio-Formats stitches the same file to a different
+  size (117390 x 76317 against OpenSlide's 114943 x 76349); OpenSlide is the
+  reference. Our canvas is 1 px narrower than OpenSlide's.
 - Synthetic samples written from that model by
   `tests/scripts/make_bif_samples.py`.
 

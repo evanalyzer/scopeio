@@ -1,6 +1,6 @@
 //! # bif
 //!
-//! Roche Ventana BIF reader (VENTANA DP 200 BigTIFF slides).
+//! Roche Ventana BIF reader (VENTANA DP 200 and iScan BigTIFF slides).
 //!
 //! Directory 0 is the label/overview image (`Label_Image`), 1 the tissue
 //! probability map, 2 the full-resolution scan and 3 onwards the pyramid.
@@ -13,6 +13,14 @@
 //! footprint is moved to its stitched position (as Bio-Formats does), and
 //! levels are cropped to the stitched size. Unscanned tiles (no data) read as
 //! the `ScanWhitePoint`.
+//!
+//! iScan slides (no `Frame` nodes) may have several AOIs and overlap in
+//! both directions. Their tiles are placed as OpenSlide (run as a black box)
+//! places them: on a lattice per scanned AOI whose pitch is the tile size
+//! less the mean overlap of all joined joints, at the AOI's stage position
+//! (`Pos-X`, `Pos-Y` with y pointing up), read from the AOI's `AoiOrigin` in
+//! the stored grid, rows from the top and later tiles on top. Lower levels
+//! draw each tile's footprint in the stored level at the scaled position.
 //!
 //! Volumetric scans (tag `ImageDepth` 32997, `Z-layers` > 1) store the
 //! nominal focus plane first in the tile tables, then the near planes, then
@@ -91,6 +99,30 @@ struct Placed {
     y: u32,
 }
 
+/// A level-0 tile of an iScan slide on its regular lattice.
+#[derive(Debug, Clone, Copy)]
+struct LatticeTile {
+    /// Origin of the tile in the stored (padded) TIFF grid.
+    gx: u32,
+    gy: u32,
+    /// Canvas position of the tile.
+    x: f64,
+    y: f64,
+}
+
+/// Placement of iScan slides (no `Frame` nodes): the tiles of each scanned
+/// AOI on a lattice whose pitch is the tile size less the mean overlap of
+/// the joined joints.
+#[derive(Debug)]
+struct Lattice {
+    /// In drawing order: AOIs in turn, rows from the top, columns from the
+    /// left; later tiles cover earlier ones.
+    tiles: Vec<LatticeTile>,
+    tile: (u32, u32),
+    width: u64,
+    height: u64,
+}
+
 /// Ventana BIF slide.
 #[derive(Debug)]
 pub(super) struct Bif {
@@ -99,6 +131,7 @@ pub(super) struct Bif {
     levels: Vec<Vec<TiffImage>>,
     /// Level-0 tiles by tile row.
     rows: Vec<Vec<Placed>>,
+    lattice: Option<Lattice>,
     tile: (u32, u32),
     white: u8,
     metas: Vec<SeriesMeta>,
@@ -196,6 +229,88 @@ fn stitching(xmp: &str, chunks: usize, across: u32) -> Result<Option<Stitching>>
     Ok(Some((rows, (tw, th), width)))
 }
 
+/// The [`Lattice`] of an `EncodeInfo` without `Frame` nodes (iScan
+/// scanners); `None` if the layout is incomplete.
+///
+/// Every AOI has `Pos-X`/`Pos-Y` (stage coordinates in level-0 pixels, y
+/// pointing up) and its tile grid starts at `AoiOrigin` in the stored image.
+/// Tiles are placed at a constant pitch, not by the overlap of each joint.
+fn lattice(xmp: &str, grid: (u32, u32)) -> Option<Lattice> {
+    let doc = Document::parse(xmp).ok()?;
+    let encode = doc.descendants().find(|n| n.tag_name().name() == "EncodeInfo")?;
+    if encode.descendants().any(|n| n.tag_name().name() == "Frame") {
+        return None;
+    }
+    let infos: Vec<Node> = encode.descendants().filter(|n| n.tag_name().name() == "ImageInfo").collect();
+    let origins = child(encode, "AoiOrigin")?;
+    let (tw, th): (u32, u32) = (num(*infos.first()?, "Width")?, num(*infos.first()?, "Height")?);
+    if tw == 0 || th == 0 {
+        return None;
+    }
+    // Mean overlap of the joined joints of all AOIs.
+    let (mut sx, mut nx, mut sy, mut ny) = (0f64, 0u64, 0f64, 0u64);
+    for j in encode.descendants().filter(|n| n.tag_name().name() == "TileJointInfo" && n.attribute("FlagJoined") == Some("1")) {
+        match j.attribute("Direction") {
+            Some("LEFT" | "RIGHT") => (sx, nx) = (sx + num::<f64>(j, "OverlapX").unwrap_or(0.0), nx + 1),
+            Some("UP" | "DOWN") => (sy, ny) = (sy + num::<f64>(j, "OverlapY").unwrap_or(0.0), ny + 1),
+            _ => {}
+        }
+    }
+    let mean = |s: f64, n: u64, size: u32| if n == 0 { 0.0 } else { (s / n as f64).clamp(0.0, size as f64 - 1.0) };
+    let (px, py) = (tw as f64 - mean(sx, nx, tw), th as f64 - mean(sy, ny, th));
+    struct Aoi {
+        rows: u32,
+        cols: u32,
+        pos: (f64, f64),
+        origin: (u32, u32),
+    }
+    let mut aois = Vec::new();
+    for (i, info) in infos.iter().enumerate() {
+        if num::<u32>(*info, "AOIScanned") == Some(0) {
+            continue;
+        }
+        let index = num::<usize>(*info, "AOIIndex").unwrap_or(i);
+        let o = origins.children().find(|n| n.tag_name().name() == format!("AOI{index}"))?;
+        let aoi = Aoi {
+            rows: num(*info, "NumRows")?,
+            cols: num(*info, "NumCols")?,
+            pos: (num(*info, "Pos-X")?, num(*info, "Pos-Y")?),
+            origin: (num(o, "OriginX")?, num(o, "OriginY")?),
+        };
+        if (num(*info, "Width"), num(*info, "Height")) != (Some(tw), Some(th))
+            || !(aoi.pos.0.is_finite() && aoi.pos.1.is_finite())
+            || aoi.rows == 0
+            || aoi.cols == 0
+            || aoi.origin.0 as u64 + aoi.cols as u64 * tw as u64 > grid.0 as u64
+            || aoi.origin.1 as u64 + aoi.rows as u64 * th as u64 > grid.1 as u64
+        {
+            return None;
+        }
+        aois.push(aoi);
+    }
+    // Stage y points up: the canvas top is the highest AOI top.
+    let top = |a: &Aoi| a.pos.1 + (a.rows - 1) as f64 * py + th as f64;
+    let x0 = aois.iter().map(|a| a.pos.0).reduce(f64::min)?;
+    let y_top = aois.iter().map(top).reduce(f64::max)?;
+    let y_bottom = aois.iter().map(|a| a.pos.1).reduce(f64::min)?;
+    let x1 = aois.iter().map(|a| a.pos.0 + (a.cols - 1) as f64 * px + tw as f64).reduce(f64::max)?;
+    let mut tiles = Vec::new();
+    for a in &aois {
+        let (ax, ay) = (a.pos.0 - x0, y_top - top(a));
+        for r in 0..a.rows {
+            for c in 0..a.cols {
+                tiles.push(LatticeTile { gx: a.origin.0 + c * tw, gy: a.origin.1 + r * th, x: ax + c as f64 * px, y: ay + r as f64 * py });
+            }
+        }
+    }
+    let (width, height) = ((x1 - x0).ceil() as u64, (y_top - y_bottom).ceil() as u64);
+    // Stitching shrinks the grid; a much larger canvas means corrupt positions.
+    if width > 4 * grid.0 as u64 || height > 4 * grid.1 as u64 {
+        return None;
+    }
+    Some(Lattice { tiles, tile: (tw, th), width, height })
+}
+
 impl Bif {
     /// Opens a BIF file.
     ///
@@ -249,6 +364,7 @@ impl Bif {
             _ => (Vec::new(), (base.chunk_w, base.chunk_h), base.width),
         };
         let height = if rows.is_empty() { base.height } else { rows.len() as u32 * tile.1 };
+        let lattice = if rows.is_empty() { lattice(&scan_xmp, (base.width, base.height)) } else { None };
         // iScan attributes of the label directory.
         let iscan = xmp(0).unwrap_or_default();
         let (mut mpp, mut mag, mut white, mut z_spacing) = (None, None, 255u8, None);
@@ -267,8 +383,14 @@ impl Bif {
             .map(|(l, planes)| {
                 let img = &planes[0];
                 let f = (1u64 << l) as f64;
-                let (w, h) = if l == 0 { (width as u64, height as u64) } else { ((width as f64 / f) as u64, (height as f64 / f) as u64) };
-                LevelMeta { size_x: w.min(img.width as u64), size_y: h.min(img.height as u64), tile: Some((img.chunk_w, img.chunk_h)), downsample: f }
+                let (w, h) = match &lattice {
+                    // Lower levels round up, as OpenSlide reports them.
+                    // The lattice canvas need not fit in the stored grid.
+                    Some(lat) => (lat.width.div_ceil(1 << l), lat.height.div_ceil(1 << l)),
+                    None if l == 0 => ((width as u64).min(img.width as u64), (height as u64).min(img.height as u64)),
+                    None => (((width as f64 / f) as u64).min(img.width as u64), ((height as f64 / f) as u64).min(img.height as u64)),
+                };
+                LevelMeta { size_x: w, size_y: h, tile: Some((img.chunk_w, img.chunk_h)), downsample: f }
             })
             .collect();
         let meta = SeriesMeta {
@@ -288,6 +410,7 @@ impl Bif {
             tiff,
             levels,
             rows,
+            lattice,
             tile,
             white,
             metas: vec![meta],
@@ -386,6 +509,51 @@ impl Bif {
     }
 }
 
+impl Bif {
+    /// A level of an iScan slide: each tile's footprint in the stored level
+    /// drawn at its lattice position scaled to the level, snapped to whole
+    /// pixels, later tiles on top. Canvas no tile covers reads as unscanned.
+    fn read_lattice(&self, lat: &Lattice, level: usize, z: usize, region: Region, sink: &mut Sink) -> Result<()> {
+        let img = &self.levels[level][z];
+        let f = (1u64 << level.min(30)) as f64;
+        let px = img.samples_out as usize * img.pixel_type.bytes();
+        let samples = if img.samples_out == 1 { Samples::One(0) } else { Samples::All };
+        let (x0, y0) = (region.x as i64, region.y as i64);
+        let (x1, y1) = (x0 + region.width as i64, y0 + region.height as i64);
+        for y in 0..region.height as usize {
+            sink.write_with(y, 0, region.width as usize, |d| {
+                d.fill(self.white);
+                Ok(())
+            })?;
+        }
+        let (tw, th) = (lat.tile.0 as f64, lat.tile.1 as f64);
+        for t in &lat.tiles {
+            // Footprint on the canvas and in the stored level.
+            let (dx0, dy0) = ((t.x / f).round() as i64, (t.y / f).round() as i64);
+            let (sx0, sy0) = ((t.gx as f64 / f).round() as i64, (t.gy as f64 / f).round() as i64);
+            let w = ((t.gx as f64 + tw) / f).round() as i64 - sx0;
+            let h = ((t.gy as f64 + th) / f).round() as i64 - sy0;
+            let w = w.min(img.width as i64 - sx0);
+            let h = h.min(img.height as i64 - sy0);
+            let (cx0, cx1) = (x0.max(dx0), x1.min(dx0 + w));
+            let (cy0, cy1) = (y0.max(dy0), y1.min(dy0 + h));
+            if cx0 >= cx1 || cy0 >= cy1 {
+                continue;
+            }
+            let src = Region::new((sx0 + cx0 - dx0) as u64, (sy0 + cy0 - dy0) as u64, (cx1 - cx0) as u64, (cy1 - cy0) as u64);
+            let part = native_image(src, img.samples_out, img.pixel_type, |s| img.read_native(&self.tiff, src, samples, s))?;
+            let row = src.width as usize * px;
+            for y in 0..src.height as usize {
+                sink.write_with((cy0 - y0) as usize + y, (cx0 - x0) as usize, src.width as usize, |d| {
+                    d.copy_from_slice(&part.data[y * row..(y + 1) * row]);
+                    Ok(())
+                })?;
+            }
+        }
+        Ok(())
+    }
+}
+
 impl Backend for Bif {
     fn format(&self) -> &'static FormatInfo {
         &FORMAT
@@ -413,6 +581,9 @@ impl Backend for Bif {
 
     fn read_native(&self, _series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
         let z = plane.z as usize;
+        if let Some(lat) = &self.lattice {
+            return self.read_lattice(lat, level, z, region, sink);
+        }
         if level == 0 && !self.rows.is_empty() {
             return self.read_stitched(z, region, sink);
         }
@@ -436,6 +607,29 @@ mod tests {
         // Storage: nominal, near -1, near -2, far +1, far +2.
         assert_eq!((0..5).map(|z| storage_block(z, 5)).collect::<Vec<_>>(), [2, 1, 0, 3, 4]);
         assert_eq!(storage_block(0, 1), 0);
+    }
+
+    #[test]
+    fn iscan_lattice() {
+        // Two AOIs as in OpenSlide's OS-2 sample, scaled down: stage y points up.
+        let xmp = r#"<EncodeInfo Ver='2'>
+            <ImageInfo AOIScanned="1" Width="10" Height="8" NumRows="2" NumCols="2" Pos-X="0" Pos-Y="20">
+              <TileJointInfo FlagJoined='1' Direction='RIGHT' Tile1='1' Tile2='2' OverlapX='3' OverlapY='1'/>
+              <TileJointInfo FlagJoined='0' Direction='RIGHT' Tile1='3' Tile2='4' OverlapX='0' OverlapY='0'/>
+              <TileJointInfo FlagJoined='1' Direction='UP' Tile1='1' Tile2='4' OverlapX='-1' OverlapY='2'/></ImageInfo>
+            <ImageInfo AOIScanned="0" Width="10" Height="8" NumRows="1" NumCols="1" Pos-X="5" Pos-Y="5"/>
+            <ImageInfo AOIScanned="1" Width="10" Height="8" NumRows="1" NumCols="2" Pos-X="30" Pos-Y="0">
+              <TileJointInfo FlagJoined='1' Direction='RIGHT' Tile1='1' Tile2='2' OverlapX='5' OverlapY='0'/></ImageInfo>
+            <AoiOrigin><AOI0 OriginX="0" OriginY="0"/><AOI1 OriginX="20" OriginY="16"/><AOI2 OriginX="0" OriginY="16"/></AoiOrigin>
+            </EncodeInfo>"#;
+        let lat = lattice(xmp, (30, 24)).unwrap();
+        // Pitch: 10 - (3 + 5) / 2 = 6 across, 8 - 2 = 6 down.
+        let pos: Vec<_> = lat.tiles.iter().map(|t| (t.gx, t.gy, t.x, t.y)).collect();
+        // AOI0 top: 20 + 6 + 8 = 34 is the canvas top; AOI2 top at 34 - 8.
+        assert_eq!(pos, [(0, 0, 0.0, 0.0), (10, 0, 6.0, 0.0), (0, 8, 0.0, 6.0), (10, 8, 6.0, 6.0), (0, 16, 30.0, 26.0), (10, 16, 36.0, 26.0)]);
+        assert_eq!((lat.width, lat.height), (46, 34));
+        // DP 200 layouts (Frame nodes) are not lattices.
+        assert!(lattice(&xmp.replace("</EncodeInfo>", "<FrameInfo><Frame XY='0,0' Z='0'/></FrameInfo></EncodeInfo>"), (30, 24)).is_none());
     }
 
     #[test]

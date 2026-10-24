@@ -27,8 +27,8 @@ DEFAULT = [
     "Ventana/Ventana-1.bif",
 ]
 # Large files with layouts the default set lacks (NDPI offsets above 4 GiB,
-# MIRAX slide version 2.2).
-LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi", "Mirax/Mirax2.2-1.zip"]
+# MIRAX slide version 2.2, iScan BIF).
+LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi", "Mirax/Mirax2.2-1.zip", "Ventana/OS-2.bif"]
 
 
 def sha256(path):

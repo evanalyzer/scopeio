@@ -55,7 +55,7 @@ fn synthetic_file_matches_spec_truth() {
 
 #[test]
 fn corrupt_files_do_not_panic() {
-    for name in ["synthetic.bif", "volumetric.bif"] {
+    for name in ["synthetic.bif", "volumetric.bif", "iscan.bif"] {
         common::corrupt_sweep(&root().join("tests/data/bif").join(name), 13);
     }
 }

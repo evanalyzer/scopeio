@@ -26,3 +26,13 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/openslide/Ventana/Ventana-1.bif (series 9) | 222048 KiB | scopeio | ok | 2.786 | 2.790 | 1451.8 |
 | tests/reference/openslide/Ventana/Ventana-1.bif (series 9) | 222048 KiB | bioformats | ok | 1.426 | 0.580 | 181.7 |
 | tests/reference/openslide/Ventana/Ventana-1.bif (series 9) | 222048 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 69000,37000,2048,2048 | 2654134 KiB | scopeio | ok | 0.101 | 0.103 | 34.6 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 69000,37000,2048,2048 | 2654134 KiB | openslide | ok | 2.100 | 2.102 | 58.2 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 2000,34000,1024,1024 | 2654134 KiB | scopeio | ok | 0.036 | 0.038 | 19.7 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 2000,34000,1024,1024 | 2654134 KiB | openslide | ok | 0.529 | 0.531 | 50.4 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 14000,9000,1024,1024 | 2654134 KiB | scopeio | ok | 0.239 | 0.240 | 15.2 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 14000,9000,1024,1024 | 2654134 KiB | openslide | ok | 0.559 | 0.561 | 50.1 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 1000,600,512,512 | 2654134 KiB | scopeio | ok | 1.909 | 1.911 | 13.1 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 1000,600,512,512 | 2654134 KiB | openslide | ok | 0.186 | 0.187 | 50.3 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 0,0,449,299 | 2654134 KiB | scopeio | ok | 13.578 | 13.583 | 12.9 |
+| tests/reference/openslide/Ventana/OS-2.bif crop 0,0,449,299 | 2654134 KiB | openslide | ok | 0.177 | 0.179 | 50.4 |
