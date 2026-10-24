@@ -71,6 +71,7 @@ python3 -I tests/scripts/make_dicom_samples.py    # DICOM WSI (native, RLE, spar
 python3 -I tests/scripts/make_zvi_samples.py      # Zeiss ZVI (shares cfbwriter.py with the OIF generator)
 python3 -I tests/scripts/make_xlef_samples.py     # Leica LOF and XLEF/XLCF/XLIF
 python3 -I tests/scripts/make_stk_samples.py      # MetaMorph STK
+python3 -I tests/scripts/make_dv_samples.py       # DeltaVision
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -137,6 +138,12 @@ python3 -I tests/scripts/fetch_figshare.py --ext .stk 7583960 12981617 6852419
 find tests/reference/figshare -name "*.stk" -print0 | sort -z | xargs -0 python3 -I tests/scripts/oracle.py stk --repeat 3
 python3 -I tests/scripts/fetch_ome.py Metamorph/zenodo-13642395/
 python3 -I tests/scripts/oracle.py stk --append --per-series --repeat 1 tests/reference/ome/Metamorph/zenodo-13642395/test_timelapse_20240816.nd
+# DeltaVision: OME siRNAi-HeLa samples (CC BY 4.0) and the synthetic files
+D=tests/reference/ome/DV/siRNAi-HeLa
+python3 -I tests/scripts/fetch_ome.py DV/siRNAi-HeLa/IN_02.r3d DV/siRNAi-HeLa/IN_02.r3d_D3D.dv DV/siRNAi-HeLa/IN_02.r3d_D3D_PRJ.dv \
+    DV/siRNAi-HeLa/VRAQ_01.r3d DV/siRNAi-HeLa/CSFV_10.r3d_D3D_PRJ.dv
+python3 -I tests/scripts/oracle.py dv --repeat 3 $D/IN_02.r3d $D/IN_02.r3d_D3D.dv $D/IN_02.r3d_D3D_PRJ.dv $D/VRAQ_01.r3d $D/CSFV_10.r3d_D3D_PRJ.dv
+python3 -I tests/scripts/oracle.py dv --append --repeat 1 tests/data/dv/wzt_be.r3d tests/data/dv/ztw_le.dv
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

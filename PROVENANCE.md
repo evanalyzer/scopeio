@@ -340,6 +340,17 @@ as black-box command-line tools to produce reference output
   reports 1 um for a stack calibrated in "pixel"; scopeio reports none.
 - Synthetic samples written by `tests/scripts/make_stk_samples.py`.
 
+## DeltaVision (`src/formats/dv.rs`)
+
+- Priism IVE image file format reference (UCSF; archived copy in
+  `doc/deltavision-dv/`): header fields, pixel modes, section orders,
+  extended header.
+- OpenReadout DeltaVision notes (MIT OR Apache-2.0, `doc/deltavision-dv/`).
+- Own analysis of the OME `DV/siRNAi-HeLa` samples (CC BY 4.0): byte order
+  from the identifier, rows stored bottom-up. Pixels identical to
+  Bio-Formats and bioformats-rs (black boxes) on all five files.
+- Synthetic samples written by `tests/scripts/make_dv_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

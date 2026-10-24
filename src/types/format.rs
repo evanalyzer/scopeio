@@ -47,6 +47,7 @@ pub enum FormatId {
     Lof,
     /// Leica XML experiment, collection or image file.
     Xlef,
+    DeltaVision,
     /// MetaMorph stack (TIFF with UIC tags).
     Stk,
     /// MetaMorph multi-dimensional acquisition (`.nd` and its TIFF/STK files).

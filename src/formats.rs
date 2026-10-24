@@ -28,6 +28,8 @@ mod zvi;
 mod czi;
 #[cfg(feature = "dicom")]
 mod dicom;
+#[cfg(feature = "dv")]
+mod dv;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "lif")]
@@ -124,6 +126,8 @@ static SUPPORTED: &[FormatInfo] = &[
     dicom::FORMAT,
     #[cfg(feature = "zvi")]
     zvi::FORMAT,
+    #[cfg(feature = "dv")]
+    dv::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -227,6 +231,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if let Some(id) = tiff::probe(path, &head)? {
         return Ok(Some(id));
     }
+    #[cfg(feature = "dv")]
+    if dv::matches(&head) {
+        return Ok(Some(FormatId::DeltaVision));
+    }
     #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
     if let Some(id) = plain::probe(&head) {
         return Ok(Some(id));
@@ -265,6 +273,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
         #[cfg(feature = "stk")]
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
+        #[cfg(feature = "dv")]
+        Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
         #[cfg(feature = "zvi")]
         Some(FormatId::Zvi) => Ok(Arc::new(Reader(zvi::Zvi::open(path)?))),
         #[cfg(feature = "dicom")]
