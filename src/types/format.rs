@@ -43,6 +43,10 @@ pub enum FormatId {
     Oir,
     Dicom,
     Zvi,
+    /// Leica object file (one image).
+    Lof,
+    /// Leica XML experiment, collection or image file.
+    Xlef,
 }
 
 /// Identification of the reader that produced the data, for

@@ -69,6 +69,7 @@ python3 -I tests/scripts/make_oif_samples.py      # Olympus OIF/OIB (own compoun
 python3 -I tests/scripts/make_oir_samples.py      # Olympus OIR with a continuation file
 python3 -I tests/scripts/make_dicom_samples.py    # DICOM WSI (native, RLE, sparse, fluorescence) and plain
 python3 -I tests/scripts/make_zvi_samples.py      # Zeiss ZVI (shares cfbwriter.py with the OIF generator)
+python3 -I tests/scripts/make_xlef_samples.py     # Leica LOF and XLEF/XLCF/XLIF
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -178,6 +179,17 @@ L=tests/reference/ome/Leica-LIF
 F="$L/imagesc-30856/20191025 Test FRET 585. 423, 426.lif"
 python3 -I tests/scripts/oracle.py lif --per-series tests/external/laica_01.lif $L/michael/PR2729_frameOrderCombinedScanTypes.lif "$F" $L/zenodo-6606445/Project007.lif
 for k in 0 1 2 3 4 5 6 7; do python3 -I tests/scripts/oracle.py lif --repeat 1 --series $k --append "$F"; done
+```
+
+Leica LOF and XLEF (OME `Leica-XLEF` samples; the folder states no licence,
+so the files are only downloaded, never committed; its `lif/` folder holds
+plain LIF files):
+
+```sh
+python3 -I tests/scripts/fetch_ome.py Leica-XLEF/
+X=tests/reference/ome/Leica-XLEF; Y="$X/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small"
+find $X -path "$X/lif" -prune -o -name "*.xlef" -print0 | sort -z | xargs -0 python3 -I tests/scripts/oracle.py xlef --per-series --repeat 1
+python3 -I tests/scripts/oracle.py xlef --per-series --repeat 1 --append "$Y/Image001.lof" "$Y/Series002.lof"
 ```
 
 SVS (`--ours-series 0/2` compares a Bio-Formats pyramid series with level 2

@@ -1,0 +1,12 @@
+# Known differences for Leica LOF and XLEF.
+file	tool	series	tolerance	reason
+tests/reference/ome/Leica-XLEF/Snail/XLEF-LOF Snail/Schnecke.xlef	bioformats	0		Dimensions given in Unit "px" (Length = element count): no physical size; Bio-Formats reports 1.001 nm
+tests/reference/ome/Leica-XLEF/Snail/XLEF-LOF Snail/Schnecke.xlef	bioformats	1		Dimensions in Unit "px": no physical size
+tests/reference/ome/Leica-XLEF/Snail/XLEF-TIF Snail/XLEF-TIF Snail.xlef	bioformats	0		Dimensions in Unit "px": no physical size
+tests/reference/ome/Leica-XLEF/Snail/XLEF-TIF Snail/XLEF-TIF Snail.xlef	bioformats	1		Dimensions in Unit "px": no physical size
+tests/reference/ome/Leica-XLEF/format test/format test JPEG/format-test jpeg.xlef	bioformats	-	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/ome/Leica-XLEF/format test/format test JPEG TIF mixed/format-test jpeg tif mixed.xlef	bioformats	0	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/ome/Leica-XLEF/format test/format test JPEG TIF mixed/format-test jpeg tif mixed.xlef	bioformats	1	0.5	JPEG frames: IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/ome/Leica-XLEF/2020_06_23_sample 3 U2OS/XLEF-TIF 2020_06_23_sample 3 U2OS/2020_06_23_sample 3 U2OS.xlef	bioformats-rs	0		TIFF frames: bioformats-rs differs from its own read of the LOF variant, which matches ours
+tests/reference/ome/Leica-XLEF/Lysosomes actin in motion/XLEF-TIF Lysosomes_actin_in_motion/XLEF-TIF Lysosomes_actin_in_motion.xlef	bioformats-rs	0		TIFF frames: bioformats-rs differs; Bio-Formats matches ours
+tests/reference/ome/Leica-XLEF/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small/Image001.lof	bioformats-rs	-		FLIM LOF: bioformats-rs returns the 10752 x 256 x 70 F32 lifetime block; we read the 512 x 512 intensity image as Bio-Formats does

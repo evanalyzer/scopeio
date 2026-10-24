@@ -86,6 +86,10 @@ static SUPPORTED: &[FormatInfo] = &[
     czi::FORMAT,
     #[cfg(feature = "lif")]
     lif::FORMAT,
+    #[cfg(feature = "lif")]
+    lif::LOF_FORMAT,
+    #[cfg(feature = "lif")]
+    lif::XLEF_FORMAT,
     #[cfg(feature = "svs")]
     svs::FORMAT,
     #[cfg(feature = "ndpi")]
@@ -188,6 +192,14 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if lif::matches(&head) {
         return Ok(Some(FormatId::Lif));
     }
+    #[cfg(feature = "lif")]
+    if lif::matches_lof(&head) {
+        return Ok(Some(FormatId::Lof));
+    }
+    #[cfg(feature = "lif")]
+    if lif::matches_xml(path, &head) {
+        return Ok(Some(FormatId::Xlef));
+    }
     #[cfg(feature = "czi")]
     if czi::matches(&head) {
         return Ok(Some(FormatId::Czi));
@@ -268,7 +280,7 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         #[cfg(feature = "svs")]
         Some(FormatId::Svs) => Ok(Arc::new(Reader(svs::open(path, opts)?))),
         #[cfg(feature = "lif")]
-        Some(FormatId::Lif) => Ok(Arc::new(Reader(lif::Lif::open(path, opts)?))),
+        Some(FormatId::Lif | FormatId::Lof | FormatId::Xlef) => Ok(Arc::new(Reader(lif::Lif::open(path, opts)?))),
         #[cfg(feature = "czi")]
         Some(FormatId::Czi) => Ok(Arc::new(Reader(czi::Czi::open(path, opts)?))),
         #[cfg(feature = "nd2")]

@@ -101,6 +101,13 @@ as black-box command-line tools to produce reference output
   scans as one series per tile (as Bio-Formats lists them).
 - Synthetic samples written from the documented layout by
   `tests/scripts/make_lif_samples.py`.
+- LOF and the XML containers (XLEF, XLCF, XLLF, XLIF): liffile
+  (BSD-3-Clause, Christoph Gohlke; notice in THIRD_PARTY_NOTICES.md) read as
+  documentation: LOF layout (header text `LMS_Object_File`, memory block
+  before the XML), `Children/Reference` and `Memory/Frame` elements,
+  case-insensitive reference paths. Checked against Bio-Formats (black box)
+  on the OME `Leica-XLEF` samples; synthetic files written by
+  `tests/scripts/make_xlef_samples.py`.
 
 ## Aperio SVS (`src/formats/svs.rs`, `src/formats/slide.rs`)
 

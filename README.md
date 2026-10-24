@@ -65,13 +65,14 @@ compared, "n/a" means the reader cannot open the format.
 | Olympus OIR | 15 | 18 ms | 11 MiB | 244× / 51× | 2.8× / 6.1× | – |
 | DICOM | 17 | 55 ms | 18 MiB | 38× / 10× | 2.6× / 2.5× | – |
 | Zeiss ZVI | 14 | 8 ms | 6.7 MiB | 230× / 33× | 3.2× / 5.0× | – |
+| Leica LOF/XLEF | 49 | 41 ms | 7.3 MiB | 138× / 45× | 2.7× / 13× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
   the CPU and 2–7× the RAM.
 - The reference readers also write the pixels to disk (ICS output);
   scopeio only decodes.
-- bioformats-rs failed on 53 of the ops that scopeio read.
+- bioformats-rs failed on 83 of the ops that scopeio read.
 - Large plain images (24-megapixel RGB): PNG 0.31 s / 72 MiB (Bio-Formats
   1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.29 s / 145 MiB
   (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 4.9 s / 577 MiB
@@ -170,9 +171,9 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **LaVision Imspector** | — |  |
 | **Leica LAS AF LIF** | `.lif` | ✅ |
 | **Leica LCS LEI** | — |  |
-| **Leica LOF** | — |  |
+| **Leica LOF** | `.lof` | ✅ |
 | **Leica SCN** | `.scn` | ✅ |
-| **Leica XLEF** | — |  |
+| **Leica XLEF** | `.xlef, .xlcf, .xlif` | ✅ |
 | **LEO** | `.sxm, .tif, .tiff` |  |
 | **Li-Cor L2D** | `.l2d, .tif, .scn` |  |
 | **LIM (Laboratory Imaging/Nikon)** | `.lim` |  |

@@ -1,6 +1,8 @@
 //! # lif
 //!
-//! Leica LIF reader (LAS X / LAS AF project files).
+//! Leica LIF reader (LAS X / LAS AF project files) and the related LOF
+//! (one image) and XLEF / XLCF / XLIF (XML experiment, collection and image
+//! files) formats.
 //!
 //! A LIF file is a UTF-16 XML document describing a tree of elements,
 //! followed by memory blocks holding raw, uncompressed samples. Each image
@@ -11,13 +13,21 @@
 //! in a pixel) are one colour channel. Every sample is addressed with the
 //! `BytesInc` strides of its channel and dimensions.
 //!
-//! Not supported: FLIM raw data (`SingleMoleculeDetection`), LOF, XLIF and
-//! the other XML containers of the family.
+//! A LOF file holds one image: the LIF header (text `LMS_Object_File`), the
+//! memory block, then the XML. An XLEF experiment references XLCF folders
+//! and XLIF images (relative, percent-encoded paths with backslashes,
+//! matched without regard to case); an XLIF holds the image description
+//! and a memory block assembled from frames in other files (LOF, TIFF, PNG,
+//! JPEG, BMP), each decoded into its byte range of the block when a read
+//! needs it.
+//!
+//! Not supported: FLIM raw data (`SingleMoleculeDetection`).
 //!
 //! Provenance: OpenReadout LIF format notes (MIT OR Apache-2.0; derived from
 //! public samples and liffile's BSD-3 documentation) in `doc/leica-lif/`;
-//! own analysis of sample files. No GPL code consulted (readlif is GPL and
-//! was not used).
+//! liffile (BSD-3-Clause, Christoph Gohlke; see THIRD_PARTY_NOTICES.md)
+//! read as documentation for LOF and the XML containers; own analysis of
+//! sample files. No GPL code consulted (readlif is GPL and was not used).
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
@@ -27,9 +37,9 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use roxmltree::{Document, Node};
 
@@ -42,11 +52,46 @@ use crate::{
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lif, "Leica LIF", "1");
+pub(super) static LOF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Lof, "Leica LOF", "1");
+pub(super) static XLEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Xlef, "Leica XLEF/XLIF", "1");
+
+/// Text of the LIF header of a LOF file.
+const LOF_TEXT: &str = "LMS_Object_File";
+/// Most container files followed from one XLEF, against loops.
+const MAX_FILES: usize = 4096;
+/// Largest frame file decoded, in bytes.
+const MAX_FRAME: u64 = 1 << 31;
 
 const MARKER: u32 = 0x70;
 const TEXT: u8 = 0x2A;
 /// Largest XML read, against corrupt files.
 const MAX_XML_UNITS: usize = 512 << 20;
+
+/// Returns `true` if `head` starts with the LIF header of a LOF file.
+pub(super) fn matches_lof(head: &[u8]) -> bool {
+    let text: Vec<u8> = LOF_TEXT.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    head.len() >= 13 + text.len()
+        && u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) == MARKER
+        && head[8] == TEXT
+        && head[13..13 + text.len()] == text[..]
+}
+
+/// Returns `true` for an XLEF, XLCF, XLLF or XLIF file.
+pub(super) fn matches_xml(path: &Path, head: &[u8]) -> bool {
+    let ext = path.extension().map(|e| e.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+    matches!(ext.as_str(), "xlef" | "xlif" | "xlcf" | "xllf") && decode_text(head).contains("LMSDataContainer")
+}
+
+/// UTF-8 (with or without byte-order mark) or UTF-16LE text.
+fn decode_text(b: &[u8]) -> String {
+    if let Some(u) = b.strip_prefix(b"\xFF\xFE") {
+        String::from_utf16_lossy(&u.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
+    } else if b.len() >= 2 && b[0] == b'<' && b[1] == 0 {
+        String::from_utf16_lossy(&b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
+    } else {
+        String::from_utf8_lossy(b.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(b)).into_owned()
+    }
+}
 
 /// Returns `true` if `head` starts with a LIF header block.
 pub(super) fn matches(head: &[u8]) -> bool {
@@ -67,9 +112,37 @@ impl Axis {
     const NONE: Axis = Axis { count: 1, inc: 0 };
 }
 
+/// Where the bytes of memory blocks are.
+#[derive(Debug)]
+enum Source {
+    /// A LIF or LOF file; image offsets are file positions.
+    File(File),
+    /// An XLIF memory block made of frames in other files; image offsets
+    /// are positions in the block.
+    Frames(Vec<Frame>),
+}
+
+/// A part of an XLIF memory block stored in another file.
+#[derive(Debug, Clone)]
+struct Frame {
+    path: PathBuf,
+    offset: u64,
+    size: u64,
+}
+
+/// Where the XML of a series is.
+#[derive(Debug)]
+enum Xml {
+    /// UTF-16 code units in a LIF file.
+    File { source: usize, at: u64, units: usize },
+    Text(String),
+}
+
 /// One series: an image element, or one tile / split index of it.
 #[derive(Debug, Clone)]
 struct Image {
+    /// Index into [`Lif::sources`].
+    source: usize,
     /// Byte offset of the image's memory block plus the offset of this
     /// series' split index.
     base: u64,
@@ -90,12 +163,14 @@ struct Image {
     half: bool,
 }
 
-/// Leica LIF file.
+/// Leica LIF, LOF or XLEF/XLIF file.
 #[derive(Debug)]
 pub(super) struct Lif {
-    file: File,
-    xml_at: u64,
-    xml_units: usize,
+    format: &'static FormatInfo,
+    sources: Vec<Source>,
+    docs: Vec<Xml>,
+    /// Index into `docs` of each series.
+    series_doc: Vec<usize>,
     images: Vec<Image>,
     metas: Vec<SeriesMeta>,
     /// Frame times of each series in seconds since its first frame.
@@ -110,8 +185,29 @@ impl Lif {
     /// Returns [`Error::Corrupt`] for an invalid header, XML or block
     /// structure and [`Error::UnsupportedVariant`] for files without images.
     pub fn open(path: &Path, _opts: &OpenOptions) -> Result<Self> {
+        let mut lif = Lif { format: &FORMAT, sources: Vec::new(), docs: Vec::new(), series_doc: Vec::new(), images: Vec::new(), metas: Vec::new(), times: Vec::new() };
+        let mut head = [0u8; 64];
         let file = File::open(path)?;
         let len = file.metadata()?.len();
+        let n = (len as usize).min(head.len());
+        read_exact_at(&file, &mut head[..n], 0)?;
+        if matches_xml(path, &head[..n]) {
+            lif.format = &XLEF_FORMAT;
+            let mut seen = HashSet::new();
+            lif.open_container(path, "", &mut seen, 0)?;
+        } else if matches_lof(&head[..n]) {
+            lif.format = &LOF_FORMAT;
+            lif.open_lof(file, len, path)?;
+        } else {
+            lif.open_lif(file, len)?;
+        }
+        if lif.images.is_empty() {
+            return Err(Error::UnsupportedVariant(format!("{} without readable images", lif.format.name)));
+        }
+        Ok(lif)
+    }
+
+    fn open_lif(&mut self, file: File, len: u64) -> Result<()> {
         let mut head = [0u8; 13];
         if len < 13 {
             return Err(Error::Corrupt("LIF file too short".into()));
@@ -123,23 +219,99 @@ impl Lif {
         }
         let xml = read_xml(&file, 13, units)?;
         let blocks = memory_blocks(&file, len, 13 + 2 * units as u64);
+        let source = self.sources.len();
+        self.sources.push(Source::File(file));
+        self.docs.push(Xml::File { source, at: 13, units });
+        let doc = self.docs.len() - 1;
         let options = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
-        let doc = Document::parse_with_options(&xml, options).map_err(|e| Error::Corrupt(format!("LIF XML: {e}")))?;
-        let version = doc.root_element().attribute("Version").and_then(|v| v.parse::<u32>().ok()).unwrap_or(2);
-        let _ = version;
-        let mut lif = Lif { file, xml_at: 13, xml_units: units, images: Vec::new(), metas: Vec::new(), times: Vec::new() };
-        let root = doc.root_element().children().find(|c| c.has_tag_name("Element"));
-        if let Some(root) = root {
-            lif.walk(root, "", &blocks, true, 0)?;
+        let parsed = Document::parse_with_options(&xml, options).map_err(|e| Error::Corrupt(format!("LIF XML: {e}")))?;
+        if let Some(root) = parsed.root_element().children().find(|c| c.has_tag_name("Element")) {
+            self.walk(root, "", &blocks, true, 0, source, doc)?;
         }
-        if lif.images.is_empty() {
-            return Err(Error::UnsupportedVariant("LIF without readable images".into()));
+        Ok(())
+    }
+
+    /// LOF: LIF header with `LMS_Object_File`, two words, the memory block,
+    /// then the XML.
+    fn open_lof(&mut self, file: File, len: u64, path: &Path) -> Result<()> {
+        let (block, xml) = lof_parts(&file, len, path)?;
+        let options = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
+        let parsed = Document::parse_with_options(&xml, options).map_err(|e| Error::Corrupt(format!("LOF XML: {e}")))?;
+        let root = parsed.root_element().children().find(|c| c.has_tag_name("Element")).ok_or_else(|| Error::Corrupt("LOF without element".into()))?;
+        let id = child(root, "Memory").and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
+        let blocks = HashMap::from([(id.to_string(), block)]);
+        let source = self.sources.len();
+        self.sources.push(Source::File(file));
+        self.docs.push(Xml::Text(xml.clone()));
+        let doc = self.docs.len() - 1;
+        self.walk(root, "", &blocks, false, 0, source, doc)
+    }
+
+    /// An XLEF / XLCF / XLLF (references to further files) or XLIF (one
+    /// image) file; `prefix` names the folders above it.
+    fn open_container(&mut self, path: &Path, prefix: &str, seen: &mut HashSet<PathBuf>, depth: usize) -> Result<()> {
+        let canonical = path.canonicalize()?;
+        if depth > 32 || seen.len() >= MAX_FILES || !seen.insert(canonical) {
+            return Ok(());
         }
-        Ok(lif)
+        if std::fs::metadata(path)?.len() > MAX_XML_UNITS as u64 {
+            return Err(Error::Corrupt("Leica XML file too large".into()));
+        }
+        let text = decode_text(&std::fs::read(path)?);
+        let options = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
+        let parsed = Document::parse_with_options(&text, options).map_err(|e| Error::Corrupt(format!("{}: {e}", path.display())))?;
+        let Some(root) = parsed.root_element().children().find(|c| c.has_tag_name("Element")) else { return Ok(()) };
+        let dir = path.parent().unwrap_or(Path::new("."));
+        let name = root.attribute("Name").unwrap_or("");
+        if child(root, "Data").and_then(|d| child(d, "Image")).is_some() {
+            // XLIF: the memory block from frames in other files.
+            let memory = child(root, "Memory");
+            let id = memory.and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("").to_string();
+            let size: u64 = memory.and_then(|m| m.attribute("Size")).and_then(|v| v.parse().ok()).unwrap_or(0);
+            let frames: Vec<Frame> = memory
+                .into_iter()
+                .flat_map(|m| m.children())
+                .filter_map(|f| {
+                    let file = resolve(dir, f.attribute("File")?)?;
+                    Some(Frame { path: file, offset: f.attribute("Offset")?.parse().ok()?, size: f.attribute("Size")?.parse().ok()? })
+                })
+                .collect();
+            if frames.is_empty() || size == 0 {
+                return Ok(());
+            }
+            let lof = frames.len() == 1 && frames[0].path.extension().is_some_and(|e| e.eq_ignore_ascii_case("lof"));
+            let (source, blocks) = if lof {
+                // One LOF frame: its memory block, read in place.
+                let f = File::open(&frames[0].path)?;
+                let flen = f.metadata()?.len();
+                let ((at, block_len), _) = lof_parts(&f, flen, &frames[0].path)?;
+                self.sources.push(Source::File(f));
+                (self.sources.len() - 1, HashMap::from([(id, (at + frames[0].offset, block_len.min(size)))]))
+            } else {
+                self.sources.push(Source::Frames(frames));
+                (self.sources.len() - 1, HashMap::from([(id, (0, size))]))
+            };
+            self.docs.push(Xml::Text(text.clone()));
+            let doc = self.docs.len() - 1;
+            let image_prefix = prefix.to_string();
+            return self.walk(root, &image_prefix, &blocks, false, 0, source, doc);
+        }
+        // Folder: its children, named below this element (the top file's
+        // name is not part of image names).
+        let folder = if depth == 0 { String::new() } else if prefix.is_empty() { name.to_string() } else { format!("{prefix}/{name}") };
+        if let Some(children) = child(root, "Children") {
+            for r in children.children().filter(|c| c.has_tag_name("Reference")) {
+                if let Some(p) = r.attribute("File").and_then(|f| resolve(dir, f)) {
+                    self.open_container(&p, &folder, seen, depth + 1)?;
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Adds the images of `element` and its children, in document order.
-    fn walk(&mut self, element: Node, prefix: &str, blocks: &HashMap<String, (u64, u64)>, top: bool, depth: usize) -> Result<()> {
+    #[allow(clippy::too_many_arguments)]
+    fn walk(&mut self, element: Node, prefix: &str, blocks: &HashMap<String, (u64, u64)>, top: bool, depth: usize, source: usize, doc: usize) -> Result<()> {
         if depth > 64 {
             return Err(Error::Corrupt("LIF elements nested too deeply".into()));
         }
@@ -150,20 +322,25 @@ impl Lif {
             && let Some(desc) = child(image, "ImageDescription") {
                 let memory = child(element, "Memory");
                 let id = memory.and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
-                let size: u64 = memory.and_then(|m| m.attribute("Size")).and_then(|s| s.parse().ok()).unwrap_or(0);
+                // LOF files written without a Memory element hold one block.
+                let size: u64 = memory.map_or(Some(u64::MAX), |m| m.attribute("Size").and_then(|s| s.parse().ok())).unwrap_or(0);
                 if let Some(&(offset, len)) = blocks.get(id).filter(|_| size > 0) {
-                    self.add_image(element, image, desc, &path, offset, len.min(size))?;
+                    self.add_image(element, image, desc, &path, offset, len.min(size), source)?;
+                    while self.series_doc.len() < self.images.len() {
+                        self.series_doc.push(doc);
+                    }
                 }
             }
         if let Some(children) = child(element, "Children") {
             for c in children.children().filter(|c| c.has_tag_name("Element")) {
-                self.walk(c, &path, blocks, false, depth + 1)?;
+                self.walk(c, &path, blocks, false, depth + 1, source, doc)?;
             }
         }
         Ok(())
     }
 
-    fn add_image(&mut self, element: Node, image: Node, desc: Node, name: &str, offset: u64, block_len: u64) -> Result<()> {
+    #[allow(clippy::too_many_arguments)]
+    fn add_image(&mut self, element: Node, image: Node, desc: Node, name: &str, offset: u64, block_len: u64, source: usize) -> Result<()> {
         let num = |n: Node, a: &str| n.attribute(a).and_then(|v| v.trim().parse::<f64>().ok());
         let int = |n: Node, a: &str| n.attribute(a).and_then(|v| v.trim().parse::<u64>().ok()).unwrap_or(0);
         let chans: Vec<Node> = child(desc, "Channels").map(|c| c.children().filter(|c| c.has_tag_name("ChannelDescription")).collect()).unwrap_or_default();
@@ -299,6 +476,7 @@ impl Lif {
                 });
             }
             let img = Image {
+                source,
                 base,
                 block_len,
                 width: x.count,
@@ -369,6 +547,120 @@ impl Image {
         }
         Ok(())
     }
+}
+
+/// The memory block (position, length) and the XML of a LOF file. XML
+/// starting with `<Data>` (older files) is wrapped in a container header.
+fn lof_parts(file: &File, len: u64, path: &Path) -> Result<((u64, u64), String)> {
+    let bad = || Error::Corrupt("invalid LOF file".into());
+    let mut head = [0u8; 13];
+    if len < 13 {
+        return Err(bad());
+    }
+    read_exact_at(file, &mut head, 0)?;
+    let units = u32::from_le_bytes(head[9..13].try_into().expect("4 bytes")) as u64;
+    let mut at = 13 + 2 * units;
+    // Two (0x2A, u32) words, then the memory block: 0x2A, u64 length.
+    let mut words = [0u8; 19];
+    if at + 19 > len {
+        return Err(bad());
+    }
+    read_exact_at(file, &mut words, at)?;
+    if words[0] != TEXT || words[5] != TEXT || words[10] != TEXT {
+        return Err(bad());
+    }
+    let block_len = u64::from_le_bytes(words[11..19].try_into().expect("8 bytes"));
+    let data = at + 19;
+    at = data.checked_add(block_len).filter(|&e| e + 13 <= len).ok_or_else(bad)?;
+    read_exact_at(file, &mut head, at)?;
+    let xml_units = u32::from_le_bytes(head[9..13].try_into().expect("4 bytes")) as usize;
+    if u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) != MARKER || head[8] != TEXT || xml_units > MAX_XML_UNITS || at + 13 + 2 * xml_units as u64 > len {
+        return Err(bad());
+    }
+    let mut xml = read_xml(file, at + 13, xml_units)?;
+    if xml.starts_with("<Data>") {
+        let name = path.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        xml = format!("<LMSDataContainerHeader Version=\"2\"><Element Name=\"{name}\">{xml}</Element></LMSDataContainerHeader>");
+    }
+    Ok(((data, block_len), xml))
+}
+
+/// The file a container reference names: percent-encoded, with
+/// backslashes, relative to `dir`; matched without regard to case.
+fn resolve(dir: &Path, reference: &str) -> Option<PathBuf> {
+    let mut decoded = Vec::new();
+    let b = reference.as_bytes();
+    let mut i = 0;
+    while i < b.len() {
+        // %XX escapes; anything else (including a bad escape) is literal.
+        let escape = (b[i] == b'%' && i + 2 < b.len())
+            .then(|| std::str::from_utf8(&b[i + 1..i + 3]).ok().and_then(|h| u8::from_str_radix(h, 16).ok()))
+            .flatten();
+        if let Some(v) = escape {
+            decoded.push(v);
+            i += 3;
+            continue;
+        }
+        decoded.push(b[i]);
+        i += 1;
+    }
+    let text = String::from_utf8_lossy(&decoded).replace('\\', "/");
+    let mut path = dir.to_path_buf();
+    for part in text.split('/').filter(|p| !p.is_empty() && *p != ".") {
+        if part == ".." {
+            path.pop();
+            continue;
+        }
+        let direct = path.join(part);
+        path = if direct.exists() {
+            direct
+        } else {
+            std::fs::read_dir(&path).ok()?.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.file_name().is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(part)))?
+        };
+    }
+    Some(path)
+}
+
+/// Native bytes of a frame file: a LOF memory block, or the decoded image
+/// (interleaved samples) of a TIFF, PNG, JPEG or BMP file.
+fn frame_bytes(path: &Path, size: u64) -> Result<Vec<u8>> {
+    let file = File::open(path)?;
+    let len = file.metadata()?.len();
+    if len > MAX_FRAME {
+        return Err(Error::Corrupt(format!("frame file {} too large", path.display())));
+    }
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("lof")) {
+        let ((at, n), _) = lof_parts(&file, len, path)?;
+        let mut b = vec![0u8; n.min(MAX_FRAME) as usize];
+        read_exact_at(&file, &mut b, at)?;
+        return Ok(b);
+    }
+    let reader = super::open(path)?;
+    let m = reader.series_meta(0)?;
+    let l = &m.levels[0];
+    let mut req = crate::RegionRequest::new(0, 0, Region::new(0, 0, l.size_x, l.size_y));
+    req.output = crate::OutputSpec { keep_alpha: true, ..Default::default() };
+    let mut out = Vec::new();
+    for c in 0..m.size_c {
+        req.channels = crate::ChannelSelect::Channel(c);
+        out.extend_from_slice(reader.read_region(&req)?.as_bytes());
+    }
+    // A gray block stored as a gray-palette or gray RGB file keeps one
+    // sample per pixel.
+    if m.samples_per_pixel == 3 && out.len() as u64 == 3 * size {
+        let n = m.pixel_type.bytes();
+        return Ok(out.chunks_exact(3 * n).flat_map(|px| px[..n].iter().copied()).collect());
+    }
+    // Colour frames decode red first; the memory block holds blue first.
+    if m.samples_per_pixel == 3 {
+        let n = m.pixel_type.bytes();
+        for px in out.chunks_exact_mut(3 * n) {
+            for k in 0..n {
+                px.swap(k, 2 * n + k);
+            }
+        }
+    }
+    Ok(out)
 }
 
 fn child<'a, 'i>(n: Node<'a, 'i>, name: &str) -> Option<Node<'a, 'i>> {
@@ -498,7 +790,7 @@ fn half_to_f32(h: u16) -> f32 {
 
 impl Backend for Lif {
     fn format(&self) -> &'static FormatInfo {
-        &FORMAT
+        self.format
     }
 
     fn series(&self) -> &[SeriesMeta] {
@@ -518,12 +810,53 @@ impl Backend for Lif {
         if let Some(name) = &self.metas[series].name {
             meta.pairs.push(("Image name".into(), name.clone()));
         }
-        meta.documents.push(("LIF-XML".into(), read_xml(&self.file, self.xml_at, self.xml_units)?));
+        let xml = match &self.docs[self.series_doc[series]] {
+            Xml::File { source, at, units } => match &self.sources[*source] {
+                Source::File(f) => read_xml(f, *at, *units)?,
+                Source::Frames(_) => String::new(),
+            },
+            Xml::Text(t) => t.clone(),
+        };
+        meta.documents.push(("LIF-XML".into(), xml));
         Ok(meta)
     }
 
     fn read_native(&self, series: usize, _level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
         let img = &self.images[series];
+        match &self.sources[img.source] {
+            Source::File(file) => read_rows(img, plane, region, sink, &|buf, at| read_exact_at(file, buf, at)),
+            Source::Frames(frames) => {
+                // The byte span of the region in the memory block, from the
+                // frames it overlaps (each decoded once); gaps read as zeros.
+                let base = img.plane_offset(plane);
+                let (x0, y0) = (region.x, region.y);
+                let extra = img.rgb.map(|o| o.iter().max().copied().unwrap_or(0)).unwrap_or(0);
+                let lo = base + y0 * img.y_inc + x0 * img.x_inc;
+                let hi = base + (y0 + region.height - 1) * img.y_inc + (x0 + region.width - 1) * img.x_inc + extra + img.bytes as u64;
+                if hi - lo > 1 << 31 {
+                    return Err(Error::UnsupportedVariant("XLIF region spans too many bytes".into()));
+                }
+                let mut span = vec![0u8; (hi - lo) as usize];
+                for f in frames.iter().filter(|f| f.offset < hi && f.offset + f.size > lo) {
+                    let data = frame_bytes(&f.path, f.size)?;
+                    let (a, b) = (lo.max(f.offset), hi.min(f.offset + f.size).min(f.offset + data.len() as u64));
+                    if a < b {
+                        span[(a - lo) as usize..(b - lo) as usize].copy_from_slice(&data[(a - f.offset) as usize..(b - f.offset) as usize]);
+                    }
+                }
+                read_rows(img, plane, region, sink, &|buf, at| {
+                    let s = span.get((at - lo) as usize..(at - lo) as usize + buf.len()).ok_or_else(|| Error::Corrupt("XLIF read outside its span".into()))?;
+                    buf.copy_from_slice(s);
+                    Ok(())
+                })
+            }
+        }
+    }
+}
+
+/// Reads `region` of `plane` of `img` through `read(buf, at)`.
+fn read_rows(img: &Image, plane: Plane, region: Region, sink: &mut Sink, read: &dyn Fn(&mut [u8], u64) -> Result<()>) -> Result<()> {
+    {
         let base = img.plane_offset(plane);
         let (x0, y0, w, h) = (region.x, region.y, region.width as usize, region.height as usize);
         let px = img.pixel_bytes();
@@ -532,7 +865,7 @@ impl Backend for Lif {
         if img.rgb.is_none() && !img.half && img.x_inc == n as u64 {
             for r in 0..h {
                 let at = base + (y0 + r as u64) * img.y_inc + x0 * img.x_inc;
-                sink.write_with(r, 0, w, |dst| read_exact_at(&self.file, dst, at))?;
+                sink.write_with(r, 0, w, |dst| read(dst, at))?;
             }
             return Ok(());
         }
@@ -542,7 +875,7 @@ impl Backend for Lif {
         scratch::with(span, |row| {
             for r in 0..h {
                 let at = base + (y0 + r as u64) * img.y_inc + x0 * img.x_inc;
-                read_exact_at(&self.file, row, at)?;
+                read(row, at)?;
                 sink.write_with(r, 0, w, |dst| {
                     let out = if img.half { 4 } else { n };
                     for (i, d) in dst.chunks_exact_mut(px / n * out).enumerate() {
