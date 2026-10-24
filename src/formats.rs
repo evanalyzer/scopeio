@@ -12,6 +12,8 @@
 
 #[cfg(feature = "bmp")]
 mod bmp;
+#[cfg(feature = "nd2")]
+mod nd2;
 #[cfg(feature = "tiff")]
 mod tiff;
 #[cfg(feature = "vsi")]
@@ -42,6 +44,8 @@ static SUPPORTED: &[FormatInfo] = &[
     zarr::FORMAT,
     #[cfg(feature = "vsi")]
     vsi::FORMAT,
+    #[cfg(feature = "nd2")]
+    nd2::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -72,6 +76,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "bmp")]
     if bmp::matches(&head) {
         return Ok(Some(FormatId::Bmp));
+    }
+    #[cfg(feature = "nd2")]
+    if nd2::matches(&head) {
+        return Ok(Some(FormatId::Nd2));
     }
     // VSI files start with a TIFF header; check them before plain TIFF.
     #[cfg(feature = "vsi")]
@@ -112,6 +120,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "nd2")]
+        Some(FormatId::Nd2) => Ok(Arc::new(Reader(nd2::Nd2::open(path, opts)?))),
         #[cfg(feature = "vsi")]
         Some(FormatId::Vsi) => Ok(Arc::new(Reader(vsi::Vsi::open(path, opts)?))),
         #[cfg(feature = "zarr")]

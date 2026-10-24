@@ -1,0 +1,10 @@
+# Known differences between scopeio and the reference readers.
+file	tool	tolerance	reason
+tests/reference/ome/ND2/zenodo-12734440/HE_002.nd2	bioformats		returns colour samples in stored order; scopeio returns R, G, B from the stored B, G, R (OpenReadout notes; H&E tissue reads pink with the swap, blue without)
+tests/reference/ome/ND2/zenodo-10277961/MRAP1 KO DN_10X03.nd2	bioformats		returns colour samples in stored order; scopeio returns R, G, B from the stored B, G, R
+tests/external/nicon_01.nd2	bioformats-rs		reports a 5937 x 5937 uint8 image instead of the 2424 x 2424 three-channel uint16 frames
+tests/reference/ome/ND2/zenodo-12734440/HE_002.nd2	bioformats-rs		reports a 4206 x 4206 single-channel image instead of the 2880 x 2048 RGB frame
+tests/reference/ome/ND2/zenodo-10277961/MRAP1 KO DN_10X03.nd2	bioformats-rs		reports a 4206 x 4206 single-channel image instead of the 2880 x 2048 RGB frame
+tests/reference/ome/ND2/zenodo-15046688/N1_file_bugged_reconstructed-version.nd2	bioformats-rs		reports 4096 x 4096 uint8 with 5 time points instead of 2048 x 2048 float frames
+tests/reference/ome/ND2/zenodo-15046688/N1_file_bugged_raw-version.nd2	bioformats-rs		reports 4344 x 4344 uint8 with 5 time points instead of 3072 x 3072 uint16 frames
+tests/reference/ome/ND2/jonas/header_test2.nd2	bioformats-rs		ignores the Z loop of the version 2 metadata (reports 20 time points instead of 5 z x 4 t)

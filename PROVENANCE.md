@@ -56,6 +56,19 @@ as black-box command-line tools to produce reference output
 - Synthetic dataset written from the documented layout by
   `tests/scripts/make_vsi_samples.py`.
 
+## Nikon ND2 (`src/formats/nd2*`)
+
+- OpenReadout ND2 format notes and provenance log (MIT OR Apache-2.0) and
+  the nd2-rs data structure notes (MIT, see `doc/nikon-nd2/LICENSE-nd2-rs-MIT.txt`;
+  they follow the BSD-3 `nd2` Python package) in `doc/nikon-nd2/`. No Nikon
+  SDK used.
+- Own analysis of sample files: loop nesting (spectral loops without a
+  count, XY validity masks), padded rows (`uiWidthBytes`), zlib frames,
+  RGB frames stored blue first (checked on H&E slides: the plausible colour
+  order is BGR in the file).
+- Synthetic samples written from the documented layout by
+  `tests/scripts/make_nd2_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

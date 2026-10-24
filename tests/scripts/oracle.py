@@ -88,9 +88,11 @@ def run(cmd, measure=True):
     wall = time.perf_counter() - start
     lines, cpu, rss = [], 0.0, 0
     for line in proc.stdout.decode(errors="replace").splitlines():
-        m = re.fullmatch(r"@measure cpu_s=([\d.]+) maxrss_kib=(\d+)", line)
+        m = re.fullmatch(r"@measure cpu_s=([\d.]+) maxrss_kib=(\d+)( killed=rss)?", line)
         if m:
             cpu, rss = float(m[1]), int(m[2])
+            if m[3]:
+                lines.append(f"killed: exceeded the RSS limit of {os.environ.get('MEASURE_MAX_RSS_MIB', 8192)} MiB")
         else:
             lines.append(line)
     return proc.returncode, "\n".join(lines), cpu, wall, rss
@@ -375,7 +377,8 @@ def main():
         f.write("- scopeio: `scopeio_info --no-checksum` example, reads every plane of every "
                 "series.\n")
         f.write("- CPU time and peak RAM via `tests/scripts/measure.rs` (wait4); its own "
-                "footprint of about 2 MiB is included.\n")
+                "footprint of about 2 MiB is included. Runs above "
+                f"{os.environ.get('MEASURE_MAX_RSS_MIB', 8192)} MiB RSS are killed.\n")
         f.write("- Reference readers: convert the file to ICS, which also writes the pixels "
                 "to disk. Bio-Formats times include JVM start-up.\n\n")
         f.write("| File | Size | Reader | Status | CPU s | Wall s | Peak RAM MiB |\n")

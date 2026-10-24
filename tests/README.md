@@ -54,6 +54,7 @@ python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
+python3 -I tests/scripts/make_nd2_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -73,6 +74,18 @@ python3 -I tests/scripts/oracle.py vsi $E/olympus_02.vsi --series 0 --ours-serie
 python3 -I tests/scripts/oracle.py vsi $E/whole_slide_olympus_01.vsi --series 13 --ours-series 0 --crop 4096,12288,1024,1024 --append
 for f in olympus_01 histo_01; do python3 -I tests/scripts/oracle.py vsi $E/$f.vsi --keep-series 0 --ours-series assoc:thumbnail --append; done
 ```
+
+ND2:
+
+```sh
+find tests/reference/ome/ND2 -name "*.nd2" -size -120M -print0 | xargs -0 python3 -I tests/scripts/oracle.py nd2 tests/external/nicon_01.nd2
+for f in nicon_02 nicon_03; do python3 -I tests/scripts/oracle.py nd2 --series 0 --crop 1000,1000,512,512 --append tests/external/$f.nd2; done
+```
+
+Options go before the file names. Every reader runs under `measure`, which
+kills it once its process group exceeds `MEASURE_MAX_RSS_MIB` (default
+8192) of resident memory. bioformats-rs otherwise grows to more than 50 GiB
+on `Exception9_e3.nd2`.
 
 `oracle.py` converts each file with both readers to ICS, records metadata and
 a CRC-32 of the pixels, and measures CPU time and peak RAM of each reader

@@ -113,6 +113,33 @@ pub(crate) fn deflate(_src: &[u8], _out: &mut [u8], _zlib_header: bool) -> Resul
     Err(disabled("deflate"))
 }
 
+/// Decodes a zlib stream of unknown decoded size, at most `limit` bytes.
+#[cfg(feature = "deflate")]
+pub(crate) fn inflate_vec(src: &[u8], limit: usize) -> Result<Vec<u8>> {
+    use flate2::{Decompress, FlushDecompress, Status};
+    let mut d = Decompress::new(true);
+    let mut out = Vec::with_capacity((src.len() * 4).min(limit));
+    loop {
+        if out.len() == out.capacity() {
+            if out.len() >= limit {
+                return Err(Error::Corrupt(format!("zlib stream decodes to more than {limit} bytes")));
+            }
+            out.reserve((out.len().max(4096)).min(limit - out.len()));
+        }
+        let status = d
+            .decompress_vec(&src[d.total_in() as usize..], &mut out, FlushDecompress::Finish)
+            .map_err(|e| Error::Corrupt(format!("Deflate: {e}")))?;
+        if status == Status::StreamEnd || d.total_in() as usize >= src.len() && out.len() < out.capacity() {
+            return Ok(out);
+        }
+    }
+}
+
+#[cfg(not(feature = "deflate"))]
+pub(crate) fn inflate_vec(_src: &[u8], _limit: usize) -> Result<Vec<u8>> {
+    Err(disabled("deflate"))
+}
+
 /// Decodes a gzip member (RFC 1952): skips the header, inflates the data.
 pub(crate) fn gzip(src: &[u8], out: &mut [u8]) -> Result<usize> {
     let bad = || Error::Corrupt("invalid gzip header".into());
