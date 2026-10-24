@@ -16,7 +16,7 @@
 use std::fs::File;
 use std::path::Path;
 
-use crate::io::read_exact_at;
+use crate::io::{Source, read_exact_at};
 use crate::{Error, Result};
 
 /// Upper bound for the number of IFDs in one file, against corrupt chains.
@@ -101,7 +101,7 @@ impl Ifd {
 /// An open TIFF file with its main IFD chain.
 #[derive(Debug)]
 pub(crate) struct TiffFile {
-    pub file: File,
+    pub file: Source,
     pub little: bool,
     pub big: bool,
     pub len: u64,
@@ -142,7 +142,7 @@ impl TiffFile {
         if &head[..4] != b"II*\0" {
             return Err(Error::Corrupt("not an NDPI file".into()));
         }
-        let mut tiff = Self { file, little: true, big: false, len, ndpi: true, ifds: Vec::new() };
+        let mut tiff = Self { file: Source::File(file), little: true, big: false, len, ndpi: true, ifds: Vec::new() };
         let first = tiff.u64(&head[4..]);
         tiff.ifds = tiff.read_chain(first, max_ifds)?;
         if tiff.ifds.is_empty() {
@@ -154,7 +154,12 @@ impl TiffFile {
     /// Parses the header and walks the IFD chain, reading at most
     /// `max_ifds` IFDs.
     pub fn from_file(file: File, max_ifds: usize) -> Result<Self> {
-        let len = file.metadata()?.len();
+        Self::from_source(Source::File(file), max_ifds)
+    }
+
+    /// Like [`from_file`](Self::from_file), for a TIFF held in memory.
+    pub fn from_source(file: Source, max_ifds: usize) -> Result<Self> {
+        let len = file.len()?;
         let mut head = [0u8; 16];
         read_exact_at(&file, &mut head[..8.min(len as usize)], 0)?;
         if !Self::matches(&head) {

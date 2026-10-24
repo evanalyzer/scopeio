@@ -61,6 +61,7 @@ compared, "n/a" means the reader cannot open the format.
 | PNG | 12 | 1 ms | 3.6 MiB | 374× / 22× | 2.3× / 3.1× | – |
 | JPEG | 3 | 1 ms | 3.4 MiB | 228× / 16× | 1.9× / 2.5× | – |
 | JPEG 2000 | 3 | 1 ms | 3.7 MiB | 147× / 10× | 2.2× / 2.0× | – |
+| Olympus OIB/OIF | 3 | 1 ms | 3.7 MiB | 244× / 64× | 7.0× / 4.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -190,7 +191,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Nikon NIS-Elements ND2** | `.nd2` | ✅ |
 | **NRRD (Nearly Raw Raster Data)** | `.nrrd, .nhdr, .raw, .txt` |  |
 | **Olympus CellR/APL** | `.apl, .mtb, .tnb, .tif, .obsep` |  |
-| **Olympus FluoView FV1000** | `.oib, .oif` |  |
+| **Olympus FluoView FV1000** | `.oib, .oif` | ✅ |
 | **Olympus FluoView TIFF** | `.tif` |  |
 | **Olympus OIR** | `.oir` |  |
 | **Olympus OMP2INFO** | `.omp2info` |  |

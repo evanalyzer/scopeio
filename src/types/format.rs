@@ -36,6 +36,10 @@ pub enum FormatId {
     Jpeg,
     /// JPEG 2000 file (JP2) or raw codestream (J2K).
     Jpeg2000,
+    /// Olympus FluoView compound file.
+    Oib,
+    /// Olympus FluoView settings file with its `.oif.files` folder.
+    Oif,
 }
 
 /// Identification of the reader that produced the data, for

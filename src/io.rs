@@ -11,8 +11,55 @@
 //! See LICENSE and LICENSE-EXCEPTION.
 
 use std::fs::File;
+use std::sync::Arc;
 
 use crate::{Error, Result};
+
+/// Bytes readable at any offset without a shared cursor.
+pub(crate) trait ReadAt {
+    fn read_exact_at_io(&self, buf: &mut [u8], offset: u64) -> std::io::Result<()>;
+}
+
+impl ReadAt for File {
+    fn read_exact_at_io(&self, buf: &mut [u8], offset: u64) -> std::io::Result<()> {
+        read_at_impl(self, buf, offset)
+    }
+}
+
+/// A file, or bytes held in memory (e.g. a stream of a compound file).
+#[derive(Debug)]
+pub(crate) enum Source {
+    File(File),
+    Memory(Arc<[u8]>),
+}
+
+impl Source {
+    /// Length in bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Io`] if the file size cannot be queried.
+    pub fn len(&self) -> Result<u64> {
+        match self {
+            Source::File(f) => Ok(f.metadata()?.len()),
+            Source::Memory(b) => Ok(b.len() as u64),
+        }
+    }
+}
+
+impl ReadAt for Source {
+    fn read_exact_at_io(&self, buf: &mut [u8], offset: u64) -> std::io::Result<()> {
+        match self {
+            Source::File(f) => read_at_impl(f, buf, offset),
+            Source::Memory(b) => {
+                let start = usize::try_from(offset).ok().filter(|&s| s.checked_add(buf.len()).is_some_and(|e| e <= b.len()));
+                let start = start.ok_or(std::io::ErrorKind::UnexpectedEof)?;
+                buf.copy_from_slice(&b[start..start + buf.len()]);
+                Ok(())
+            }
+        }
+    }
+}
 
 /// Fills `buf` from `file` starting at `offset`, without moving a shared
 /// cursor, so that one file handle can serve parallel reads.
@@ -21,8 +68,8 @@ use crate::{Error, Result};
 ///
 /// Returns [`Error::Corrupt`] if the file ends before `buf` is full, or
 /// [`Error::Io`] on other failures.
-pub(crate) fn read_exact_at(file: &File, buf: &mut [u8], offset: u64) -> Result<()> {
-    let result = read_at_impl(file, buf, offset);
+pub(crate) fn read_exact_at(file: &(impl ReadAt + ?Sized), buf: &mut [u8], offset: u64) -> Result<()> {
+    let result = file.read_exact_at_io(buf, offset);
     match result {
         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Err(Error::Corrupt(format!(
             "file truncated: need {} bytes at offset {offset}",
@@ -70,5 +117,9 @@ mod tests {
         assert_eq!(&buf, b"456");
         assert!(matches!(read_exact_at(&file, &mut buf, 8), Err(Error::Corrupt(_))));
         std::fs::remove_file(path).unwrap();
+        let mem = Source::Memory(Arc::from(&b"0123456789"[..]));
+        read_exact_at(&mem, &mut buf, 7).unwrap();
+        assert_eq!(&buf, b"789");
+        assert!(matches!(read_exact_at(&mem, &mut buf, 8), Err(Error::Corrupt(_))));
     }
 }

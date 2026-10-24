@@ -14,13 +14,12 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use std::fs::File;
 use std::ops::Range;
 use std::sync::OnceLock;
 
 use super::ifd::{Entry, Ifd, TiffFile, tag};
 use crate::codecs;
-use crate::io::read_exact_at;
+use crate::io::{Source, read_exact_at};
 use crate::pixel::Sink;
 use crate::scratch;
 use crate::{Error, PixelType, Region, Result};
@@ -664,7 +663,7 @@ impl TiffImage {
     #[allow(clippy::too_many_arguments)]
     fn decode_jpeg(
         &self,
-        file: &File,
+        file: &Source,
         offset: u64,
         count: u64,
         rows: Range<u32>,
@@ -708,7 +707,7 @@ impl TiffImage {
     }
 
     /// Decodes a JPEG 2000 chunk; Aperio 33003 chunks hold YCbCr samples.
-    fn decode_jpeg2000(&self, file: &File, offset: u64, count: u64, rows: Range<u32>, row_values: usize, out: &mut [u8]) -> Result<()> {
+    fn decode_jpeg2000(&self, file: &Source, offset: u64, count: u64, rows: Range<u32>, row_values: usize, out: &mut [u8]) -> Result<()> {
         #[cfg(feature = "jpeg2000")]
         {
             let comps = if self.separate { 1 } else { self.spp as usize };

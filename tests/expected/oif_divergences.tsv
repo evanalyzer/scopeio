@@ -1,0 +1,6 @@
+# Known differences for Olympus FluoView OIB/OIF.
+file	tool	series	tolerance	reason
+tests/data/oif/synthetic.oib	bioformats-rs	-		bioformats-rs assigns the planes of a C x Z x T set channel-fastest to its z-fastest order (its plane "c0 z1 t0" holds C002Z001T001); scopeio follows the indices in the plane file names, as the spec-derived truth does
+tests/data/oif/synthetic.oib	bioformats	-		Bio-Formats needs settings the minimal synthetic main file lacks (NumberFormatException); the real OIB sample matches
+tests/data/oif/synthetic.oif	bioformats-rs	-		bioformats-rs assigns the planes of a C x Z x T set channel-fastest to its z-fastest order (its plane "c0 z1 t0" holds C002Z001T001); scopeio follows the indices in the plane file names, as the spec-derived truth does
+tests/data/oif/synthetic.oif	bioformats	-		Bio-Formats needs settings the minimal synthetic main file lacks (NumberFormatException); the real OIB sample matches

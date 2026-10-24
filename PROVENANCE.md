@@ -258,6 +258,22 @@ as black-box command-line tools to produce reference output
   written by ImageMagick (`tests/scripts/make_plain_samples.py`); both
   return 1- to 4-bit gray PNG values unscaled, which scopeio follows.
 
+## Olympus FluoView OIB/OIF (`src/formats/oif.rs`, `src/formats/cfb.rs`)
+
+- Microsoft [MS-CFB] (published open specification): the compound file
+  container of OIB, read by our own `cfb.rs`.
+- OpenReadout OIF notes (MIT OR Apache-2.0) in `doc/olympus-oif-oib/`:
+  `OibInfo.txt` stream mapping, settings text (UTF-16LE, decimal commas),
+  plane file names, `.pty` property files, main settings keys.
+- `oiffile` (BSD-3-Clause, Christoph Gohlke; notice in
+  THIRD_PARTY_NOTICES.md) read as documentation: container mapping and the
+  plane name convention (`_C001Z002T003.tif`).
+- Own analysis of the OME sample (`Olympus-FluoView/imagesc-71616`,
+  CC BY 4.0); pixels identical to Bio-Formats and bioformats-rs (black
+  boxes). Synthetic OIF/OIB written by `tests/scripts/make_oif_samples.py`
+  with its own [MS-CFB] writer; bioformats-rs reads its planes in another
+  order (see `tests/expected/oif_divergences.tsv`).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
