@@ -58,6 +58,9 @@ compared, "n/a" means the reader cannot open the format.
 | Ventana BIF | 10 | 1.07 s | 25 MiB | 4.3× / 2.3× | – | 1.0× / 2.9× |
 | Imaris IMS | 4 | 56 ms | 6.8 MiB | 115× / 42× | 3.3× / 18× | – |
 | Windows BMP | 17 | 1 ms | 2.5 MiB | 757× / 37× | 2.0× / 4.9× | – |
+| PNG | 12 | 1 ms | 3.6 MiB | 374× / 22× | 2.3× / 3.1× | – |
+| JPEG | 3 | 1 ms | 3.4 MiB | 228× / 16× | 1.9× / 2.5× | – |
+| JPEG 2000 | 3 | 1 ms | 3.7 MiB | 147× / 10× | 2.2× / 2.0× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -65,6 +68,10 @@ compared, "n/a" means the reader cannot open the format.
 - The reference readers also write the pixels to disk (ICS output);
   scopeio only decodes.
 - bioformats-rs failed on 53 of the ops that scopeio read.
+- Large plain images (24-megapixel RGB): PNG 0.31 s / 72 MiB (Bio-Formats
+  1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.29 s / 145 MiB
+  (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 4.9 s / 577 MiB
+  (14.5 s / 716 MiB, 4.6 s / 401 MiB).
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -148,8 +155,8 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **IVision** | `.ipm` |  |
 | **JDCE** | `.jdce, .tif` |  |
 | **JEOL** | `.dat, .img, .par` |  |
-| **JPEG** | `.jpg` |  |
-| **JPEG 2000** | `.jp2, .j2k, .jpf` |  |
+| **JPEG** | `.jpg, .jpeg` | ✅ |
+| **JPEG 2000** | `.jp2, .j2k` | ✅ |
 | **JPK** | — |  |
 | **JPX** | — |  |
 | **Keller Lab Block** | — |  |
@@ -206,7 +213,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Photoshop TIFF** | `.tif, .tiff` |  |
 | **PicoQuant Bin** | `.bin` |  |
 | **PICT (Macintosh Picture)** | `.pict` |  |
-| **PNG (Portable Network Graphics)** | `.png` |  |
+| **PNG (Portable Network Graphics)** | `.png` | ✅ |
 | **Portable Any Map** | `.pbm, .pgm, .ppm` |  |
 | **Prairie Technologies TIFF** | `.tif, .xml, .cfg` |  |
 | **Princeton Instruments SPE** | `.spe` |  |

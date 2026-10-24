@@ -23,6 +23,35 @@ pub(crate) struct Info {
     pub components: usize,
 }
 
+/// Size, components and bit depth of a JPEG 2000 codestream or JP2 file,
+/// from its headers.
+///
+/// # Errors
+///
+/// Returns [`Error::Corrupt`] for invalid headers.
+pub(crate) fn info(data: &[u8]) -> Result<(Info, u8)> {
+    info_at(data, 0)
+}
+
+/// Settings decoding `reduce` resolution levels below the full image.
+fn settings(data: &[u8], reduce: u8) -> DecodeSettings {
+    let mut s = DecodeSettings::default();
+    if reduce > 0
+        && let Ok(full) = Image::new(data, &s)
+    {
+        s.target_resolution = Some(((full.width() >> reduce).max(1), (full.height() >> reduce).max(1)));
+    }
+    s
+}
+
+/// Like [`info`], for the image reduced by `reduce` resolution levels; the
+/// size stops shrinking below the codestream's lowest level.
+pub(crate) fn info_at(data: &[u8], reduce: u8) -> Result<(Info, u8)> {
+    let image = Image::new(data, &settings(data, reduce)).map_err(|e| Error::Corrupt(format!("JPEG 2000: {e:?}")))?;
+    let components = image.color_space().num_channels() as usize + usize::from(image.has_alpha());
+    Ok((Info { width: image.width() as usize, height: image.height() as usize, components }, image.original_bit_depth()))
+}
+
 /// Decodes a JPEG 2000 codestream (or JP2 file) into `out`: interleaved
 /// components as native samples of `pixel_type` (`U8` or `U16`).
 ///
@@ -31,8 +60,13 @@ pub(crate) struct Info {
 /// Returns [`Error::Corrupt`] for invalid streams or if `out` is too small,
 /// [`Error::UnsupportedVariant`] for other output types.
 pub(crate) fn decode(data: &[u8], pixel_type: PixelType, out: &mut [u8]) -> Result<Info> {
+    decode_at(data, pixel_type, out, 0)
+}
+
+/// Like [`decode`], reduced by `reduce` resolution levels (see [`info_at`]).
+pub(crate) fn decode_at(data: &[u8], pixel_type: PixelType, out: &mut [u8], reduce: u8) -> Result<Info> {
     let err = |e: hayro_jpeg2000::DecodeError| Error::Corrupt(format!("JPEG 2000: {e:?}"));
-    let image = Image::new(data, &DecodeSettings::default()).map_err(err)?;
+    let image = Image::new(data, &settings(data, reduce)).map_err(err)?;
     let mut context = DecoderContext::default();
     let decoded = image.decode(&mut context).map_err(err)?;
     let components = decoded.components();

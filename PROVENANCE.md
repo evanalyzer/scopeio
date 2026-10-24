@@ -245,6 +245,19 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written by `tests/scripts/make_ims_samples.py` (its own
   minimal HDF5 writer from the specification).
 
+## PNG, JPEG, JPEG 2000 files (`src/formats/plain.rs`)
+
+- PNG specification (W3C, 3rd edition): chunk layout, `pHYs`, bit depths
+  and colour types; decoding by the `png` crate (MIT OR Apache-2.0).
+- JFIF 1.02 (ITU-T T.871): APP0 density; decoding by `zune-jpeg`.
+- JPEG 2000 Part 1 (ITU-T T.800): JP2 boxes (Annex I, `res `/`resc`/`resd`)
+  and reduced-resolution image sizes (B.5); decoding by `hayro-jpeg2000`.
+  A reduced level differs from the 2 x 2 mean of the level above by 0.93 on
+  average (smooth test image), as a wavelet low-pass should.
+- Checked against Bio-Formats and bioformats-rs as black boxes on samples
+  written by ImageMagick (`tests/scripts/make_plain_samples.py`); both
+  return 1- to 4-bit gray PNG values unscaled, which scopeio follows.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

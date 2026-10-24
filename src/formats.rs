@@ -26,6 +26,8 @@ mod slide;
 mod lsm;
 #[cfg(feature = "mrxs")]
 mod mrxs;
+#[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
+mod plain;
 #[cfg(feature = "qptiff")]
 mod qptiff;
 #[cfg(feature = "scn")]
@@ -92,6 +94,12 @@ static SUPPORTED: &[FormatInfo] = &[
     bif::FORMAT,
     #[cfg(feature = "ims")]
     ims::FORMAT,
+    #[cfg(feature = "png")]
+    plain::PNG_FORMAT,
+    #[cfg(feature = "jpg")]
+    plain::JPEG_FORMAT,
+    #[cfg(feature = "jp2")]
+    plain::JP2_FORMAT,
 ];
 
 /// Formats this build can read.
@@ -157,6 +165,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if let Some(id) = tiff::probe(path, &head)? {
         return Ok(Some(id));
     }
+    #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
+    if let Some(id) = plain::probe(&head) {
+        return Ok(Some(id));
+    }
     let _ = &head;
     Ok(None)
 }
@@ -187,6 +199,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
+        Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
         #[cfg(feature = "ims")]
         Some(FormatId::Ims) => Ok(Arc::new(Reader(ims::Ims::open(path, opts)?))),
         #[cfg(feature = "bif")]

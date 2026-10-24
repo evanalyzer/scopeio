@@ -1,0 +1,18 @@
+# Known differences between scopeio and the reference readers for plain images.
+file	tool	series	tolerance	reason
+tests/data/plain/rgb8_interlaced.png	bioformats	-		Bio-Formats returns other pixels for an interlaced PNG than for the same image non-interlaced; bioformats-rs and the spec truth agree with scopeio
+tests/data/plain/palette.png	bioformats-rs	-		bioformats-rs returns the palette indices as one channel; Bio-Formats and scopeio expand to RGB
+tests/data/plain/gray8.jpg	bioformats	-	0.5	JPEG IDCT rounding (zune-jpeg against the Java decoder)
+tests/data/plain/rgb8.jpg	bioformats	-	0.5	JPEG IDCT rounding (zune-jpeg against the Java decoder)
+tests/data/plain/gray8.jpg	bioformats-rs	-	0.5	JPEG IDCT rounding
+tests/data/plain/rgb8.jpg	bioformats-rs	-		bioformats-rs returns colours differing by up to 164 per channel (block means); Bio-Formats agrees with scopeio within 0.2
+tests/data/plain/rgb8.jp2	bioformats	1		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/rgb8.jp2	bioformats	2		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/rgb8.jp2	bioformats	3		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/rgb8.jp2	bioformats	4		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/gray16.j2k	bioformats	1		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/gray16.j2k	bioformats	2		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/gray16.j2k	bioformats	3		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/data/plain/gray16.j2k	bioformats	4		Bio-Formats reduced levels are rounded down in size and hold other pixels; scopeio returns the codestream resolution levels (sizes rounded up per ITU-T T.800 B.5, decoded by hayro-jpeg2000); level 0 is identical
+tests/reference/plain/photo_rgb8.jpg	bioformats	-	0.5	JPEG IDCT rounding (zune-jpeg against the Java decoder)
+tests/reference/plain/photo_rgb8.jpg	bioformats-rs	-		bioformats-rs returns colours differing by up to 123 per channel (block means); Bio-Formats agrees with scopeio within 0.05

@@ -32,6 +32,10 @@ pub enum FormatId {
     Scn,
     Bif,
     Ims,
+    Png,
+    Jpeg,
+    /// JPEG 2000 file (JP2) or raw codestream (J2K).
+    Jpeg2000,
 }
 
 /// Identification of the reader that produced the data, for

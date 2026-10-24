@@ -64,6 +64,7 @@ python3 -I tests/scripts/fetch_openslide.py
 
 ```sh
 python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
+python3 -I tests/scripts/make_plain_samples.py    # PNG, JPEG, JPEG 2000; needs ImageMagick
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -78,6 +79,11 @@ python3 -I tests/scripts/make_qptiff_samples.py
 python3 -I tests/scripts/make_scn_samples.py
 python3 -I tests/scripts/make_bif_samples.py
 python3 -I tests/scripts/make_ims_samples.py
+# PNG, JPEG, JPEG 2000: the committed samples, then larger generated images
+# for the benchmark (tests/reference/plain/, not committed)
+python3 -I tests/scripts/oracle.py plain tests/data/plain/*.png tests/data/plain/*.jpg \
+    tests/data/plain/*.jp2 tests/data/plain/*.j2k
+REP=3 sh tests/scripts/make_plain_bench.sh
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
