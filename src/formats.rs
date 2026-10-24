@@ -10,6 +10,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "bif")]
+mod bif;
 #[cfg(feature = "bmp")]
 mod bmp;
 #[cfg(feature = "czi")]
@@ -80,6 +82,8 @@ static SUPPORTED: &[FormatInfo] = &[
     qptiff::FORMAT,
     #[cfg(feature = "scn")]
     scn::FORMAT,
+    #[cfg(feature = "bif")]
+    bif::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -167,6 +171,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "bif")]
+        Some(FormatId::Bif) => Ok(Arc::new(Reader(bif::Bif::open(path, opts)?))),
         #[cfg(feature = "scn")]
         Some(FormatId::Scn) => Ok(Arc::new(Reader(scn::open(path, opts)?))),
         #[cfg(feature = "qptiff")]

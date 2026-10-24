@@ -1,0 +1,5 @@
+# JPEG 4:2:0 tiles: zune-jpeg's chroma upsampling differs from libjpeg-turbo by a mean of up to
+# 0.4 per channel (see scn_divergences.tsv); the label and probability images are exact.
+file	tool	series	tolerance	reason
+tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	0	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Ventana/Ventana-1.bif	bioformats	3	1.0	JPEG 4:2:0 chroma upsampling

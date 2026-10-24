@@ -505,6 +505,31 @@ impl TiffImage {
         Ok(())
     }
 
+    /// Decodes all rows of chunk `index` of a chunky (interleaved) image
+    /// into `out` (`chunk_w * chunk_h` stored pixels), for readers that
+    /// place chunks themselves.
+    ///
+    /// # Returns
+    ///
+    /// `false` if the chunk is not stored (offset or size 0); `out` is then
+    /// left as it is.
+    pub fn decode_chunk(&self, tiff: &TiffFile, index: usize, out: &mut [u8]) -> Result<bool> {
+        let t = self.tables(tiff)?;
+        if index >= self.chunks || t.offsets[index] == 0 || t.counts[index] == 0 {
+            return Ok(false);
+        }
+        if self.separate || self.palette.is_some() {
+            return Err(Error::UnsupportedVariant("direct chunk decoding of planar or palette images".into()));
+        }
+        self.decode_rows(tiff, t, index, 0..self.chunk_h, out)?;
+        Ok(true)
+    }
+
+    /// Number of chunks in the chunk tables.
+    pub fn chunk_count(&self) -> usize {
+        self.chunks
+    }
+
     /// Decodes rows `rows` of chunk `index` into native stored samples:
     /// `rows.len()` rows of `chunk_w` pixels in `out`.
     fn decode_rows(&self, tiff: &TiffFile, t: &Tables, index: usize, rows: Range<u32>, out: &mut [u8]) -> Result<()> {

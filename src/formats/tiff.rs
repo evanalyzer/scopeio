@@ -66,6 +66,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+    #[cfg(feature = "bif")]
+    if super::bif::matches(&first) {
+        return Ok(Some(FormatId::Bif));
+    }
     #[cfg(feature = "scn")]
     if super::scn::matches(&description) {
         return Ok(Some(FormatId::Scn));

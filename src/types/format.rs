@@ -28,6 +28,7 @@ pub enum FormatId {
     Lsm,
     Qptiff,
     Scn,
+    Bif,
 }
 
 /// Identification of the reader that produced the data, for

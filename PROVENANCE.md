@@ -172,6 +172,21 @@ as black-box command-line tools to produce reference output
   libjpeg-turbo (which Bio-Formats matches exactly) by a mean of up to 0.4
   per channel; recorded as tolerance in `tests/expected/scn_divergences.tsv`.
 
+## Ventana BIF (`src/formats/bif.rs`)
+
+- Roche "BIF image file format for digital pathology" white paper (2020)
+  in `doc/ventana-bif/`: directory order, iScan and EncodeInfo XMP, tile
+  joints with horizontal overlap (Tile2 covers Tile1, serpentine
+  numbering), unscanned tiles shown with ScanWhitePoint.
+- openslide.org Ventana page (prose, CC BY-SA 4.0).
+- Own analysis of sample files, checked against Bio-Formats as a black box:
+  tile tables follow the TIFF tile grid of the padded image (not the order
+  of the `Frame` nodes), and the stored lower levels were made from the
+  unstitched grid, so their tile-column footprints are moved to the
+  stitched positions.
+- Synthetic sample written from that model by
+  `tests/scripts/make_bif_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
