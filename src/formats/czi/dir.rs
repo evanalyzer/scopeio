@@ -79,6 +79,8 @@ impl Span {
 /// Fields of the `ZISRAWFILE` segment.
 #[derive(Debug, Clone, Copy)]
 pub(super) struct FileHeader {
+    /// GUID of the master file; equal in all parts of a document.
+    pub primary_guid: [u8; 16],
     pub file_part: u32,
     pub directory: u64,
     pub metadata: u64,
@@ -92,7 +94,9 @@ pub(super) fn file_header(file: &File, span: Span) -> Result<FileHeader> {
         return Err(Error::Corrupt("not a CZI file".into()));
     }
     let p = &b[32..];
-    Ok(FileHeader { file_part: u32_at(p, 48), directory: u64_at(p, 52), metadata: u64_at(p, 60), attachments: u64_at(p, 72) })
+    Ok(FileHeader {
+        primary_guid: p[16..32].try_into().expect("16 bytes"),
+        file_part: u32_at(p, 48), directory: u64_at(p, 52), metadata: u64_at(p, 60), attachments: u64_at(p, 72) })
 }
 
 /// Dimension of a directory entry that is not X, Y, Z, C, T, S or M.
@@ -199,6 +203,7 @@ pub(super) fn metadata_xml(file: &File, span: Span, at: u64) -> Result<String> {
 pub(super) struct Attachment {
     /// Position of its `ZISRAWATTACH` segment.
     pub position: u64,
+    pub file_part: u32,
     pub content_type: String,
     pub name: String,
 }
@@ -208,6 +213,16 @@ fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(&b[..end]).trim().to_string()
 }
 
+/// Parses one attachment entry (schema `A1`, 128 bytes).
+pub(super) fn attachment_entry(e: &[u8]) -> Option<Attachment> {
+    (e.len() >= 128 && &e[..2] == b"A1").then(|| Attachment {
+        position: u64_at(e, 12),
+        file_part: u32_at(e, 20),
+        content_type: text(&e[40..48]),
+        name: text(&e[48..128]),
+    })
+}
+
 pub(super) fn attachments(file: &File, span: Span, at: u64) -> Result<Vec<Attachment>> {
     let data = span.segment(file, at, b"ZISRAWATTDIR")?;
     let count = data.get(..4).map(|b| u32_at(b, 0) as usize).unwrap_or(0);
@@ -215,8 +230,7 @@ pub(super) fn attachments(file: &File, span: Span, at: u64) -> Result<Vec<Attach
     Ok(list
         .chunks_exact(128)
         .take(count)
-        .filter(|e| &e[..2] == b"A1")
-        .map(|e| Attachment { position: u64_at(e, 12), content_type: text(&e[40..48]), name: text(&e[48..128]) })
+        .filter_map(attachment_entry)
         .collect())
 }
 

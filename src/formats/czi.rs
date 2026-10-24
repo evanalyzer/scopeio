@@ -12,7 +12,14 @@
 //! stored blue first and returned as RGB(A). Attachments `Thumbnail`
 //! (JPEG), `Label` and `SlidePreview` (embedded CZI) are associated images.
 //!
-//! Not supported: multi-file documents, lossless JPEG, camera raw data,
+//! Multi-file documents: the master holds the XML and the directories;
+//! entries with `file_part` k > 0 read from part k, found next to the
+//! master as `<stem> (k).czi` or `<stem>(k).czi` with that part number and
+//! the master's primary GUID. An entry naming a part that is not there
+//! reads from the master if the segment at its position repeats the entry
+//! (some writers store the scene index in `file_part`).
+//!
+//! Not supported: lossless JPEG, camera raw data,
 //! complex pixel types, super-resolved renderings (subblocks with more
 //! stored than logical pixels are ignored).
 //!
@@ -33,7 +40,7 @@ mod decode;
 mod dir;
 mod meta;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::path::Path;
 
@@ -53,6 +60,8 @@ pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Czi, "Zeiss CZI
 const ASSOCIATED_MAX: u64 = 4096;
 /// Largest subblock decoded, against corrupt sizes.
 const MAX_SUBBLOCK: usize = 1 << 31;
+/// Most file parts looked for, against corrupt part numbers.
+const MAX_PARTS: usize = 1024;
 
 /// Returns `true` if `head` starts with the CZI file segment.
 pub(super) fn matches(head: &[u8]) -> bool {
@@ -63,6 +72,7 @@ pub(super) fn matches(head: &[u8]) -> bool {
 #[derive(Debug, Clone, Copy)]
 struct Block {
     position: u64,
+    part: u32,
     /// Start in level-0 pixels.
     x: i32,
     y: i32,
@@ -86,11 +96,54 @@ struct Scene {
     blocks: std::ops::Range<usize>,
 }
 
+/// One file of a document: the master (part 0) or a following part.
+#[derive(Debug)]
+struct Part {
+    file_part: u32,
+    file: File,
+    span: Span,
+}
+
+impl Part {
+    /// Returns `true` if the subblock at the position of `e` repeats `e`.
+    fn holds_subblock(&self, e: &Entry) -> bool {
+        let mut b = [0u8; 512];
+        let n = (self.span.len.saturating_sub(e.position) as usize).min(b.len());
+        self.span.read(&self.file, &mut b[..n], e.position).is_ok()
+            && b[..n].starts_with(b"ZISRAWSUBBLOCK")
+            && n > 48
+            && dir::entry(&b[48..n]).is_ok_and(|(own, _)| own == *e)
+    }
+
+    /// Returns `true` if the attachment at the position of `a` repeats `a`.
+    fn holds_attachment(&self, a: &Attachment) -> bool {
+        let mut b = [0u8; 48 + 128];
+        self.span.read(&self.file, &mut b, a.position).is_ok()
+            && b.starts_with(b"ZISRAWATTACH")
+            && dir::attachment_entry(&b[48..]).is_some_and(|own| own == *a)
+    }
+}
+
+/// Part `k` of the document whose master is `master`, if next to it.
+fn find_part(master: &Path, k: u32, primary_guid: &[u8; 16]) -> Option<Part> {
+    let stem = master.file_stem()?.to_string_lossy();
+    let ext = master.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+    for name in [format!("{stem} ({k}){ext}"), format!("{stem}({k}){ext}")] {
+        let Ok(file) = File::open(master.with_file_name(name)) else { continue };
+        let Ok(len) = file.metadata().map(|m| m.len()) else { continue };
+        let span = Span { base: 0, len };
+        if dir::file_header(&file, span).is_ok_and(|h| h.file_part == k && &h.primary_guid == primary_guid) {
+            return Some(Part { file_part: k, file, span });
+        }
+    }
+    None
+}
+
 /// Zeiss CZI file.
 #[derive(Debug)]
 pub(super) struct Czi {
-    file: File,
-    span: Span,
+    /// The master first.
+    parts: Vec<Part>,
     metadata: u64,
     blocks: Box<[Block]>,
     scenes: Vec<Scene>,
@@ -109,15 +162,16 @@ impl Czi {
     /// # Errors
     ///
     /// Returns [`Error::Corrupt`] for an invalid segment structure and
-    /// [`Error::UnsupportedVariant`] for multi-file documents and pixel
-    /// types not supported.
+    /// [`Error::UnsupportedVariant`] for a following part of a multi-file
+    /// document and pixel types not supported.
     pub fn open(path: &Path, _opts: &OpenOptions) -> Result<Self> {
         let file = File::open(path)?;
         let len = file.metadata()?.len();
-        Self::open_span(file, Span { base: 0, len })
+        Self::open_span(file, Span { base: 0, len }, Some(path))
     }
 
-    fn open_span(file: File, span: Span) -> Result<Self> {
+    /// Opens the CZI in `span` of `file`; `path` locates following parts.
+    fn open_span(file: File, span: Span, path: Option<&Path>) -> Result<Self> {
         let header = dir::file_header(&file, span)?;
         if header.file_part != 0 {
             return Err(Error::UnsupportedVariant("CZI file part of a multi-file document; open the first part".into()));
@@ -125,18 +179,31 @@ impl Czi {
         if header.directory == 0 {
             return Err(Error::Corrupt("CZI without subblock directory".into()));
         }
-        let entries = dir::directory(&file, span, header.directory)?;
-        if entries.iter().any(|e| e.file_part != 0) {
-            return Err(Error::UnsupportedVariant("multi-file CZI documents".into()));
-        }
+        let mut entries = dir::directory(&file, span, header.directory)?;
         let xml = if header.metadata != 0 { dir::metadata_xml(&file, span, header.metadata)? } else { String::new() };
         let xml_meta = meta::parse(&xml);
-        let attachments =
+        let mut attachments =
             if header.attachments != 0 { dir::attachments(&file, span, header.attachments).unwrap_or_default() } else { Vec::new() };
+        let mut parts = vec![Part { file_part: 0, file, span }];
+        let wanted: BTreeSet<u32> =
+            entries.iter().map(|e| e.file_part).chain(attachments.iter().map(|a| a.file_part)).filter(|&k| k != 0).collect();
+        if let Some(path) = path {
+            parts.extend(wanted.into_iter().take(MAX_PARTS).filter_map(|k| find_part(path, k, &header.primary_guid)));
+        }
+        let present = |k: u32| parts.iter().any(|p| p.file_part == k);
+        for e in &mut entries {
+            if !present(e.file_part) && parts[0].holds_subblock(e) {
+                e.file_part = 0;
+            }
+        }
+        for a in &mut attachments {
+            if !present(a.file_part) && parts[0].holds_attachment(a) {
+                a.file_part = 0;
+            }
+        }
         let (blocks, scenes, metas) = build_index(&entries, &xml_meta)?;
         let mut czi = Czi {
-            file,
-            span,
+            parts,
             metadata: header.metadata,
             blocks,
             scenes,
@@ -174,16 +241,24 @@ impl Czi {
     /// Time of each time point from the `TimeStamps` attachment.
     fn time_stamps(&self) -> Vec<f64> {
         let Some(a) = self.attachments.iter().find(|a| a.content_type == "CZTIMS") else { return Vec::new() };
-        let Ok((start, len)) = dir::attachment_data(&self.file, self.span, a.position) else { return Vec::new() };
+        let Ok(p) = self.part(a.file_part) else { return Vec::new() };
+        let Ok((start, len)) = dir::attachment_data(&p.file, p.span, a.position) else { return Vec::new() };
         if !(8..=1 << 24).contains(&len) {
             return Vec::new();
         }
         let mut b = vec![0u8; len as usize];
-        if self.span.read(&self.file, &mut b, start).is_err() {
+        if p.span.read(&p.file, &mut b, start).is_err() {
             return Vec::new();
         }
         let count = u32::from_le_bytes(b[4..8].try_into().expect("4 bytes")) as usize;
         b[8..].chunks_exact(8).take(count).map(|v| f64::from_le_bytes(v.try_into().expect("8 bytes"))).collect()
+    }
+
+    /// File part `k`.
+    fn part(&self, k: u32) -> Result<&Part> {
+        self.parts.iter().find(|p| p.file_part == k).ok_or_else(|| {
+            Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, format!("CZI file part {k} not found next to the master")))
+        })
     }
 
     /// Blocks of `plane` at `level` of `series`, in directory order.
@@ -231,10 +306,11 @@ impl Czi {
         for (block, (bx, by, bw, bh)) in hits {
             let g = Geometry { width: bw as usize, height: bh as usize, pixel_type, spp: spp as usize };
             let px = g.pixel_bytes();
-            let sub = dir::subblock(&self.file, self.span, block.position)?;
+            let p = self.part(block.part)?;
+            let sub = dir::subblock(&p.file, p.span, block.position)?;
             let mask = if sub.attachment_len > 0 && sub.attachment_len < 1 << 24 {
                 let mut b = vec![0u8; sub.attachment_len as usize];
-                self.span.read(&self.file, &mut b, sub.attachment)?;
+                p.span.read(&p.file, &mut b, sub.attachment)?;
                 Mask::parse(&b)
             } else {
                 None
@@ -282,7 +358,7 @@ impl Czi {
                         let at = ((y - by) as usize * stride + col * px) as u64;
                         let avail = sub.data_len.saturating_sub(at).min(row.len() as u64) as usize;
                         row[avail..].fill(0);
-                        self.span.read(&self.file, &mut row[..avail], sub.data + at)?;
+                        p.span.read(&p.file, &mut row[..avail], sub.data + at)?;
                         decode::bgr_to_rgb(row, &g);
                         put(sink, y, row)?;
                     }
@@ -294,7 +370,7 @@ impl Czi {
                 return Err(Error::Corrupt(format!("CZI subblock at {} too large", block.position)));
             }
             scratch::with(sub.data_len as usize, |data| {
-                self.span.read(&self.file, data, sub.data)?;
+                p.span.read(&p.file, data, sub.data)?;
                 scratch::with(g.len(), |tile| {
                     decode::decode(data, block.compression, &g, tile)?;
                     for y in cy0..cy1 {
@@ -310,7 +386,9 @@ impl Czi {
 
     /// Payload position and length of attachment `index`.
     fn attachment(&self, index: usize) -> Result<(u64, u64)> {
-        dir::attachment_data(&self.file, self.span, self.attachments[index].position)
+        let a = &self.attachments[index];
+        let p = self.part(a.file_part)?;
+        dir::attachment_data(&p.file, p.span, a.position)
     }
 }
 
@@ -396,6 +474,7 @@ fn build_index(entries: &[Entry], xml: &meta::XmlMeta) -> Result<Index> {
             }
             blocks.push(Block {
                 position: e.position,
+                part: e.file_part,
                 x: e.x,
                 y: e.y,
                 stored_w: e.stored_w,
@@ -478,7 +557,7 @@ impl Backend for Czi {
             meta.pairs.push((format!("Attachment {}", a.name), a.content_type.clone()));
         }
         if self.metadata != 0 {
-            meta.documents.push(("CZI-XML".into(), dir::metadata_xml(&self.file, self.span, self.metadata)?));
+            meta.documents.push(("CZI-XML".into(), dir::metadata_xml(&self.parts[0].file, self.parts[0].span, self.metadata)?));
         }
         Ok(meta)
     }
@@ -495,11 +574,12 @@ impl Backend for Czi {
             .map(|i| self.associated[i])
             .ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
         let (start, len) = self.attachment(index)?;
+        let p = self.part(self.attachments[index].file_part)?;
         if self.attachments[index].content_type == "JPG" {
-            return jpeg_image(&self.file, self.span, start, len);
+            return jpeg_image(&p.file, p.span, start, len);
         }
         // An embedded CZI: its coarsest level within the size limit.
-        let inner = Czi::open_span(self.file.try_clone()?, Span { base: self.span.base + start, len })?;
+        let inner = Czi::open_span(p.file.try_clone()?, Span { base: p.span.base + start, len }, None)?;
         let meta = &inner.metas[0];
         let level = meta.levels.iter().position(|l| l.size_x.max(l.size_y) <= ASSOCIATED_MAX).unwrap_or(meta.levels.len() - 1);
         let l = &meta.levels[level];

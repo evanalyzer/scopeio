@@ -93,30 +93,44 @@ def dims(d):
     return b"".join(n.encode().ljust(4, b"\0") + struct.pack("<iIfI", st, sz, 0.0, ss) for n, st, sz, ss in d)
 
 
-def dir_entry(pt, pos, comp, pyramid, d):
-    return b"DV" + struct.pack("<IQII", pt, pos, 0, comp) + bytes([pyramid]) + bytes(5) + struct.pack("<I", len(d)) + dims(d)
+def dir_entry(pt, pos, comp, pyramid, d, part=0):
+    return b"DV" + struct.pack("<IQII", pt, pos, part, comp) + bytes([pyramid]) + bytes(5) + struct.pack("<I", len(d)) + dims(d)
+
+
+GUID = bytes(range(1, 17))
 
 
 class Writer:
+    """A CZI document; segments with `part` k > 0 go to following part k."""
+
     def __init__(self):
-        self.data = bytearray(segment("ZISRAWFILE", bytes(512)))
+        self.parts = {0: bytearray(segment("ZISRAWFILE", bytes(512)))}
+        self.data = self.parts[0]
         self.entries = []
         self.attachments = []
 
-    def subblock(self, pt, comp, d, pixels, pyramid=0, attachment=b""):
-        pos = len(self.data)
-        entry = dir_entry(pt, pos, comp, pyramid, d)
+    def _part(self, part):
+        if part not in self.parts:
+            self.parts[part] = bytearray(segment("ZISRAWFILE", bytes(512)))
+        return self.parts[part]
+
+    def subblock(self, pt, comp, d, pixels, pyramid=0, attachment=b"", part=0):
+        data = self._part(part)
+        pos = len(data)
+        entry = dir_entry(pt, pos, comp, pyramid, d, part)
         meta = b"<METADATA></METADATA>"
         head = struct.pack("<IIQ", len(meta), len(attachment), len(pixels)) + entry
         head = head.ljust(max(256, len(head)), b"\0")
-        self.data += segment("ZISRAWSUBBLOCK", head + meta + pixels + attachment)
+        data += segment("ZISRAWSUBBLOCK", head + meta + pixels + attachment)
         self.entries.append(entry)
 
-    def attach(self, name, content_type, payload):
-        pos = len(self.data)
-        entry = b"A1" + bytes(10) + struct.pack("<QI", pos, 0) + bytes(16) + content_type.encode().ljust(8, b"\0") + name.encode().ljust(80, b"\0")
+    def attach(self, name, content_type, payload, part=0, stored_in=None):
+        """`stored_in`: the part holding the segment if not `part` (a wrong part number)."""
+        data = self._part(part if stored_in is None else stored_in)
+        pos = len(data)
+        entry = b"A1" + bytes(10) + struct.pack("<QI", pos, part) + bytes(16) + content_type.encode().ljust(8, b"\0") + name.encode().ljust(80, b"\0")
         head = struct.pack("<I", len(payload)).ljust(16, b"\0") + entry
-        self.data += segment("ZISRAWATTACH", head.ljust(256, b"\0") + payload)
+        data += segment("ZISRAWATTACH", head.ljust(256, b"\0") + payload)
         self.attachments.append(entry)
 
     def write(self, path, xml):
@@ -129,9 +143,15 @@ class Writer:
         if self.attachments:
             att_pos = len(self.data)
             self.data += segment("ZISRAWATTDIR", struct.pack("<I", len(self.attachments)).ljust(256, b"\0") + b"".join(self.attachments))
-        header = struct.pack("<II", 1, 0) + bytes(8) + bytes(32) + struct.pack("<IQQIQ", 0, dir_pos, meta_pos, 0, att_pos)
+        header = struct.pack("<II", 1, 0) + bytes(8) + GUID + GUID + struct.pack("<IQQIQ", 0, dir_pos, meta_pos, 0, att_pos)
         self.data[32:32 + len(header)] = header
         path.write_bytes(bytes(self.data))
+        # Following parts: own file GUID, the master's as primary GUID.
+        for k, data in self.parts.items():
+            if k:
+                header = struct.pack("<II", 1, 0) + bytes(8) + GUID + bytes([k] * 16) + struct.pack("<IQQIQ", k, 0, 0, 0, 0)
+                data[32:32 + len(header)] = header
+                path.with_name(f"{path.stem} ({k}){path.suffix}").write_bytes(bytes(data))
 
 
 def xml(scale_um, channels, scenes=(), bits=None, sizes=None, pixel_type="Gray16"):
@@ -235,6 +255,19 @@ def main():
     truth("chunked_time.czi", 0, 0, plane_list, "H")
     w.attach("TimeStamps", "CZTIMS", struct.pack("<II", 32, 3) + struct.pack("<3d", 10.0, 12.5, 15.0))
     w.write(OUT / "chunked_time.czi", xml(1.0, [("GFP", "#FF00FF00")], sizes={"X": 10, "Y": 7, "T": 3, "C": 1}))
+
+    # D: multi-file document, gray8, time point t in part t; TimeStamps in
+    # part 1; a thumbnail entry naming part 7 (absent) stored in the master.
+    w = Writer()
+    W, H = 6, 5
+    plane_list = []
+    for t in range(3):
+        w.subblock(0, 0, [("X", 0, W, W), ("Y", 0, H, H), ("T", t, 1, 1), ("C", 0, 1, 1)], tile(W, H, "B", 1, lambda x, y, k, t=t: value(x, y, t=t) % 256), part=t)
+        plane_list.append([[(value(x, y, t=t) % 256,) for x in range(W)] for y in range(H)])
+    truth("multipart.czi", 0, 0, plane_list, "B")
+    w.attach("TimeStamps", "CZTIMS", struct.pack("<II", 32, 3) + struct.pack("<3d", 1.0, 2.0, 4.0), part=1)
+    w.attach("Profile", "CZPRF", b"profile", part=7, stored_in=0)
+    w.write(OUT / "multipart.czi", xml(1.0, [("Gray", "#FFFFFFFF")], sizes={"X": W, "Y": H, "T": 3, "C": 1}, pixel_type="Gray8"))
 
     with open(OUT / "truth.tsv", "w") as f:
         f.write("file\tseries\tlevel\tcrc32\n")

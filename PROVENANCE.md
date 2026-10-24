@@ -81,6 +81,13 @@ as black-box command-line tools to produce reference output
   (later entries on top), checked pixel by pixel against Bio-Formats as a
   black box; pyramid levels from the downsampling ratio of each subblock,
   snapped to a power of two (level sizes agree with Bio-Formats).
+- Multi-file documents follow the inferred layout of the OpenReadout notes
+  (part k next to the master as `<stem> (k).czi` or `<stem>(k).czi`, header
+  `file_part` k and the master's primary GUID; entries naming an absent part
+  read from the master when the segment there repeats the entry). No public
+  multi-file CZI exists; the synthetic `multipart.czi` set was read by
+  Bio-Formats as a black box, which found the same part files and returned
+  the same pixels for every plane.
 - Synthetic samples written from the documented layout by
   `tests/scripts/make_czi_samples.py`.
 

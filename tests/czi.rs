@@ -70,6 +70,33 @@ fn synthetic_metadata() {
 }
 
 #[test]
+fn multi_file_document() {
+    let r = scopeio::open(&sample("multipart.czi")).unwrap();
+    let m = r.series_meta(0).unwrap();
+    assert_eq!((m.size_t, m.pixel_type), (3, scopeio::PixelType::U8));
+    // TimeStamps read from part 1.
+    assert_eq!(r.plane_meta(0, Plane::new(0, 0, 2)).unwrap().delta_t_s, Some(3.0));
+    // An attachment naming an absent part is read from the master.
+    let original = r.original_metadata(0).unwrap();
+    assert!(original.pairs.iter().any(|(k, v)| k == "Attachment Profile" && v == "CZPRF"));
+    assert!(matches!(scopeio::open(&sample("multipart (1).czi")), Err(scopeio::Error::UnsupportedVariant(_))));
+
+    // Without part 2 the other planes stay readable.
+    let dir = std::env::temp_dir().join(format!("scopeio-czi-parts-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for name in ["multipart.czi", "multipart (1).czi"] {
+        std::fs::copy(sample(name), dir.join(name)).unwrap();
+    }
+    let r = scopeio::open(&dir.join("multipart.czi")).unwrap();
+    let mut req = scopeio::RegionRequest::new(0, 0, scopeio::Region::new(0, 0, 6, 5));
+    req.t = 1;
+    assert!(r.read_region(&req).is_ok());
+    req.t = 2;
+    assert!(matches!(r.read_region(&req), Err(scopeio::Error::Io(e)) if e.kind() == std::io::ErrorKind::NotFound));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
 fn corrupt_files_do_not_panic() {
     let data = std::fs::read(sample("scenes_zstd.czi")).unwrap();
     let dir = std::env::temp_dir().join(format!("scopeio-czi-{}", std::process::id()));
