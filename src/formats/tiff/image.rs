@@ -210,6 +210,8 @@ impl TiffImage {
                 }
                 match spp {
                     3 | 4 => spp as u8,
+                    // Some writers (e.g. NDPI maps) label gray data RGB.
+                    1 => 1,
                     n => return Err(Error::UnsupportedVariant(format!("TIFF RGB with {n} samples"))),
                 }
             }

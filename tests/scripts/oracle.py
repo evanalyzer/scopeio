@@ -191,6 +191,13 @@ def canonical_order(values, axes, sizes):
     raise ValueError(f"unsupported ICS axis order {axes}")
 
 
+# Format being processed (set in main) and the TIFF-based formats whose
+# bioformats-rs ICS output is interleaved like every other source (checked
+# pixel by pixel), unlike its TIFF, SVS and VSI output.
+FORMAT = None
+RS_INTERLEAVED = {"ndpi"}
+
+
 def oracle(tool, src, tmp, expand=True, series=None, crop=None):
     """Converts `src` with `tool` and returns (rows, cpu, wall, rss).
 
@@ -220,7 +227,8 @@ def oracle(tool, src, tmp, expand=True, series=None, crop=None):
         try:
             row = {"series": number, "status": "ok",
                    **parse_ics(path, int32_little=source_little(src) if tool == "bioformats" else True,
-                               planar_colour=tool == "bioformats-rs" and source_little(src) is not None)}
+                               planar_colour=tool == "bioformats-rs" and source_little(src) is not None
+                               and FORMAT not in RS_INTERLEAVED)}
             if tool == "bioformats-rs":
                 # Its ICS writer stores pixel sizes without unit conversion.
                 row["phys_x_nm"] = row["phys_y_nm"] = "-"
@@ -313,6 +321,8 @@ def main():
                     help="record each Bio-Formats series from a conversion of that series alone "
                          "(bfconvert returns wrong pixels for later series of some multi-series files)")
     args = ap.parse_args()
+    global FORMAT
+    FORMAT = args.format
 
     for tool in (BFCONVERT, BFRS):
         if not tool.exists():

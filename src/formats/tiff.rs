@@ -53,6 +53,17 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     if !TiffFile::matches(head) {
         return Ok(None);
     }
+    #[cfg(feature = "ndpi")]
+    {
+        // NDPI first IFDs may lie beyond 4 GiB; read them the NDPI way.
+        if head.starts_with(b"II*\0") {
+            if let Ok(t) = TiffFile::open_ndpi(path, 1) {
+                if t.ifds[0].has(super::ndpi::TAG_VERSION) {
+                    return Ok(Some(FormatId::Ndpi));
+                }
+            }
+        }
+    }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
     #[cfg(feature = "svs")]

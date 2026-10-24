@@ -66,3 +66,10 @@ fn synthetic_metadata() {
     assert_eq!(l.channels[2].emission_wavelength_nm.map(f64::round), Some(540.0));
     assert_eq!(t.plane_meta(3, Plane::new(0, 0, 0)).unwrap().delta_t_s, None);
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    for name in "planar.lif tiles_lambda.lif ".split_whitespace() {
+        common::corrupt_sweep(&common::root().join("tests/data/lif").join(name), 7);
+    }
+}

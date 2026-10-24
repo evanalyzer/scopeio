@@ -108,6 +108,22 @@ as black-box command-line tools to produce reference output
 - Synthetic sample written from the documented layout by
   `tests/scripts/make_svs_samples.py`.
 
+## Hamamatsu NDPI (`src/formats/ndpi.rs`, `src/formats/slide/restart.rs`)
+
+- openslide.org Hamamatsu format page (prose, CC BY-SA 4.0) in
+  `doc/hamamatsu-ndpi-vms/`: 64-bit header and IFD links, high 32 bits of
+  entry values after each IFD, tags 65420/65421 (source lens; -1 macro, -2
+  map), 65426/65432 (restart offsets). OpenSlide's C code (LGPL) was not
+  consulted.
+- ITU-T T.81 (JPEG): restart intervals reset the DC predictions, so each
+  interval decodes on its own with the stream's tables and a patched frame
+  size.
+- Own analysis of sample files: restart offsets are relative to the JPEG
+  stream and point after each RSTn marker.
+- Synthetic sample written from the documented layout by
+  `tests/scripts/make_ndpi_samples.py` (JPEG streams by ImageMagick, run as a
+  program).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

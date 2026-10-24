@@ -1,0 +1,19 @@
+# Known differences between scopeio and the reference readers: JPEG decoded with different
+# IDCT implementations (zune-jpeg vs Bio-Formats) differs by rounding.
+file	tool	series	tolerance	reason
+tests/reference/openslide/Hamamatsu/CMU-1.ndpi	bioformats	0	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/CMU-1.ndpi	bioformats	2	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/CMU-1.ndpi	bioformats	3	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/CMU-1.ndpi	bioformats	4	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/Hamamatsu-2.ndpi	bioformats	0	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/Hamamatsu-2.ndpi	bioformats	5	0.2	JPEG IDCT rounding
+tests/reference/openslide/Hamamatsu/Hamamatsu-2.ndpi	bioformats	6	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-DAPI 2 (387) .ndpi	bioformats	0	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-DAPI 2 (387) .ndpi	bioformats	1	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-FITC 2 (485).ndpi	bioformats	0	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-FITC 2 (485).ndpi	bioformats	1	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi	bioformats	0	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi	bioformats	1	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-DAPI 2 (387) .ndpi	bioformats-rs	0	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-FITC 2 (485).ndpi	bioformats-rs	0	0.2	JPEG IDCT rounding
+tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi	bioformats-rs	0	0.2	JPEG IDCT rounding

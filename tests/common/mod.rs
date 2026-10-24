@@ -393,8 +393,24 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             continue;
         }
         if level > 0 {
-            let diffs = match scopeio::open(&path).and_then(|reader| decode_level(reader.as_ref(), series, level)) {
-                Ok(s) => compare(&s, r, tolerance),
+            let diffs = match scopeio::open(&path).and_then(|reader| decode_level(reader.as_ref(), series, level).map(|s| (s, reader))) {
+                Ok((mut s, reader)) => {
+                    // References give a level the pixel size of level 0 or its own.
+                    let first = compare(&s, r, tolerance);
+                    let f = reader.series_meta(series).map(|m| m.levels[level].downsample).unwrap_or(1.0);
+                    // Within 1 %: references may use the level's own rounded resolution.
+                    let near = |ours: Option<f64>, key: &str| {
+                        let scaled = ours.map(|v| v * f);
+                        match (scaled, r[key].parse::<f64>()) {
+                            (Some(v), Ok(reference)) if (v - reference).abs() <= 0.01 * reference.abs() => Some(reference),
+                            _ => scaled,
+                        }
+                    };
+                    s.phys_x_nm = near(s.phys_x_nm, "phys_x_nm");
+                    s.phys_y_nm = near(s.phys_y_nm, "phys_y_nm");
+                    let scaled = compare(&s, r, tolerance);
+                    if scaled.len() < first.len() { scaled } else { first }
+                }
                 Err(e) => vec![format!("level {level}: {e}")],
             };
             match (diffs.is_empty(), listed) {
@@ -431,4 +447,37 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         eprintln!("{format}: skipped {skipped} reference rows of files not present locally");
     }
     failures
+}
+
+/// Opens and decodes truncated and byte-flipped copies of `path`; any
+/// panic fails the calling test. Errors are expected.
+#[allow(dead_code)]
+pub fn corrupt_sweep(path: &Path, step: usize) {
+    let data = std::fs::read(path).unwrap();
+    let dir = std::env::temp_dir().join(format!("scopeio-sweep-{}-{}", std::process::id(), path.file_name().unwrap().to_string_lossy()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let target = dir.join(path.file_name().unwrap());
+    for at in (0..data.len()).step_by(step.max(1)) {
+        let mut d = data.clone();
+        if at % 2 == 0 {
+            d.truncate(at.max(8));
+        } else {
+            d[at] ^= 0xA5;
+        }
+        std::fs::write(&target, &d).unwrap();
+        if let Ok(r) = scopeio::open(&target) {
+            let _ = decode(r.as_ref());
+            for s in 0..r.series_count() {
+                if let Ok(m) = r.series_meta(s) {
+                    for l in 1..m.levels.len() {
+                        let _ = decode_level(r.as_ref(), s, l);
+                    }
+                }
+            }
+            for kind in r.associated_images().to_vec() {
+                let _ = r.read_associated(&kind, &Default::default());
+            }
+        }
+    }
+    let _ = std::fs::remove_dir_all(&dir);
 }

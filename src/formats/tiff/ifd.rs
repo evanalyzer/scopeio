@@ -105,6 +105,9 @@ pub(crate) struct TiffFile {
     pub little: bool,
     pub big: bool,
     pub len: u64,
+    /// Hamamatsu NDPI: classic TIFF whose offsets carry high 32 bits after
+    /// each structure (see [`TiffFile::open_ndpi`]).
+    pub ndpi: bool,
     /// IFDs of the main chain, in file order.
     pub ifds: Vec<Ifd>,
 }
@@ -125,6 +128,29 @@ impl TiffFile {
         Self::from_file(File::open(path)?, 1)
     }
 
+    /// Opens a Hamamatsu NDPI file: a little-endian classic TIFF whose
+    /// header and next-IFD links are 64-bit, followed after each IFD by the
+    /// high 32 bits of every entry's value (inline values included).
+    pub fn open_ndpi(path: &Path, max_ifds: usize) -> Result<Self> {
+        let file = File::open(path)?;
+        let len = file.metadata()?.len();
+        let mut head = [0u8; 12];
+        if len < 12 {
+            return Err(Error::Corrupt("NDPI file too short".into()));
+        }
+        read_exact_at(&file, &mut head, 0)?;
+        if &head[..4] != b"II*\0" {
+            return Err(Error::Corrupt("not an NDPI file".into()));
+        }
+        let mut tiff = Self { file, little: true, big: false, len, ndpi: true, ifds: Vec::new() };
+        let first = tiff.u64(&head[4..]);
+        tiff.ifds = tiff.read_chain(first, max_ifds)?;
+        if tiff.ifds.is_empty() {
+            return Err(Error::Corrupt("NDPI without image directory".into()));
+        }
+        Ok(tiff)
+    }
+
     /// Parses the header and walks the IFD chain, reading at most
     /// `max_ifds` IFDs.
     pub fn from_file(file: File, max_ifds: usize) -> Result<Self> {
@@ -136,7 +162,7 @@ impl TiffFile {
         }
         let little = head[0] == b'I';
         let big = head[2] == 43 || head[3] == 43;
-        let mut tiff = Self { file, little, big, len, ifds: Vec::new() };
+        let mut tiff = Self { file, little, big, len, ndpi: false, ifds: Vec::new() };
         let first = if big {
             read_exact_at(&tiff.file, &mut head, 0)?;
             if tiff.u16(&head[4..]) != 8 {
@@ -172,18 +198,27 @@ impl TiffFile {
 
     /// Reads one IFD, returning it and the offset of the next one.
     pub fn read_ifd(&self, offset: u64) -> Result<(Ifd, u64)> {
-        let (count_size, entry_size, link_size): (usize, usize, usize) = if self.big { (8, 20, 8) } else { (2, 12, 4) };
+        let (count_size, entry_size, link_size): (usize, usize, usize) = match (self.big, self.ndpi) {
+            (true, _) => (8, 20, 8),
+            (false, true) => (2, 12, 8),
+            (false, false) => (2, 12, 4),
+        };
         let mut buf = [0u8; 8];
         read_exact_at(&self.file, &mut buf[..count_size], offset)?;
         let n = if self.big { self.u64(&buf) } else { self.u16(&buf) as u64 };
         if n == 0 || offset + (count_size + link_size) as u64 + n * entry_size as u64 > self.len {
             return Err(Error::Corrupt(format!("invalid IFD at offset {offset}")));
         }
-        let mut raw = vec![0u8; n as usize * entry_size + link_size];
-        read_exact_at(&self.file, &mut raw, offset + count_size as u64)?;
+        // NDPI: the high 32 bits of each entry's value follow the link.
+        let high = if self.ndpi { 4 * n as usize } else { 0 };
+        let mut raw = vec![0u8; n as usize * entry_size + link_size + high];
+        let avail = (self.len - offset - count_size as u64).min(raw.len() as u64) as usize;
+        read_exact_at(&self.file, &mut raw[..avail], offset + count_size as u64)?;
+        let high_at = n as usize * entry_size + link_size;
         let mut entries: Vec<Entry> = raw[..n as usize * entry_size]
             .chunks_exact(entry_size)
-            .map(|e| {
+            .enumerate()
+            .map(|(i, e)| {
                 let mut value = [0u8; 8];
                 let (count, v) = if self.big {
                     (self.u64(&e[4..]), &e[12..20])
@@ -191,13 +226,16 @@ impl TiffFile {
                     (self.u32(&e[4..]) as u64, &e[8..12])
                 };
                 value[..v.len()].copy_from_slice(v);
+                if self.ndpi {
+                    value[4..8].copy_from_slice(&raw[high_at + 4 * i..high_at + 4 * i + 4]);
+                }
                 Entry { tag: self.u16(e), typ: self.u16(&e[2..]), count, value }
             })
             .collect();
         entries.sort_by_key(|e| e.tag);
         entries.dedup_by_key(|e| e.tag);
         let link = &raw[n as usize * entry_size..];
-        let next = if self.big { self.u64(link) } else { self.u32(link) as u64 };
+        let next = if self.big || self.ndpi { self.u64(link) } else { self.u32(link) as u64 };
         Ok((Ifd { entries }, next))
     }
 
@@ -209,7 +247,7 @@ impl TiffFile {
         if size <= inline {
             return Ok(e.value[..size].to_vec());
         }
-        let offset = if self.big { self.u64(&e.value) } else { self.u32(&e.value) as u64 };
+        let offset = if self.big || self.ndpi { self.u64(&e.value) } else { self.u32(&e.value) as u64 };
         let mut buf = vec![0u8; size];
         read_exact_at(&self.file, &mut buf, offset)?;
         Ok(buf)
@@ -222,6 +260,10 @@ impl TiffFile {
 
     /// Integer values of an entry of any integer type.
     pub fn entry_uints(&self, e: &Entry) -> Result<Vec<u64>> {
+        // NDPI: an inline LONG (strip offset or size) has high bits too.
+        if self.ndpi && e.count == 1 && matches!(e.typ, 4 | 13) {
+            return Ok(vec![self.u64(&e.value)]);
+        }
         let raw = self.raw(e)?;
         Ok(match e.typ {
             1 | 6 | 7 => raw.iter().map(|&b| b as u64).collect(),
@@ -240,6 +282,8 @@ impl TiffFile {
             return Ok(Some(match e.typ {
                 1 | 6 | 7 => v[0] as u64,
                 3 | 8 => self.u16(v) as u64,
+                // NDPI keeps the high bits of inline offsets and sizes.
+                4 | 13 if self.ndpi => self.u64(v),
                 4 | 9 | 13 => self.u32(v) as u64,
                 16 | 17 | 18 if self.big => self.u64(v),
                 _ => return Ok(self.uints(ifd, tag)?.and_then(|v| v.first().copied())),

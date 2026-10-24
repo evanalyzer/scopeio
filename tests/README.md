@@ -63,6 +63,7 @@ python3 -I tests/scripts/make_nd2_samples.py
 python3 -I tests/scripts/make_czi_samples.py
 python3 -I tests/scripts/make_lif_samples.py
 python3 -I tests/scripts/make_svs_samples.py
+python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -129,6 +130,24 @@ for f in CMU-1 CMU-1-JP2K-33005; do
 done
 python3 -I tests/scripts/oracle.py svs --series 0 --crop 6000,8000,2048,2048 --append $A/JP2K-33003-1.svs
 python3 -I tests/scripts/oracle.py svs --series 0 --crop 30000,20000,2048,2048 --append tests/reference/ome/SVS/77928.svs
+```
+
+NDPI:
+
+```sh
+H=tests/reference/openslide/Hamamatsu; M=tests/reference/ome/Hamamatsu-NDPI/manuel
+python3 -I tests/scripts/oracle.py ndpi --series 0 --crop 20000,15000,2048,2048 $H/CMU-1.ndpi
+python3 -I tests/scripts/oracle.py ndpi --series 2 --ours-series 0/2 --append $H/CMU-1.ndpi
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 3 --ours-series 0/3 --append $H/CMU-1.ndpi
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 4 --ours-series assoc:macro --append $H/CMU-1.ndpi
+python3 -I tests/scripts/oracle.py ndpi --series 0 --crop 10000,20000,2048,2048 --append $H/Hamamatsu-2.ndpi
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 5 --ours-series 0/5 --append $H/Hamamatsu-2.ndpi
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 6 --ours-series assoc:macro --append $H/Hamamatsu-2.ndpi
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 7 --ours-series assoc:map --append $H/Hamamatsu-2.ndpi
+for f in "$M"/*.ndpi; do
+  python3 -I tests/scripts/oracle.py ndpi --keep-series 0 --append "$f"
+  python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 1 --ours-series 0/1 --append "$f"
+done
 ```
 
 Divergence files may name one reference series in an optional `series`

@@ -49,3 +49,10 @@ fn synthetic_file_matches_spec_truth() {
         assert_eq!(crc(&got), t["crc32"], "{}", t["image"]);
     }
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    for name in "synthetic.svs ".split_whitespace() {
+        common::corrupt_sweep(&common::root().join("tests/data/svs").join(name), 7);
+    }
+}

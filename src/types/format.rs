@@ -23,6 +23,7 @@ pub enum FormatId {
     Czi,
     Lif,
     Svs,
+    Ndpi,
 }
 
 /// Identification of the reader that produced the data, for

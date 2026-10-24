@@ -16,6 +16,10 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+pub(super) mod restart;
+
+use restart::RestartJpeg;
+
 use super::tiff::ifd::TiffFile;
 use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
@@ -27,13 +31,20 @@ use crate::{AssociatedKind, Error, FormatInfo, OriginalMeta, Plane, PlaneMeta, R
 pub(super) struct PlaneImage {
     pub image: TiffImage,
     pub samples: Samples,
+    /// Read by restart interval instead of by TIFF chunk.
+    pub restart: Option<Box<RestartJpeg>>,
 }
 
 impl PlaneImage {
     /// All samples of `image` (gray or colour).
     pub fn whole(image: TiffImage) -> Self {
         let samples = if image.samples_out == 1 { Samples::One(0) } else { Samples::All };
-        Self { image, samples }
+        Self { image, samples, restart: None }
+    }
+
+    pub fn with_restart(mut self, restart: Option<RestartJpeg>) -> Self {
+        self.restart = restart.map(Box::new);
+        self
     }
 }
 
@@ -131,6 +142,9 @@ impl Backend for Slide {
         let m = &self.metas[series];
         let index = (plane.c + m.size_c * (plane.z + m.size_z * plane.t)) as usize;
         let p = &self.series[series].levels[level][index];
-        p.image.read_native(&self.tiff, region, p.samples, sink)
+        match &p.restart {
+            Some(r) => r.read(&self.tiff, region, sink),
+            None => p.image.read_native(&self.tiff, region, p.samples, sink),
+        }
     }
 }

@@ -18,6 +18,8 @@ mod czi;
 mod lif;
 #[cfg(feature = "tiff")]
 mod slide;
+#[cfg(feature = "ndpi")]
+mod ndpi;
 #[cfg(feature = "svs")]
 mod svs;
 #[cfg(feature = "nd2")]
@@ -60,6 +62,8 @@ static SUPPORTED: &[FormatInfo] = &[
     lif::FORMAT,
     #[cfg(feature = "svs")]
     svs::FORMAT,
+    #[cfg(feature = "ndpi")]
+    ndpi::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -142,6 +146,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "ndpi")]
+        Some(FormatId::Ndpi) => Ok(Arc::new(Reader(ndpi::open(path, opts)?))),
         #[cfg(feature = "svs")]
         Some(FormatId::Svs) => Ok(Arc::new(Reader(svs::open(path, opts)?))),
         #[cfg(feature = "lif")]
