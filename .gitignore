@@ -2,4 +2,6 @@
 CLAUDE.local.md
 /tests/external
 /tests/reference
-/doc
+/doc/*
+!/doc/README.md
+!/doc/_manifest_*.md
