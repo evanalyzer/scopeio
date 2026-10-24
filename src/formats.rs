@@ -32,6 +32,8 @@ mod qptiff;
 mod scn;
 #[cfg(feature = "ndpi")]
 mod ndpi;
+#[cfg(feature = "ndpi")]
+mod ndpis;
 #[cfg(feature = "svs")]
 mod svs;
 #[cfg(feature = "nd2")]
@@ -76,6 +78,8 @@ static SUPPORTED: &[FormatInfo] = &[
     svs::FORMAT,
     #[cfg(feature = "ndpi")]
     ndpi::FORMAT,
+    #[cfg(feature = "ndpi")]
+    ndpis::FORMAT,
     #[cfg(feature = "mrxs")]
     mrxs::FORMAT,
     #[cfg(feature = "lsm")]
@@ -127,6 +131,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "ims")]
     if ims::matches(path, &head) {
         return Ok(Some(FormatId::Ims));
+    }
+    #[cfg(feature = "ndpi")]
+    if ndpis::matches(&head) {
+        return Ok(Some(FormatId::Ndpis));
     }
     #[cfg(feature = "lif")]
     if lif::matches(&head) {
@@ -193,6 +201,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Mrxs) => Ok(Arc::new(Reader(mrxs::Mrxs::open(path, opts)?))),
         #[cfg(feature = "ndpi")]
         Some(FormatId::Ndpi) => Ok(Arc::new(Reader(ndpi::open(path, opts)?))),
+        #[cfg(feature = "ndpi")]
+        Some(FormatId::Ndpis) => Ok(Arc::new(Reader(ndpis::Ndpis::open(path, opts)?))),
         #[cfg(feature = "svs")]
         Some(FormatId::Svs) => Ok(Arc::new(Reader(svs::open(path, opts)?))),
         #[cfg(feature = "lif")]

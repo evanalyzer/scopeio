@@ -162,6 +162,10 @@ for f in "$M"/*.ndpi; do
   python3 -I tests/scripts/oracle.py ndpi --keep-series 0 --append "$f"
   python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 1 --ours-series 0/1 --append "$f"
 done
+# NDPIS set; bfconvert fails on the whole series 0 ("Invalid plane index"), a full-size crop works
+python3 -I tests/scripts/oracle.py ndpi --series 0 --crop 0,0,3968,4864 --append $M/test3.ndpis
+python3 -I tests/scripts/oracle.py ndpi --tools bioformats-rs --keep-series 0 --append $M/test3.ndpis
+python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 1 --ours-series 0/1 --append $M/test3.ndpis
 # Above 4 GiB (fetch_openslide.py --large): 64-bit NDPI offsets
 python3 -I tests/scripts/oracle.py ndpi --series 0 --crop 120000,60000,2048,2048 --append $H/Hamamatsu-1.ndpi
 python3 -I tests/scripts/oracle.py ndpi --repeat 1 --series 4 --ours-series 0/4 --append $H/Hamamatsu-1.ndpi

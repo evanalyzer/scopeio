@@ -24,6 +24,8 @@ pub enum FormatId {
     Lif,
     Svs,
     Ndpi,
+    /// Hamamatsu NDPIS fluorescence set (one NDPI per channel).
+    Ndpis,
     Mrxs,
     Lsm,
     Qptiff,

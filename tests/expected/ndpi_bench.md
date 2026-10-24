@@ -59,3 +59,14 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | scopeio | ok | 0.746 | 0.748 | 226.5 |
 | tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | bioformats | ok | 2.967 | 1.904 | 762.7 |
 | tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis | 0 KiB | scopeio | ok | 0.354 | 0.357 | 77.5 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis | 0 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 2.963 | 1.627 | 440.0 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis | 0 KiB | bioformats-rs | ok | 1.471 | 1.472 | 219.8 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 1) | 0 KiB | scopeio | ok | 0.082 | 0.084 | 22.2 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 1) | 0 KiB | bioformats | ok | 1.903 | 0.993 | 377.8 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 1) | 0 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 0) crop 0,0,3968,4864 | 0 KiB | scopeio | ok | 0.350 | 0.352 | 77.5 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 0) crop 0,0,3968,4864 | 0 KiB | bioformats | ok | 1.963 | 1.088 | 428.6 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis (series 0) crop 0,0,3968,4864 | 0 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis | 0 KiB | scopeio | ok | 0.350 | 0.352 | 77.5 |
+| tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis | 0 KiB | bioformats-rs | ok | 1.418 | 1.420 | 219.4 |

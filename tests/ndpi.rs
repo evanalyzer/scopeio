@@ -53,7 +53,38 @@ fn synthetic_file_matches_spec_truth() {
 
 #[test]
 fn corrupt_files_do_not_panic() {
-    for name in "synthetic.ndpi ".split_whitespace() {
-        common::corrupt_sweep(&common::root().join("tests/data/ndpi").join(name), 7);
+    for name in "ndpi/synthetic.ndpi ndpis/synthetic.ndpis".split_whitespace() {
+        common::corrupt_sweep(&common::root().join("tests/data").join(name), 7);
     }
+}
+
+#[test]
+fn ndpis_set_reads_one_component_per_file() {
+    let r = scopeio::open(&root().join("tests/data/ndpis/synthetic.ndpis")).unwrap();
+    assert_eq!(r.format().id, scopeio::FormatId::Ndpis);
+    let m = r.series_meta(0).unwrap();
+    assert_eq!((m.size_c, m.samples_per_pixel, m.levels.len()), (2, 1, 2));
+    // Each channel is the strongest component of its RGB file.
+    let rgb = scopeio::open(&root().join("tests/data/ndpi/synthetic.ndpi")).unwrap();
+    let full = decode_level(rgb.as_ref(), 0, 1).unwrap().pixels;
+    let set = decode_level(r.as_ref(), 0, 1).unwrap().pixels;
+    let k = (0..3).max_by_key(|&k| full.chunks_exact(3).map(|p| p[k] as u64).sum::<u64>()).unwrap();
+    let expect: Vec<u8> = full.chunks_exact(3).flat_map(|p| [p[k], p[k]]).collect();
+    assert_eq!(set, expect);
+    assert_eq!(r.associated_images(), [AssociatedKind::Macro]);
+}
+
+#[test]
+fn ndpis_channel_metadata() {
+    let path = root().join("tests/reference/ome/Hamamatsu-NDPI/manuel/test3.ndpis");
+    if !path.exists() {
+        return;
+    }
+    let r = scopeio::open(&path).unwrap();
+    let ch = r.series_meta(0).unwrap().channels.clone();
+    let names: Vec<_> = ch.iter().map(|c| c.name.as_deref().unwrap_or("")).collect();
+    assert_eq!(names, ["DAPI 2 (387)", "FITC 2 (485)", "TRITC 2 (560)"]);
+    let em: Vec<_> = ch.iter().map(|c| c.emission_wavelength_nm).collect();
+    assert_eq!(em, [Some(455.0), Some(519.0), Some(622.0)]);
+    assert_eq!(ch[0].excitation_wavelength_nm, Some(387.0));
 }

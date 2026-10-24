@@ -136,9 +136,10 @@ pub(super) fn open(path: &Path, _opts: &OpenOptions) -> Result<Slide> {
         original.push(("hamamatsu.Model".into(), m));
     }
     if let Some(text) = tiff.string(ifd, TAG_METADATA)? {
-        for line in text.lines() {
+        // Lines end in a bare CR in the sample files.
+        for line in text.split(['\r', '\n']) {
             if let Some((k, v)) = line.split_once('=') {
-                original.push((format!("hamamatsu.{}", k.trim()), v.trim().to_string()));
+                original.push((format!("hamamatsu.{}", k.trim().trim_start_matches(';')), v.trim().to_string()));
             }
         }
     }

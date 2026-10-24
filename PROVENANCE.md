@@ -124,6 +124,18 @@ as black-box command-line tools to produce reference output
   `tests/scripts/make_ndpi_samples.py` (JPEG streams by ImageMagick, run as a
   program).
 
+## Hamamatsu NDPIS (`src/formats/ndpis.rs`)
+
+- Own analysis of the OME sample set `Hamamatsu-NDPI/manuel/test3.ndpis`:
+  INI text `[NanoZoomer Digital Pathology Image Set]` with `NoImages` and
+  `Image0..` naming one NDPI file per channel next to it. Each file is a
+  pseudo-coloured RGB slide with the signal in one component; tag 65434
+  holds the channel name, the CR-separated tag 65449 block holds
+  `ExcitationWaveLength` / `EmissionWaveLength`.
+- Bio-Formats and bioformats-rs run as black boxes to confirm the channel
+  order and that each channel is the dominant component (pixels match
+  bioformats-rs exactly). No GPL/LGPL code consulted.
+
 ## 3DHistech MIRAX (`src/formats/mrxs.rs`)
 
 - openslide.org MIRAX format page (prose, CC BY-SA 4.0) in
