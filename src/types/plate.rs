@@ -16,24 +16,18 @@ use crate::Position;
 pub struct PlateMeta {
     pub name: Option<String>,
     pub rows: u32,
-    pub columns: u32,
-    /// Imaged wells only.
-    pub wells: Vec<WellMeta>,
+    pub cols: u32,
+    /// One entry per imaged field.
+    pub wells: Vec<WellSample>,
 }
 
-/// One well of a plate. `row` and `column` are 0-based.
-#[derive(Debug, Clone, PartialEq, Default)]
-#[non_exhaustive]
-pub struct WellMeta {
-    pub row: u32,
-    pub column: u32,
-    pub fields: Vec<WellField>,
-}
-
-/// One imaged field within a well.
+/// One imaged field of a well. `row`, `col` and `field` are 0-based.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 #[non_exhaustive]
-pub struct WellField {
+pub struct WellSample {
+    pub row: u32,
+    pub col: u32,
+    pub field: u32,
     /// Index of the series holding this field's image.
     pub series: usize,
     pub position: Option<Position>,

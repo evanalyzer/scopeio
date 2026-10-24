@@ -1,0 +1,165 @@
+//! # codecs
+//!
+//! Decompression of chunk data, shared by all readers.
+//!
+//! Each decoder writes into a caller-provided buffer of the expected
+//! decoded size and returns the number of bytes written. Codecs are behind
+//! cargo features; disabled ones return [`Error::Unsupported`].
+//!
+//! **Author:** Joachim Danmayr
+//! **Date:** 2026-10-24
+//!
+//! ## License
+//! Copyright 2026 Joachim Danmayr.
+//! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
+//! See LICENSE and LICENSE-EXCEPTION.
+
+#[cfg(feature = "jpeg")]
+pub(crate) mod jpeg;
+
+use crate::{Error, Result};
+
+#[allow(dead_code)]
+fn disabled(name: &str) -> Error {
+    Error::UnsupportedVariant(format!("{name} compression (enable the `{name}` feature)"))
+}
+
+/// Decodes PackBits run-length data (Apple TN1023, TIFF 6.0 section 9).
+///
+/// Stops when `out` is full or the input ends.
+pub(crate) fn packbits(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    let (mut i, mut o) = (0, 0);
+    while i < src.len() && o < out.len() {
+        let n = src[i] as i8;
+        i += 1;
+        if n >= 0 {
+            let len = (n as usize + 1).min(out.len() - o).min(src.len() - i);
+            out[o..o + len].copy_from_slice(&src[i..i + len]);
+            i += n as usize + 1;
+            o += len;
+        } else if n != -128 {
+            let Some(&v) = src.get(i) else { break };
+            let len = (1 - n as isize) as usize;
+            let len = len.min(out.len() - o);
+            out[o..o + len].fill(v);
+            i += 1;
+            o += len;
+        }
+    }
+    Ok(o)
+}
+
+/// Decodes TIFF LZW data (TIFF 6.0 section 13), including the pre-6.0
+/// variant with LSB-first codes.
+#[cfg(feature = "lzw")]
+pub(crate) fn lzw(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    use weezl::{BitOrder, LzwStatus, decode::Decoder};
+    // Old-style streams start with a clear code written LSB first.
+    let old_style = src.len() >= 2 && src[0] == 0 && src[1] & 1 == 1;
+    let mut decoder = if old_style {
+        Decoder::new(BitOrder::Lsb, 8)
+    } else {
+        Decoder::with_tiff_size_switch(BitOrder::Msb, 8)
+    };
+    let (mut i, mut o) = (0, 0);
+    while o < out.len() {
+        let r = decoder.decode_bytes(&src[i..], &mut out[o..]);
+        i += r.consumed_in;
+        o += r.consumed_out;
+        match r.status {
+            Ok(LzwStatus::Ok) if r.consumed_in == 0 && r.consumed_out == 0 => break,
+            Ok(LzwStatus::Ok) => {}
+            Ok(LzwStatus::Done | LzwStatus::NoProgress) => break,
+            // Some writers end strips without an end code or with garbage after
+            // the image data; keep what was decoded.
+            Err(_) if o > 0 => break,
+            Err(e) => return Err(Error::Corrupt(format!("LZW: {e}"))),
+        }
+    }
+    Ok(o)
+}
+
+#[cfg(not(feature = "lzw"))]
+pub(crate) fn lzw(_src: &[u8], _out: &mut [u8]) -> Result<usize> {
+    Err(disabled("lzw"))
+}
+
+/// Decodes a zlib stream (RFC 1950), or raw Deflate data (RFC 1951) if
+/// `zlib_header` is false.
+#[cfg(feature = "deflate")]
+pub(crate) fn deflate(src: &[u8], out: &mut [u8], zlib_header: bool) -> Result<usize> {
+    use flate2::{Decompress, FlushDecompress, Status};
+    let mut d = Decompress::new(zlib_header);
+    loop {
+        let before = d.total_out();
+        let status = d
+            .decompress(&src[d.total_in() as usize..], &mut out[d.total_out() as usize..], FlushDecompress::Finish)
+            .map_err(|e| Error::Corrupt(format!("Deflate: {e}")))?;
+        match status {
+            Status::StreamEnd => break,
+            _ if d.total_out() as usize == out.len() || d.total_out() == before => break,
+            _ => {}
+        }
+    }
+    Ok(d.total_out() as usize)
+}
+
+#[cfg(not(feature = "deflate"))]
+pub(crate) fn deflate(_src: &[u8], _out: &mut [u8], _zlib_header: bool) -> Result<usize> {
+    Err(disabled("deflate"))
+}
+
+/// Decodes Zstandard frames (RFC 8878).
+#[cfg(feature = "zstd")]
+pub(crate) fn zstd(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    ruzstd::decoding::FrameDecoder::new()
+        .decode_all(src, out)
+        .map_err(|e| Error::Corrupt(format!("Zstandard: {e}")))
+}
+
+#[cfg(not(feature = "zstd"))]
+pub(crate) fn zstd(_src: &[u8], _out: &mut [u8]) -> Result<usize> {
+    Err(disabled("zstd"))
+}
+
+// --- Tests ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packbits_tn1023_example() {
+        // Example from Apple TN1023.
+        let src = [0xFE, 0xAA, 0x02, 0x80, 0x00, 0x2A, 0xFD, 0xAA, 0x03, 0x80, 0x00, 0x2A, 0x22, 0xF7, 0xAA];
+        let mut out = [0u8; 24];
+        assert_eq!(packbits(&src, &mut out).unwrap(), 24);
+        assert_eq!(
+            out,
+            [
+                0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0xAA, 0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0x22, 0xAA,
+                0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA
+            ]
+        );
+    }
+
+    #[cfg(feature = "deflate")]
+    #[test]
+    fn deflate_stored_block() {
+        // zlib header, one stored block "abc", Adler-32.
+        let src = [0x78, 0x01, 0x01, 0x03, 0x00, 0xFC, 0xFF, b'a', b'b', b'c', 0x02, 0x4D, 0x01, 0x27];
+        let mut out = [0u8; 3];
+        assert_eq!(deflate(&src, &mut out, true).unwrap(), 3);
+        assert_eq!(&out, b"abc");
+    }
+
+    #[cfg(feature = "zstd")]
+    #[test]
+    fn zstd_raw_block() {
+        // Frame header with single segment and 3-byte content, one raw last block.
+        let src = [0x28, 0xB5, 0x2F, 0xFD, 0x20, 0x03, 0x19, 0x00, 0x00, b'x', b'y', b'z'];
+        let mut out = [0u8; 3];
+        assert_eq!(zstd(&src, &mut out).unwrap(), 3);
+        assert_eq!(&out, b"xyz");
+    }
+}

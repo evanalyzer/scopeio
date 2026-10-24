@@ -6,3 +6,23 @@ authors = ["Joachim Danmayr"]
 license = "AGPL-3.0-only"
 
 [dependencies]
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"], optional = true }
+roxmltree = { version = "0.21", optional = true }
+ruzstd = { version = "0.9", optional = true }
+weezl = { version = "0.2", optional = true }
+zune-jpeg = { version = "0.5", optional = true }
+
+[features]
+default = ["bmp", "tiff", "deflate", "lzw", "jpeg", "zstd"]
+# Formats.
+bmp = []
+tiff = ["dep:roxmltree"]
+# Compression codecs. Files using a disabled codec return `Error::Unsupported`.
+deflate = ["dep:flate2"]
+lzw = ["dep:weezl"]
+jpeg = ["dep:zune-jpeg"]
+zstd = ["dep:ruzstd"]
+
+# Tests decode many sample files; optimise them.
+[profile.test]
+opt-level = 2

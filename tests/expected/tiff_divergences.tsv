@@ -1,0 +1,30 @@
+# Known differences between scopeio and the reference readers, each checked
+# against the TIFF 6.0 specification, the spec-derived truth of tests/data/tiff
+# or the raw file bytes. With a tolerance, block means must agree within it
+# (lossy data); without, the difference must persist. Tool "scopeio" marks
+# files scopeio cannot read yet.
+file	tool	tolerance	reason
+tests/data/tiff/f16_le.tif	bioformats-rs		returns the raw 16-bit half-float bit patterns as uint16; scopeio converts them to f32
+tests/data/tiff/u10_rgb_be.tif	bioformats		10-bit packed samples differ from sample 13 on; scopeio matches the encoded values (MSB first, rows padded to bytes, TIFF 6.0)
+tests/data/tiff_im/gray8_jpeg.tif	bioformats	1.0	lossy JPEG: decoders differ by rounding
+tests/reference/ome/TIFF/libtiff/quad-jpeg.tif	bioformats	1.0	lossy JPEG: decoders differ by rounding
+tests/reference/ome/TIFF/libtiff/cramps.tif	bioformats		no ResolutionUnit tag: TIFF 6.0 defaults to inch (352778 nm for 72 dpi); Bio-Formats reports 13.889 nm
+tests/reference/ome/TIFF/libtiff/strike.tif	bioformats		ResolutionUnit 1 (no absolute unit): scopeio reports no pixel size, Bio-Formats assumes micrometres
+tests/reference/ome/TIFF/libtiff/dscf0013.tif	bioformats		YCbCr 2x1 data: Bio-Formats colours differ strongly (e.g. raw Y=2 Cb=128 Cr=130 decodes to 184,122,228); scopeio follows TIFF 6.0 section 21 and matches bioformats-rs
+tests/reference/ome/TIFF/libtiff/ycbcr-cat.tif	bioformats		YCbCr 2x2 data: Bio-Formats wraps out-of-range values instead of clamping (0 vs 252) and rounds differently
+tests/reference/ome/TIFF/libtiff/ycbcr-cat.tif	bioformats-rs		YCbCr 2x2 data: values differ; scopeio follows TIFF 6.0 section 21
+tests/reference/ome/TIFF/libtiff/quad-lzw.tif	bioformats		Bio-Formats output differs; scopeio matches libtiff (ImageMagick) exactly and Bio-Formats' own result for the tiled copy quad-tile.tif
+tests/reference/ome/TIFF/libtiff/fax2d.tif	scopeio		CCITT Group 3 compression not supported yet
+tests/reference/ome/TIFF/libtiff/g3test.tif	scopeio		CCITT Group 3 compression not supported yet
+tests/reference/ome/TIFF/libtiff/off_l16.tif	scopeio		LogL compression not supported
+tests/reference/ome/TIFF/libtiff/off_luv24.tif	scopeio		LogLuv compression not supported
+tests/reference/ome/TIFF/libtiff/off_luv32.tif	scopeio		LogLuv compression not supported
+tests/reference/ome/TIFF/libtiff/smallliz.tif	scopeio		old-style JPEG compression (6) not supported
+tests/reference/ome/TIFF/libtiff/zackthecat.tif	scopeio		old-style JPEG compression (6) not supported
+tests/reference/ome/TIFF/libtiff/text.tif	scopeio		ThunderScan compression not supported
+tests/data/tiff/palette8.tif	bioformats		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv
+tests/data/tiff/palette8.tif	bioformats-rs		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv
+tests/data/tiff/palette8_rgb16.tif	bioformats		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv
+tests/data/tiff/palette8_rgb16.tif	bioformats-rs		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv
+tests/reference/ome/TIFF/libtiff/jello.tif	bioformats		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv
+tests/reference/ome/TIFF/libtiff/jello.tif	bioformats-rs		palette with a colour map that is no gray or single-colour ramp: the reference readers return the indices (also with bfconvert -expand), scopeio expands to RGB by design (promt.md section 6); synthetic samples checked against truth.tsv

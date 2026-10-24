@@ -1,5 +1,8 @@
 //! # reader
 //!
+//! The public [`ImageReader`] trait and the engine implementing it on top of
+//! the format backends.
+//!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
 //!
@@ -8,288 +11,408 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::types::as_bytes_mut;
-use crate::{Error, PixelBuf, PixelType, Plane, PlaneMeta, PlateMeta, Region, Result, Sample, SeriesMeta};
+use crate::pixel::{Sink, output_type};
+use crate::{
+    AssociatedKind, ChannelSelect, ColorOrder, Error, FormatInfo, ImageBuf, Layout, OriginalMeta, OutputShape,
+    OutputSpec, PixelBuf, PixelType, PixelViewMut, Plane, PlaneMeta, PlateMeta, Region, RegionRequest, Result,
+    SeriesMeta, TileRequest,
+};
 
-/// Common interface implemented by all format readers.
+/// Common interface of all format readers.
 ///
-/// Pixel data is written row-major, with samples interleaved (height x
-/// width x samples per pixel), always in native byte order: readers convert
-/// from the file byte order with [`ByteOrder::to_native`](crate::ByteOrder::to_native).
-/// Colour samples are always R, G, B(, A), interleaved, with straight alpha:
-/// readers normalise BGR and planar storage with [`ColorModel::bgr_to_rgb`](crate::ColorModel::bgr_to_rgb)
-/// and [`ColorModel::interleave`](crate::ColorModel::interleave).
-/// Readers take `&self` so that one reader can serve parallel reads from
-/// several threads.
-///
-/// Implementors only provide [`ImageReader::read_region_into`]; the typed
-/// methods of [`ImageReaderExt`] build on it without copying.
+/// Handles are stateless and shareable: every method takes `&self`, so one
+/// handle serves reads from many threads at once. Reads are positional and
+/// keep no pixel cache.
 pub trait ImageReader: Send + Sync {
-    /// Number of series in the file.
+    /// Format and reader version that produced the data.
+    fn format(&self) -> &FormatInfo;
+
+    /// Number of series (scenes, positions, wells) in the file.
     fn series_count(&self) -> usize;
 
-    /// Metadata of one series.
+    /// Core metadata of one series.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::SeriesOutOfRange`](crate::Error::SeriesOutOfRange) if `series` is not smaller than
-    /// [`ImageReader::series_count`].
+    /// Returns [`Error::OutOfRange`] if `series` does not exist.
     fn series_meta(&self, series: usize) -> Result<&SeriesMeta>;
 
-    /// Acquisition data of one plane (time stamp, exposure, stage position).
-    ///
-    /// The default implementation validates the request and returns empty
-    /// metadata; readers override it if the format stores per-plane data.
+    /// Acquisition data of one plane: time stamp, exposure, stage position.
     ///
     /// # Errors
     ///
-    /// Returns [`Error`](crate::Error) if `series` or `plane` is out of range.
+    /// Returns [`Error::OutOfRange`] if `series` or `plane` does not exist.
     fn plane_meta(&self, series: usize, plane: Plane) -> Result<PlaneMeta> {
         self.series_meta(series)?.check_plane(plane)?;
         Ok(PlaneMeta::default())
     }
 
-    /// Plates in the file. Empty unless the file comes from a plate screen.
+    /// Format-specific metadata, parsed on every call and not retained.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OutOfRange`] if `series` does not exist, or an I/O or
+    /// parse error of the metadata.
+    fn original_metadata(&self, series: usize) -> Result<OriginalMeta>;
+
+    /// Plates in the file; empty unless the file comes from a plate screen.
     fn plates(&self) -> &[PlateMeta] {
         &[]
     }
 
-    /// Decodes a region into a caller-provided buffer.
-    ///
-    /// # Arguments
-    ///
-    /// * `series` - Series index.
-    /// * `level` - Resolution level index, 0 is full resolution.
-    /// * `plane` - Plane address.
-    /// * `region` - Region in level coordinates.
-    /// * `buf` - Output buffer of at least [`SeriesMeta::buffer_size`] bytes.
+    /// Kinds of the associated images (label, macro, thumbnail).
+    fn associated_images(&self) -> &[AssociatedKind] {
+        &[]
+    }
+
+    /// Decodes an associated image.
     ///
     /// # Errors
     ///
-    /// Returns [`Error`](crate::Error) if the request is invalid or decoding fails.
-    fn read_region_into(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-        buf: &mut [u8],
-    ) -> Result<()>;
+    /// Returns [`Error::OutOfRange`] if the file has no such image, or a
+    /// decoding error.
+    fn read_associated(&self, kind: &AssociatedKind, output: &OutputSpec) -> Result<ImageBuf>;
 
-    /// Decodes a region into a newly allocated buffer.
+    /// Decodes exactly one native tile into `out`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OutOfRange`] for invalid indices, [`Error::TypeMismatch`]
+    /// if `out` does not match the output shape of the tile, or a decoding
+    /// error.
+    fn read_tile_into(&self, req: &TileRequest, out: PixelViewMut<'_>) -> Result<()>;
+
+    /// Decodes any region into `out`.
+    ///
+    /// # Errors
+    ///
+    /// Same as [`ImageReader::read_tile_into`].
+    fn read_region_into(&self, req: &RegionRequest, out: PixelViewMut<'_>) -> Result<()>;
+
+    /// Decodes a region into a newly allocated, contiguous, typed buffer.
     ///
     /// # Errors
     ///
     /// Same as [`ImageReader::read_region_into`].
-    fn read_region(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-    ) -> Result<Vec<u8>> {
-        let size = self.series_meta(series)?.buffer_size(region);
-        let mut buf = vec![0u8; size];
-        self.read_region_into(series, level, plane, region, &mut buf)?;
-        Ok(buf)
+    fn read_region(&self, req: &RegionRequest) -> Result<ImageBuf>;
+
+    /// Size and element type of the output of `req`, to preallocate buffers.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OutOfRange`] for invalid indices.
+    fn output_shape(&self, req: &RegionRequest) -> Result<OutputShape>;
+}
+
+/// Native image data of an associated image.
+pub(crate) struct NativeImage {
+    pub width: u64,
+    pub height: u64,
+    pub samples_per_pixel: u8,
+    pub pixel_type: PixelType,
+    /// Row-major native samples, colour ordered R, G, B(, A).
+    pub data: Vec<u8>,
+}
+
+/// What a format implements; the engine adds request handling and output
+/// conversion.
+pub(crate) trait Backend: Send + Sync + 'static {
+    fn format(&self) -> &'static FormatInfo;
+
+    fn series(&self) -> &[SeriesMeta];
+
+    fn plane_meta(&self, _series: usize, _plane: Plane) -> Result<PlaneMeta> {
+        Ok(PlaneMeta::default())
+    }
+
+    fn original_metadata(&self, series: usize) -> Result<OriginalMeta>;
+
+    fn plates(&self) -> &[PlateMeta] {
+        &[]
+    }
+
+    fn associated_images(&self) -> &[AssociatedKind] {
+        &[]
+    }
+
+    fn read_associated_native(&self, kind: &AssociatedKind) -> Result<NativeImage> {
+        Err(Error::OutOfRange(format!("no associated image {kind:?}")))
+    }
+
+    /// Delivers `region` of channel `plane.c` at `level` to `sink`, row by row.
+    ///
+    /// Called with validated indices and a region within the level.
+    fn read_native(&self, series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()>;
+}
+
+/// [`ImageReader`] implementation shared by all formats.
+pub(crate) struct Reader<B>(pub B);
+
+/// Samples one source channel contributes, in output order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SampleMap {
+    samples: [u8; 4],
+    len: u8,
+}
+
+impl SampleMap {
+    fn as_slice(&self) -> &[u8] {
+        &self.samples[..self.len as usize]
     }
 }
 
-/// Typed pixel access, implemented for every [`ImageReader`] including
-/// `dyn ImageReader`.
-///
-/// Buffers hold samples row-major and interleaved (height x width x samples
-/// per pixel) in native byte order, so they can be handed to tensor
-/// libraries as is. [`SeriesMeta::shape`] gives the matching tensor shape.
-///
-/// # Zero-copy use with tensor libraries
-///
-/// Either hand over the returned `Vec<T>`, or decode into memory the tensor
-/// already owns. With kornia-rs:
-///
-/// ```ignore
-/// use kornia_image::{Image, ImageSize};
-///
-/// // Vec<T> moves into the image without copying.
-/// let data = reader.read_region_as::<u8>(0, 0, plane, region)?;
-/// let size = ImageSize { width: region.width as usize, height: region.height as usize };
-/// let rgb = Image::<u8, 3>::new(size, data)?;
-///
-/// // Reuse one image for a loop over equally sized tiles.
-/// let mut tile = Image::<u8, 3>::from_size_val(size, 0)?;
-/// reader.read_region_into_as(0, 0, plane, region, tile.as_slice_mut())?;
-/// ```
-pub trait ImageReaderExt: ImageReader {
-    /// Decodes a region into a caller-provided typed buffer.
-    ///
-    /// # Arguments
-    ///
-    /// * `buf` - Output buffer of at least width x height x samples per pixel
-    ///   elements. Other arguments as in [`ImageReader::read_region_into`].
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::PixelTypeMismatch`] if `T` does not match
-    /// [`SeriesMeta::pixel_type`], otherwise same as
-    /// [`ImageReader::read_region_into`].
-    fn read_region_into_as<T: Sample>(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-        buf: &mut [T],
-    ) -> Result<()> {
-        let stored = self.series_meta(series)?.pixel_type;
-        if stored != T::TYPE {
-            return Err(Error::PixelTypeMismatch { stored, requested: T::TYPE });
+/// Source channels and the samples they contribute; built without
+/// allocating, so reads of uncompressed data allocate nothing.
+struct Plan<'r> {
+    select: &'r ChannelSelect,
+    map: SampleMap,
+    out_channels: usize,
+}
+
+impl Plan<'_> {
+    /// Source channels in output order, each with its samples.
+    fn channels(&self) -> impl Iterator<Item = (u32, SampleMap)> + '_ {
+        let list: &[u32] = match self.select {
+            ChannelSelect::Channel(c) => std::slice::from_ref(c),
+            ChannelSelect::Sample { channel, .. } => std::slice::from_ref(channel),
+            ChannelSelect::Channels(list) => list,
+        };
+        list.iter().map(|&c| (c, self.map))
+    }
+}
+
+/// Samples of one stored channel with `spp` samples, in output order.
+fn channel_samples(spp: u8, spec: &OutputSpec) -> SampleMap {
+    let (mut samples, mut len) = match (spp, spec.color_order) {
+        (3 | 4, ColorOrder::Rgb) => ([0, 1, 2, 0], 3),
+        (3 | 4, ColorOrder::Bgr) => ([2, 1, 0, 0], 3),
+        // Gray, with or without alpha.
+        _ => ([0; 4], 1),
+    };
+    if spec.keep_alpha && (spp == 4 || spp == 2) {
+        samples[len as usize] = spp - 1;
+        len += 1;
+    }
+    SampleMap { samples, len }
+}
+
+fn plan<'r>(meta: &SeriesMeta, select: &'r ChannelSelect, spec: &OutputSpec) -> Result<Plan<'r>> {
+    let check = |c: u32| {
+        if c >= meta.size_c {
+            return Err(Error::OutOfRange(format!("channel {c} of {}", meta.size_c)));
         }
-        self.read_region_into(series, level, plane, region, as_bytes_mut(buf))
+        Ok(())
+    };
+    let spp = meta.samples_per_pixel.max(1);
+    let (map, count) = match select {
+        ChannelSelect::Channel(c) => {
+            check(*c)?;
+            (channel_samples(spp, spec), 1)
+        }
+        ChannelSelect::Sample { channel, sample } => {
+            check(*channel)?;
+            if *sample >= spp {
+                return Err(Error::OutOfRange(format!("sample {sample} of {spp}")));
+            }
+            (SampleMap { samples: [*sample, 0, 0, 0], len: 1 }, 1)
+        }
+        ChannelSelect::Channels(list) if list.is_empty() => {
+            return Err(Error::OutOfRange("empty channel list".into()));
+        }
+        ChannelSelect::Channels(list) => {
+            for &c in list {
+                check(c)?;
+            }
+            (channel_samples(spp, spec), list.len())
+        }
+    };
+    Ok(Plan { select, map, out_channels: map.len as usize * count })
+}
+
+impl<B: Backend> Reader<B> {
+    fn checked<'r>(&self, req: &'r RegionRequest) -> Result<(&SeriesMeta, Plan<'r>)> {
+        let meta = self.series_meta(req.series)?;
+        let level = meta.level(req.level)?;
+        if !req.region.fits(level.size_x, level.size_y) {
+            return Err(Error::OutOfRange(format!(
+                "region {:?} outside level {} of {}x{}",
+                req.region, req.level, level.size_x, level.size_y
+            )));
+        }
+        meta.check_plane(Plane::new(0, req.z, req.t))?;
+        Ok((meta, plan(meta, &req.channels, &req.output)?))
+    }
+}
+
+impl<B: Backend> ImageReader for Reader<B> {
+    fn format(&self) -> &FormatInfo {
+        self.0.format()
     }
 
-    /// Decodes a region into a newly allocated typed buffer.
-    ///
-    /// # Errors
-    ///
-    /// Same as [`ImageReaderExt::read_region_into_as`].
-    fn read_region_as<T: Sample>(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-    ) -> Result<Vec<T>> {
-        let meta = self.series_meta(series)?;
-        let mut buf = vec![T::default(); meta.buffer_size(region) / meta.pixel_type.bytes()];
-        self.read_region_into_as(series, level, plane, region, &mut buf)?;
-        Ok(buf)
+    fn series_count(&self) -> usize {
+        self.0.series().len()
     }
 
-    /// Decodes a region into a buffer of the series' own sample type.
-    ///
-    /// # Errors
-    ///
-    /// Same as [`ImageReader::read_region_into`].
-    fn read_region_buf(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-    ) -> Result<PixelBuf> {
-        macro_rules! read {
-            ($variant:ident) => {
-                PixelBuf::$variant(self.read_region_as(series, level, plane, region)?)
+    fn series_meta(&self, series: usize) -> Result<&SeriesMeta> {
+        let all = self.0.series();
+        all.get(series).ok_or_else(|| Error::OutOfRange(format!("series {series} of {}", all.len())))
+    }
+
+    fn plane_meta(&self, series: usize, plane: Plane) -> Result<PlaneMeta> {
+        self.series_meta(series)?.check_plane(plane)?;
+        self.0.plane_meta(series, plane)
+    }
+
+    fn original_metadata(&self, series: usize) -> Result<OriginalMeta> {
+        self.series_meta(series)?;
+        self.0.original_metadata(series)
+    }
+
+    fn plates(&self) -> &[PlateMeta] {
+        self.0.plates()
+    }
+
+    fn associated_images(&self) -> &[AssociatedKind] {
+        self.0.associated_images()
+    }
+
+    fn read_associated(&self, kind: &AssociatedKind, output: &OutputSpec) -> Result<ImageBuf> {
+        let img = self.0.read_associated_native(kind)?;
+        let samples = channel_samples(img.samples_per_pixel, output);
+        let map = samples.as_slice();
+        let (w, h) = (img.width as usize, img.height as usize);
+        let pixel_type = output_type(output.dtype, img.pixel_type);
+        let mut data = PixelBuf::zeros(pixel_type, w * h * map.len());
+        {
+            let mut slice = data.as_slice_mut();
+            let (row_stride, plane_stride) = match output.layout {
+                Layout::Hwc => (w * map.len(), 0),
+                Layout::Chw => (w, w * h),
             };
+            let spp = img.samples_per_pixel as usize;
+            let mut sink = Sink::new(
+                slice.bytes_mut(),
+                output.layout,
+                row_stride,
+                plane_stride,
+                map.len(),
+                0,
+                map,
+                spp,
+                img.pixel_type,
+                output.dtype,
+            );
+            let row = w * spp * img.pixel_type.bytes();
+            for (y, src) in img.data.chunks_exact(row).take(h).enumerate() {
+                sink.put(y, 0, src);
+            }
         }
-        Ok(match self.series_meta(series)?.pixel_type {
-            PixelType::U8 => read!(U8),
-            PixelType::I8 => read!(I8),
-            PixelType::U16 => read!(U16),
-            PixelType::I16 => read!(I16),
-            PixelType::U32 => read!(U32),
-            PixelType::I32 => read!(I32),
-            PixelType::F32 => read!(F32),
-            PixelType::F64 => read!(F64),
+        Ok(ImageBuf {
+            data,
+            width: img.width,
+            height: img.height,
+            channels: map.len() as u32,
+            layout: output.layout,
+            color_order: output.color_order,
         })
     }
 
-}
+    fn read_tile_into(&self, req: &TileRequest, out: PixelViewMut<'_>) -> Result<()> {
+        let region = self.series_meta(req.series)?.level(req.level)?.tile_rect(req.tile_x, req.tile_y)?;
+        let region_req = RegionRequest {
+            series: req.series,
+            level: req.level,
+            z: req.z,
+            t: req.t,
+            channels: req.channels.clone(),
+            region,
+            output: req.output,
+        };
+        self.read_region_into(&region_req, out)
+    }
 
-impl<R: ImageReader + ?Sized> ImageReaderExt for R {}
+    fn read_region_into(&self, req: &RegionRequest, mut out: PixelViewMut<'_>) -> Result<()> {
+        let (meta, plan) = self.checked(req)?;
+        let pixel_type = output_type(req.output.dtype, meta.pixel_type);
+        if out.data.pixel_type() != pixel_type {
+            return Err(Error::TypeMismatch(format!(
+                "buffer holds {:?}, output is {pixel_type:?}",
+                out.data.pixel_type()
+            )));
+        }
+        let r = req.region;
+        if (out.width, out.height, out.channels as usize) != (r.width, r.height, plan.out_channels)
+            || out.layout != req.output.layout
+        {
+            return Err(Error::TypeMismatch(format!(
+                "view is {}x{}x{} {:?}, output is {}x{}x{} {:?}",
+                out.width, out.height, out.channels, out.layout, r.width, r.height, plan.out_channels, req.output.layout
+            )));
+        }
+        out.check()?;
+        let (row_stride, plane_stride) = (out.row_stride, out.plane_stride);
+        let bytes = out.data.bytes_mut();
+        let mut base = 0;
+        for (c, map) in plan.channels() {
+            let mut sink = Sink::new(
+                &mut *bytes,
+                req.output.layout,
+                row_stride,
+                plane_stride,
+                plan.out_channels,
+                base,
+                map.as_slice(),
+                meta.samples_per_pixel.max(1) as usize,
+                meta.pixel_type,
+                req.output.dtype,
+            );
+            self.0.read_native(req.series, req.level, Plane::new(c, req.z, req.t), r, &mut sink)?;
+            base += map.len as usize;
+        }
+        Ok(())
+    }
+
+    fn read_region(&self, req: &RegionRequest) -> Result<ImageBuf> {
+        let shape = self.output_shape(req)?;
+        let mut data = PixelBuf::zeros(shape.pixel_type, shape.len());
+        let view = PixelViewMut::contiguous(data.as_slice_mut(), shape.width, shape.height, shape.channels, shape.layout);
+        self.read_region_into(req, view)?;
+        Ok(ImageBuf {
+            data,
+            width: shape.width,
+            height: shape.height,
+            channels: shape.channels,
+            layout: shape.layout,
+            color_order: req.output.color_order,
+        })
+    }
+
+    fn output_shape(&self, req: &RegionRequest) -> Result<OutputShape> {
+        let (meta, plan) = self.checked(req)?;
+        Ok(OutputShape {
+            width: req.region.width,
+            height: req.region.height,
+            channels: plan.out_channels as u32,
+            layout: req.output.layout,
+            pixel_type: output_type(req.output.dtype, meta.pixel_type),
+        })
+    }
+}
 
 // --- Tests ------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ColorModel, LevelMeta};
-
-    /// Reader returning a constant pixel value, to test the default methods.
-    struct Constant {
-        meta: SeriesMeta,
-    }
-
-    impl Constant {
-        fn new() -> Self {
-            Self {
-                meta: SeriesMeta {
-                    size_c: 1,
-                    size_z: 2,
-                    size_t: 1,
-                    pixel_type: PixelType::U16,
-                    color: ColorModel::Gray,
-                    levels: vec![LevelMeta { width: 8, height: 4, tile_width: 8, tile_height: 4, downsample: 1.0 }],
-                    ..Default::default()
-                },
-            }
-        }
-    }
-
-    impl ImageReader for Constant {
-        fn series_count(&self) -> usize {
-            1
-        }
-
-        fn series_meta(&self, series: usize) -> Result<&SeriesMeta> {
-            match series {
-                0 => Ok(&self.meta),
-                _ => Err(Error::SeriesOutOfRange { series, count: 1 }),
-            }
-        }
-
-        fn read_region_into(
-            &self,
-            series: usize,
-            level: usize,
-            plane: Plane,
-            region: Region,
-            buf: &mut [u8],
-        ) -> Result<()> {
-            let meta = self.series_meta(series)?;
-            meta.check_request(level, plane, region, buf.len())?;
-            buf[..meta.buffer_size(region)].fill(7);
-            Ok(())
-        }
-    }
 
     #[test]
-    fn read_region_allocates_exact_size() {
-        let buf = Constant::new().read_region(0, 0, Plane::new(0, 1, 0), Region::new(2, 1, 3, 2)).unwrap();
-        assert_eq!(buf, vec![7u8; 12]);
+    fn channel_samples_follow_spec() {
+        let rgb = OutputSpec::default();
+        assert_eq!(channel_samples(1, &rgb).as_slice(), [0]);
+        assert_eq!(channel_samples(3, &rgb).as_slice(), [0, 1, 2]);
+        assert_eq!(channel_samples(4, &rgb).as_slice(), [0, 1, 2]);
+        let bgra = OutputSpec { color_order: ColorOrder::Bgr, keep_alpha: true, ..Default::default() };
+        assert_eq!(channel_samples(4, &bgra).as_slice(), [2, 1, 0, 3]);
+        assert_eq!(channel_samples(2, &bgra).as_slice(), [0, 1]);
     }
-
-    #[test]
-    fn plane_meta_default_validates_request() {
-        let r = Constant::new();
-        assert_eq!(r.plane_meta(0, Plane::new(0, 1, 0)).unwrap(), PlaneMeta::default());
-        assert!(matches!(r.plane_meta(0, Plane::new(0, 2, 0)), Err(Error::PlaneOutOfRange(_))));
-        assert!(matches!(r.plane_meta(1, Plane::default()), Err(Error::SeriesOutOfRange { .. })));
-        assert!(r.plates().is_empty());
-    }
-
-    #[test]
-    fn read_region_as_returns_typed_samples() {
-        let r = Constant::new();
-        let px: Vec<u16> = r.read_region_as(0, 0, Plane::default(), Region::new(0, 0, 3, 2)).unwrap();
-        assert_eq!(px, vec![0x0707; 6]);
-    }
-
-    #[test]
-    fn read_region_as_rejects_wrong_type() {
-        let r = Constant::new();
-        assert!(matches!(
-            r.read_region_as::<f32>(0, 0, Plane::default(), Region::new(0, 0, 3, 2)),
-            Err(Error::PixelTypeMismatch { stored: PixelType::U16, requested: PixelType::F32 })
-        ));
-    }
-
-    #[test]
-    fn typed_reads_work_through_dyn() {
-        let r: Box<dyn ImageReader> = Box::new(Constant::new());
-        let buf = r.read_region_buf(0, 0, Plane::default(), Region::new(0, 0, 2, 2)).unwrap();
-        assert_eq!(buf, PixelBuf::U16(vec![0x0707; 4]));
-        assert_eq!(buf.pixel_type(), PixelType::U16);
-    }
-
 }

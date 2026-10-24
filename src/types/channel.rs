@@ -29,4 +29,8 @@ pub struct ChannelMeta {
     pub detector_offset: Option<f64>,
     /// Detector binning as (x, y).
     pub binning: Option<(u16, u16)>,
+    /// Display lookup table mapping sample values to 16-bit RGB, e.g. the
+    /// gray or single-colour ramp of a palette TIFF. Present only if the
+    /// pixel data are the unmapped values.
+    pub lut: Option<Vec<[u16; 3]>>,
 }

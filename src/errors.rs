@@ -10,61 +10,38 @@
 
 use std::fmt;
 
-use crate::{PixelType, Plane, Region};
-
 /// Result type used throughout the crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Errors returned by readers.
+/// Errors returned by scopeio.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
     /// Underlying I/O failure.
     Io(std::io::Error),
-    /// The series index is not smaller than the series count.
-    SeriesOutOfRange { series: usize, count: usize },
-    /// The level index is not smaller than the level count of the series.
-    LevelOutOfRange { level: usize, count: usize },
-    /// One of the plane coordinates exceeds the series dimensions.
-    PlaneOutOfRange(Plane),
-    /// The region is empty or extends beyond the level dimensions.
-    RegionOutOfBounds(Region),
-    /// The output buffer cannot hold the requested region.
-    BufferTooSmall { needed: usize, got: usize },
-    /// A typed read requested a sample type different from the series type.
-    PixelTypeMismatch { stored: PixelType, requested: PixelType },
-    /// The file uses a feature this reader does not implement.
-    Unsupported(String),
-    /// The file content is invalid.
+    /// No reader recognises the file.
+    UnsupportedFormat(String),
+    /// The format is recognised, but the file uses a feature (compression,
+    /// layout, sample type) this reader does not implement.
+    UnsupportedVariant(String),
+    /// The file content is invalid or truncated.
     Corrupt(String),
+    /// A series, level, tile, region, plane, channel or sample index is out
+    /// of range.
+    OutOfRange(String),
+    /// An output buffer has the wrong element type, shape or stride.
+    TypeMismatch(String),
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Io(e) => write!(f, "I/O error: {e}"),
-            Error::SeriesOutOfRange { series, count } => {
-                write!(f, "series {series} out of range (count {count})")
-            }
-            Error::LevelOutOfRange { level, count } => {
-                write!(f, "level {level} out of range (count {count})")
-            }
-            Error::PlaneOutOfRange(p) => {
-                write!(f, "plane c={} z={} t={} out of range", p.c, p.z, p.t)
-            }
-            Error::RegionOutOfBounds(r) => write!(
-                f,
-                "region {}x{} at ({}, {}) out of bounds",
-                r.width, r.height, r.x, r.y
-            ),
-            Error::BufferTooSmall { needed, got } => {
-                write!(f, "buffer too small: need {needed} bytes, got {got}")
-            }
-            Error::PixelTypeMismatch { stored, requested } => {
-                write!(f, "pixel type mismatch: series stores {stored:?}, requested {requested:?}")
-            }
-            Error::Unsupported(msg) => write!(f, "unsupported: {msg}"),
+            Error::UnsupportedFormat(msg) => write!(f, "unsupported format: {msg}"),
+            Error::UnsupportedVariant(msg) => write!(f, "unsupported: {msg}"),
             Error::Corrupt(msg) => write!(f, "corrupt file: {msg}"),
+            Error::OutOfRange(msg) => write!(f, "out of range: {msg}"),
+            Error::TypeMismatch(msg) => write!(f, "output mismatch: {msg}"),
         }
     }
 }

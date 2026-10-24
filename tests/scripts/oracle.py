@@ -15,6 +15,7 @@ Usage: python3 -I tests/scripts/oracle.py <format> <file>... [--repeat N]
 """
 
 import argparse
+import array
 import datetime
 import re
 import os
@@ -37,7 +38,42 @@ MEASURE = ROOT / "target" / "release" / "measure"
 EXPECTED = ROOT / "tests" / "expected"
 
 COLUMNS = ["file", "tool", "series", "status", "channels", "width", "height", "size_z",
-           "size_t", "pixel_type", "phys_x_nm", "phys_y_nm", "crc32"]
+           "size_t", "pixel_type", "phys_x_nm", "phys_y_nm", "crc32", "grid"]
+
+# Block means for comparing lossy data, see `grid()`.
+GRID = 8
+GRID_SAMPLES = 64
+ARRAY_CODES = {"U8": "B", "I8": "b", "U16": "H", "I16": "h", "U32": "I", "I32": "i", "F32": "f",
+               "F64": "d"}
+
+
+def grid(pixels, pixel_type, channels, width, height, planes):
+    """Means of GRID x GRID cells per channel, over all planes.
+
+    Samples every `ceil(width / GRID_SAMPLES)`-th pixel in x and y, so the
+    cost is bounded per plane. Must match `grid()` in tests/common/mod.rs.
+    Returns `channels * GRID * GRID` values, channel-major, as text.
+    """
+    values = array.array(ARRAY_CODES[pixel_type])
+    values.frombytes(pixels)
+    sx = -(-width // GRID_SAMPLES)
+    sy = -(-height // GRID_SAMPLES)
+    sums = [0.0] * (channels * GRID * GRID)
+    counts = [0] * (channels * GRID * GRID)
+    plane_len = width * height * channels
+    for p in range(planes):
+        base = p * plane_len
+        for y in range(0, height, sy):
+            gy = y * GRID // height
+            row = base + y * width * channels
+            for x in range(0, width, sx):
+                gx = x * GRID // width
+                at = row + x * channels
+                for c in range(channels):
+                    i = (c * GRID + gy) * GRID + gx
+                    sums[i] += values[at + c]
+                    counts[i] += 1
+    return ",".join(f"{s / n:.2f}" if n else "nan" for s, n in zip(sums, counts))
 
 
 def run(cmd, measure=True):
@@ -60,8 +96,18 @@ def run(cmd, measure=True):
     return proc.returncode, "\n".join(lines), cpu, wall, rss
 
 
-def parse_ics(path):
-    """Reads an ICS v2 file, returning its metadata and a CRC-32 of the pixels."""
+def parse_ics(path, int32_little=None, planar_colour=False):
+    """Reads an ICS v2 file, returning its metadata and a CRC-32 of the pixels.
+
+    Pixels are brought into one layout: channels interleaved per pixel, then
+    x, y, z, t, native (little-endian) byte order.
+
+    Quirks of the reference writers, observed on files with known content:
+    the byte order labels of 32-bit integer data are unreliable; bfconvert
+    writes them in the byte order of the source file, bioformats-rs in
+    little-endian order. `int32_little` gives the actual order if known. bioformats-rs writes colour (3 or 4 channel) data plane
+    by plane under an interleaved header (`planar_colour`).
+    """
     data = path.read_bytes()
     end = data.find(b"\nend\n")
     header = data[:end].decode("latin-1")
@@ -83,8 +129,18 @@ def parse_ics(path):
         pixel_type = f"F{bits}"
     else:
         pixel_type = f"{'I' if signed else 'U'}{bits}"
-    if fields.get("representation byte_order", ["1"])[0] != "1" and bits > 8:
-        raise ValueError(f"{path}: big-endian ICS output is not handled")
+    big_endian = fields.get("representation byte_order", ["1"])[0] != "1"
+    if int32_little is not None and fmt == "integer" and bits == 32:
+        big_endian = not int32_little
+    values = array.array(ARRAY_CODES[pixel_type])
+    values.frombytes(pixels)
+    if big_endian and bits > 8:
+        values.byteswap()
+    axes = [a for a in order if a != "bits"]
+    if planar_colour and sizes.get("ch", 1) > 1 and axes[0] == "ch":
+        axes = axes[1:] + ["ch"]
+    values = canonical_order(values, axes, sizes)
+    pixels = values.tobytes()
     scale = dict(zip(order, fields.get("parameter scale", [])))
     units = dict(zip(order, fields.get("parameter units", [])))
 
@@ -96,18 +152,46 @@ def parse_ics(path):
         # Writers put 1 for unknown sizes.
         return "-" if value == 1000.0 else f"{value:.3f}"
 
+    ch, w, h = sizes.get("ch", 1), sizes.get("x", 1), sizes.get("y", 1)
+    planes = count // max(1, ch * w * h)
     return {
-        "channels": sizes.get("ch", 1), "width": sizes.get("x", 1), "height": sizes.get("y", 1),
+        "channels": ch, "width": w, "height": h,
         "size_z": sizes.get("z", 1), "size_t": sizes.get("t", 1), "pixel_type": pixel_type,
         "phys_x_nm": nm("x"), "phys_y_nm": nm("y"), "crc32": f"{zlib.crc32(pixels):08x}",
+        "grid": grid(pixels, pixel_type, ch, w, h, planes),
     }
 
 
-def oracle(tool, src, tmp):
+def source_little(src):
+    """Byte order of a TIFF source file, None for other formats."""
+    with open(src, "rb") as f:
+        magic = f.read(2)
+    return {b"II": True, b"MM": False}.get(magic)
+
+
+def canonical_order(values, axes, sizes):
+    """Reorders samples stored with axes `axes` (fastest first) to
+    ch, x, y, z, t."""
+    target = ["ch", "x", "y", "z", "t"]
+    present = [a for a in axes if sizes.get(a, 1) > 1]
+    if [a for a in target if a in present] == present:
+        return values
+    channels = sizes.get("ch", 1)
+    if axes[-1] == "ch" and [a for a in axes[:-1] if a in present] == [a for a in target[1:] if a in present]:
+        # Channel blocks one after another: interleave them.
+        n = len(values) // channels
+        out = array.array(values.typecode, bytes(len(values) * values.itemsize))
+        for c in range(channels):
+            out[c::channels] = values[c * n:(c + 1) * n]
+        return out
+    raise ValueError(f"unsupported ICS axis order {axes}")
+
+
+def oracle(tool, src, tmp, expand=True):
     """Converts `src` with `tool` and returns (rows, cpu, wall, rss)."""
     out_dir = Path(tempfile.mkdtemp(dir=tmp))
     if tool == "bioformats":
-        cmd = [str(BFCONVERT), "-no-upgrade", "-overwrite", "-expand", str(src),
+        cmd = [str(BFCONVERT), "-no-upgrade", "-overwrite", *(["-expand"] if expand else []), str(src),
                str(out_dir / "out_%s.ics")]
     else:
         cmd = [str(BFRS), str(src), str(out_dir / "out.ics")]
@@ -122,7 +206,13 @@ def oracle(tool, src, tmp):
     rows = []
     for series, path in enumerate(outputs):
         try:
-            rows.append({"series": series, "status": "ok", **parse_ics(path)})
+            row = {"series": series, "status": "ok",
+                   **parse_ics(path, int32_little=source_little(src) if tool == "bioformats" else True,
+                               planar_colour=tool == "bioformats-rs" and source_little(src) is not None)}
+            if tool == "bioformats-rs":
+                # Its ICS writer stores pixel sizes without unit conversion.
+                row["phys_x_nm"] = row["phys_y_nm"] = "-"
+            rows.append(row)
         except (ValueError, KeyError) as e:
             rows.append({"series": series, "status": f"error: unreadable output: {e}"})
     return rows, cpu, wall, rss
@@ -190,6 +280,8 @@ def main():
     ap.add_argument("format")
     ap.add_argument("files", nargs="+", type=Path)
     ap.add_argument("--repeat", type=int, default=3, help="runs per tool for timing (median)")
+    ap.add_argument("--no-expand", action="store_true",
+                    help="keep palette indices in Bio-Formats output (formats returning indices)")
     args = ap.parse_args()
 
     for tool in (BFCONVERT, BFRS):
@@ -208,7 +300,7 @@ def main():
             print(rel, file=sys.stderr)
             stats = {}
             for tool in ("bioformats", "bioformats-rs"):
-                runs = [oracle(tool, src, tmp) for _ in range(args.repeat)]
+                runs = [oracle(tool, src, tmp, not args.no_expand) for _ in range(args.repeat)]
                 phys = bf_physical_sizes(src) if tool == "bioformats" else []
                 for r in runs[0][0]:
                     if tool == "bioformats" and r["status"] == "ok":

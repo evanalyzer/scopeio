@@ -11,12 +11,14 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#![allow(dead_code)]
+
 pub mod crc32;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use scopeio::{ImageReader, Plane, Region};
+use scopeio::{ChannelSelect, ImageReader, OutputSpec, Plane, Region, RegionRequest};
 
 /// Repository root.
 pub fn root() -> PathBuf {
@@ -49,43 +51,97 @@ pub struct Series {
 
 /// Decodes every series of a file at full resolution.
 pub fn decode(reader: &dyn ImageReader) -> scopeio::Result<Vec<Series>> {
-    let mut out = Vec::new();
-    for s in 0..reader.series_count() {
-        let meta = reader.series_meta(s)?;
-        let level = &meta.levels[0];
-        let region = Region::new(0, 0, level.width as u32, level.height as u32);
-        let plane_len = meta.buffer_size(region);
-        let pixel = meta.color.samples() * meta.pixel_type.bytes();
-        let size_c = meta.size_c as usize;
-        let mut pixels = vec![0u8; plane_len * size_c * (meta.size_z * meta.size_t) as usize];
-        let mut plane = vec![0u8; plane_len];
-        let mut offset = 0;
-        for t in 0..meta.size_t {
-            for z in 0..meta.size_z {
-                let block = &mut pixels[offset..offset + plane_len * size_c];
-                for c in 0..meta.size_c {
-                    reader.read_region_into(s, 0, Plane::new(c, z, t), region, &mut plane)?;
-                    for (i, px) in plane.chunks_exact(pixel).enumerate() {
-                        let at = (i * size_c + c as usize) * pixel;
-                        block[at..at + pixel].copy_from_slice(px);
-                    }
+    (0..reader.series_count()).map(|s| decode_level(reader, s, 0)).collect()
+}
+
+/// All samples of all channels, alpha included, interleaved per pixel.
+fn all_channels(size_c: u32) -> (ChannelSelect, OutputSpec) {
+    (ChannelSelect::Channels((0..size_c).collect()), OutputSpec { keep_alpha: true, ..Default::default() })
+}
+
+/// Native bytes of channel `plane.c` (all samples, alpha kept) of `region`.
+pub fn read(reader: &dyn ImageReader, series: usize, level: usize, plane: Plane, region: Region) -> scopeio::Result<Vec<u8>> {
+    let req = RegionRequest {
+        series,
+        level,
+        z: plane.z,
+        t: plane.t,
+        channels: ChannelSelect::Channel(plane.c),
+        region,
+        output: OutputSpec { keep_alpha: true, ..Default::default() },
+    };
+    Ok(reader.read_region(&req)?.as_bytes().to_vec())
+}
+
+/// Decodes one resolution level of one series.
+pub fn decode_level(reader: &dyn ImageReader, s: usize, level_index: usize) -> scopeio::Result<Series> {
+    let meta = reader.series_meta(s)?;
+    let level = &meta.levels[level_index];
+    let mut req = RegionRequest::new(s, level_index, Region::new(0, 0, level.size_x, level.size_y));
+    (req.channels, req.output) = all_channels(meta.size_c);
+    let mut pixels = Vec::new();
+    for t in 0..meta.size_t {
+        for z in 0..meta.size_z {
+            (req.z, req.t) = (z, t);
+            pixels.extend_from_slice(reader.read_region(&req)?.as_bytes());
+        }
+    }
+    Ok(Series {
+        width: level.size_x,
+        height: level.size_y,
+        size_z: meta.size_z,
+        size_t: meta.size_t,
+        channels: meta.samples_per_pixel as usize * meta.size_c as usize,
+        pixel_type: format!("{:?}", meta.pixel_type),
+        phys_x_nm: meta.physical_size.x_nm,
+        phys_y_nm: meta.physical_size.y_nm,
+        pixels,
+    })
+}
+
+/// Block means per channel as in `grid()` of `tests/scripts/oracle.py`.
+pub fn grid(pixels: &[u8], pixel_type: &str, channels: usize, width: usize, height: usize) -> Vec<f64> {
+    const GRID: usize = 8;
+    const SAMPLES: usize = 64;
+    let bytes = match pixel_type {
+        "U8" | "I8" => 1,
+        "U16" | "I16" => 2,
+        "U32" | "I32" | "F32" => 4,
+        _ => 8,
+    };
+    let value = |i: usize| -> f64 {
+        let b = &pixels[i * bytes..(i + 1) * bytes];
+        match pixel_type {
+            "U8" => b[0] as f64,
+            "I8" => b[0] as i8 as f64,
+            "U16" => u16::from_ne_bytes([b[0], b[1]]) as f64,
+            "I16" => i16::from_ne_bytes([b[0], b[1]]) as f64,
+            "U32" => u32::from_ne_bytes(b.try_into().unwrap()) as f64,
+            "I32" => i32::from_ne_bytes(b.try_into().unwrap()) as f64,
+            "F32" => f32::from_ne_bytes(b.try_into().unwrap()) as f64,
+            _ => f64::from_ne_bytes(b.try_into().unwrap()),
+        }
+    };
+    let (sx, sy) = (width.div_ceil(SAMPLES), height.div_ceil(SAMPLES));
+    let plane_len = width * height * channels;
+    let planes = pixels.len() / bytes / plane_len.max(1);
+    let mut sums = vec![0.0; channels * GRID * GRID];
+    let mut counts = vec![0usize; channels * GRID * GRID];
+    for p in 0..planes {
+        for y in (0..height).step_by(sy) {
+            let gy = y * GRID / height;
+            for x in (0..width).step_by(sx) {
+                let gx = x * GRID / width;
+                let at = p * plane_len + (y * width + x) * channels;
+                for c in 0..channels {
+                    let i = (c * GRID + gy) * GRID + gx;
+                    sums[i] += value(at + c);
+                    counts[i] += 1;
                 }
-                offset += plane_len * size_c;
             }
         }
-        out.push(Series {
-            width: level.width,
-            height: level.height,
-            size_z: meta.size_z,
-            size_t: meta.size_t,
-            channels: meta.color.samples() * size_c,
-            pixel_type: format!("{:?}", meta.pixel_type),
-            phys_x_nm: meta.physical_size.x_nm,
-            phys_y_nm: meta.physical_size.y_nm,
-            pixels,
-        });
     }
-    Ok(out)
+    sums.iter().zip(&counts).map(|(s, &n)| if n > 0 { s / n as f64 } else { f64::NAN }).collect()
 }
 
 pub fn crc(data: &[u8]) -> String {
@@ -95,7 +151,9 @@ pub fn crc(data: &[u8]) -> String {
 }
 
 /// Differences between one decoded series and one reference row.
-fn compare(ours: &Series, r: &HashMap<String, String>) -> Vec<String> {
+///
+/// With `tolerance`, pixels are compared by block means instead of CRC-32.
+fn compare(ours: &Series, r: &HashMap<String, String>, tolerance: Option<f64>) -> Vec<String> {
     let mut diffs = Vec::new();
     let mut field = |name: &str, ours: String| {
         if r[name] != ours {
@@ -126,6 +184,21 @@ fn compare(ours: &Series, r: &HashMap<String, String>) -> Vec<String> {
         }
         ours.pixels.clone()
     };
+    if let Some(tol) = tolerance {
+        let channels = ref_channels.max(1);
+        let ours_grid = grid(&pixels, &ours.pixel_type, channels, ours.width as usize, ours.height as usize);
+        let ref_grid: Vec<f64> = r["grid"].split(',').map(|v| v.parse().unwrap_or(f64::NAN)).collect();
+        let worst = ours_grid
+            .iter()
+            .zip(&ref_grid)
+            .filter(|(a, b)| a.is_finite() && b.is_finite())
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0, f64::max);
+        if ours_grid.len() != ref_grid.len() || worst > tol {
+            diffs.push(format!("block means differ by up to {worst:.2}, tolerance {tol}"));
+        }
+        return diffs;
+    }
     let ours_crc = crc(&pixels);
     if ours_crc != r["crc32"] {
         diffs.push(format!("crc32: ours {ours_crc}, reference {}", r["crc32"]));
@@ -133,12 +206,25 @@ fn compare(ours: &Series, r: &HashMap<String, String>) -> Vec<String> {
     diffs
 }
 
+/// Level `series - (count - 1)` of the last of `count` series, if it exists.
+fn level_of_last_series(path: &Path, count: usize, series: usize) -> Option<Series> {
+    let reader = scopeio::open(path).ok()?;
+    let last = count.checked_sub(1)?;
+    let level = series - last;
+    if level >= reader.series_meta(last).ok()?.levels.len() {
+        return None;
+    }
+    decode_level(reader.as_ref(), last, level).ok()
+}
+
 /// Compares scopeio with all reference rows of a format.
 ///
 /// Reads `tests/expected/<format>.tsv` and `<format>_divergences.tsv`.
-/// A (file, tool) pair listed as divergence must differ, every other
-/// successful reference must match. Missing external sample files are
-/// skipped.
+/// A (file, tool) pair listed as divergence without tolerance must differ;
+/// with a tolerance, its block means must agree within it (lossy codecs).
+/// Every other successful reference must match exactly. A (file, `scopeio`)
+/// entry marks a file scopeio cannot read yet. Missing external sample
+/// files are skipped.
 ///
 /// # Returns
 ///
@@ -146,9 +232,9 @@ fn compare(ours: &Series, r: &HashMap<String, String>) -> Vec<String> {
 pub fn check_against_oracles(format: &str) -> Vec<String> {
     let expected = root().join("tests/expected");
     let rows = read_tsv(&expected.join(format!("{format}.tsv")));
-    let divergences: HashMap<(String, String), String> = read_tsv(&expected.join(format!("{format}_divergences.tsv")))
+    let divergences: HashMap<(String, String), Option<f64>> = read_tsv(&expected.join(format!("{format}_divergences.tsv")))
         .into_iter()
-        .map(|d| ((d["file"].clone(), d["tool"].clone()), d["reason"].clone()))
+        .map(|d| ((d["file"].clone(), d["tool"].clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
         .collect();
 
     let mut failures = Vec::new();
@@ -164,10 +250,18 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             scopeio::open(&path).and_then(|reader| decode(reader.as_ref())).map_err(|e| e.to_string())
         });
         let key = (r["file"].clone(), r["tool"].clone());
-        let listed = divergences.contains_key(&key);
-        let ours = match ours {
-            Ok(series) => series,
-            Err(e) => {
+        let tolerance = divergences.get(&key).copied().flatten();
+        let listed = divergences.contains_key(&key) && tolerance.is_none();
+        // A (file, "scopeio") divergence marks files scopeio cannot read yet.
+        let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
+        let ours = match (ours, unsupported) {
+            (Ok(_), true) => {
+                failures.push(format!("{}: listed as unreadable by scopeio but opens now", r["file"]));
+                continue;
+            }
+            (Err(_), true) => continue,
+            (Ok(series), false) => series,
+            (Err(e), false) => {
                 failures.push(format!("{}: scopeio failed: {e}", r["file"]));
                 continue;
             }
@@ -177,8 +271,13 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         }
         let series: usize = r["series"].parse().expect("series index");
         let diffs = match ours.get(series) {
-            Some(s) => compare(s, r),
-            None => vec![format!("series {series} missing, ours has {}", ours.len())],
+            Some(s) => compare(s, r, tolerance),
+            // Bio-Formats returns pyramid levels as extra series by default;
+            // compare them with the levels of the last series instead.
+            None => match level_of_last_series(&path, ours.len(), series) {
+                Some(s) => compare(&s, r, tolerance),
+                None => vec![format!("series {series} missing, ours has {}", ours.len())],
+            },
         };
         match (diffs.is_empty(), listed) {
             (false, false) => failures.push(format!("{} vs {}: {}", r["file"], r["tool"], diffs.join("; "))),

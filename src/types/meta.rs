@@ -8,7 +8,7 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::{ChannelMeta, ColorModel, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
+use crate::{ChannelMeta, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
 
 /// Physical size of one pixel (x, y) and the z-step, in nanometres.
 /// Fields are `None` if unknown.
@@ -23,17 +23,44 @@ pub struct PhysicalSize {
 #[derive(Debug, Clone, PartialEq, Default)]
 #[non_exhaustive]
 pub struct LevelMeta {
-    pub width: u64,
-    pub height: u64,
-    /// Native storage tile width; equal to `width` for untiled data.
-    pub tile_width: u32,
-    /// Native storage tile height; equal to the strip height for strip-based data.
-    pub tile_height: u32,
+    pub size_x: u64,
+    pub size_y: u64,
+    /// Native tile size; `None` if untiled (the whole plane is one tile).
+    pub tile: Option<(u32, u32)>,
     /// Downsample factor relative to level 0 (1.0 for level 0).
     pub downsample: f64,
 }
 
-/// Metadata of one series.
+impl LevelMeta {
+    /// Native tile size, the whole level if untiled.
+    pub fn tile_size(&self) -> (u64, u64) {
+        self.tile.map_or((self.size_x, self.size_y), |(w, h)| (w as u64, h as u64))
+    }
+
+    /// Number of tiles across and down.
+    pub fn tile_counts(&self) -> (u32, u32) {
+        let (w, h) = self.tile_size();
+        (self.size_x.div_ceil(w) as u32, self.size_y.div_ceil(h) as u32)
+    }
+
+    /// Region of tile (`tile_x`, `tile_y`), cropped at the right and bottom
+    /// edges.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::OutOfRange`] if the tile does not exist.
+    pub fn tile_rect(&self, tile_x: u32, tile_y: u32) -> Result<Region> {
+        let (across, down) = self.tile_counts();
+        if tile_x >= across || tile_y >= down {
+            return Err(Error::OutOfRange(format!("tile ({tile_x}, {tile_y}) of {across}x{down}")));
+        }
+        let (w, h) = self.tile_size();
+        let (x, y) = (tile_x as u64 * w, tile_y as u64 * h);
+        Ok(Region::new(x, y, w.min(self.size_x - x), h.min(self.size_y - y)))
+    }
+}
+
+/// Core metadata of one series, parsed at open.
 ///
 /// Units are fixed: lengths and wavelengths in nanometres, times in seconds.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -43,14 +70,15 @@ pub struct SeriesMeta {
     pub description: Option<String>,
     /// Acquisition start as ISO 8601 string.
     pub acquisition_date: Option<String>,
+    /// Number of channels; a colour image is one channel.
     pub size_c: u32,
     pub size_z: u32,
     pub size_t: u32,
     pub pixel_type: PixelType,
     /// Bits actually used per sample, e.g. 12 for 12-bit data stored as u16.
     pub significant_bits: Option<u8>,
-    /// Meaning of the interleaved samples of one pixel.
-    pub color: ColorModel,
+    /// Samples per pixel of every channel: 1 gray, 3 RGB, 4 RGBA.
+    pub samples_per_pixel: u8,
     /// Resolution levels, level 0 first. Never empty.
     pub levels: Vec<LevelMeta>,
     pub physical_size: PhysicalSize,
@@ -61,85 +89,54 @@ pub struct SeriesMeta {
     pub objective: Option<ObjectiveMeta>,
     pub stage_position: Option<Position>,
     pub rois: Vec<Roi>,
-    /// Format-specific key-value metadata not mapped to a field above,
-    /// in file order.
-    pub original: Vec<(String, String)>,
 }
 
 impl SeriesMeta {
-    /// Number of bytes needed to hold `region`.
-    pub fn buffer_size(&self, region: Region) -> usize {
-        region.width as usize
-            * region.height as usize
-            * self.color.samples()
-            * self.pixel_type.bytes()
-    }
-
-    /// Tensor shape of `region` as `[height, width, samples per pixel]`.
-    ///
-    /// Matches the layout of the decoded data, e.g. for
-    /// `Tensor3::from_shape_vec` in kornia-rs.
-    pub fn shape(&self, region: Region) -> [usize; 3] {
-        [region.height as usize, region.width as usize, self.color.samples()]
-    }
-
     /// Checks that `plane` lies within the series dimensions.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::PlaneOutOfRange`] if any coordinate is too large.
+    /// Returns [`Error::OutOfRange`] if any coordinate is too large.
     pub fn check_plane(&self, plane: Plane) -> Result<()> {
         if plane.c >= self.size_c || plane.z >= self.size_z || plane.t >= self.size_t {
-            return Err(Error::PlaneOutOfRange(plane));
+            return Err(Error::OutOfRange(format!(
+                "plane c={} z={} t={} of {}x{}x{}",
+                plane.c, plane.z, plane.t, self.size_c, self.size_z, self.size_t
+            )));
         }
         Ok(())
     }
 
-    /// Validates a read request against this series.
-    ///
-    /// Readers call this at the start of [`ImageReader::read_region_into`](crate::ImageReader::read_region_into).
-    ///
-    /// # Arguments
-    ///
-    /// * `level` - Resolution level index.
-    /// * `plane` - Plane address.
-    /// * `region` - Requested region in level coordinates.
-    /// * `buf_len` - Length of the output buffer.
-    ///
-    /// # Returns
-    ///
-    /// The metadata of the requested level.
+    /// Metadata of `level`.
     ///
     /// # Errors
     ///
-    /// Returns [`Error`] if any index is out of range, the region is empty or
-    /// out of bounds, or the buffer is too small.
-    pub fn check_request(
-        &self,
-        level: usize,
-        plane: Plane,
-        region: Region,
-        buf_len: usize,
-    ) -> Result<&LevelMeta> {
-        let level_meta = self.levels.get(level).ok_or(Error::LevelOutOfRange {
-            level,
-            count: self.levels.len(),
-        })?;
-        self.check_plane(plane)?;
-        let fits = |pos: u64, len: u32, max: u64| {
-            len > 0 && pos.checked_add(len as u64).is_some_and(|end| end <= max)
-        };
-        if !fits(region.x, region.width, level_meta.width)
-            || !fits(region.y, region.height, level_meta.height)
-        {
-            return Err(Error::RegionOutOfBounds(region));
-        }
-        let needed = self.buffer_size(region);
-        if buf_len < needed {
-            return Err(Error::BufferTooSmall { needed, got: buf_len });
-        }
-        Ok(level_meta)
+    /// Returns [`Error::OutOfRange`] if the level does not exist.
+    pub fn level(&self, level: usize) -> Result<&LevelMeta> {
+        self.levels
+            .get(level)
+            .ok_or_else(|| Error::OutOfRange(format!("level {level} of {}", self.levels.len())))
     }
+}
+
+/// Format-specific metadata not mapped to [`SeriesMeta`], parsed on request.
+#[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
+pub struct OriginalMeta {
+    /// Key-value pairs in file order.
+    pub pairs: Vec<(String, String)>,
+    /// Embedded documents by name, e.g. `("OME-XML", xml)`.
+    pub documents: Vec<(String, String)>,
+}
+
+/// Images stored besides the series, e.g. the label of a slide.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum AssociatedKind {
+    Label,
+    Macro,
+    Thumbnail,
+    Other(String),
 }
 
 // --- Tests ------------------------------------------------------------------
@@ -148,68 +145,20 @@ impl SeriesMeta {
 mod tests {
     use super::*;
 
-    fn meta() -> SeriesMeta {
-        SeriesMeta {
-            size_c: 2,
-            size_z: 3,
-            size_t: 1,
-            pixel_type: PixelType::U16,
-            color: ColorModel::Gray,
-            levels: vec![
-                LevelMeta { width: 1000, height: 800, tile_width: 256, tile_height: 256, downsample: 1.0 },
-                LevelMeta { width: 500, height: 400, tile_width: 256, tile_height: 256, downsample: 2.0 },
-            ],
-            ..Default::default()
-        }
+    #[test]
+    fn tile_rect_crops_edges() {
+        let l = LevelMeta { size_x: 300, size_y: 200, tile: Some((128, 128)), downsample: 1.0 };
+        assert_eq!(l.tile_counts(), (3, 2));
+        assert_eq!(l.tile_rect(2, 1).unwrap(), Region::new(256, 128, 44, 72));
+        assert!(l.tile_rect(3, 0).is_err());
+        let untiled = LevelMeta { size_x: 30, size_y: 20, tile: None, downsample: 1.0 };
+        assert_eq!(untiled.tile_rect(0, 0).unwrap(), Region::new(0, 0, 30, 20));
     }
 
     #[test]
-    fn buffer_size_accounts_for_type_and_samples() {
-        let mut m = meta();
-        assert_eq!(m.buffer_size(Region::new(0, 0, 10, 5)), 100);
-        m.color = ColorModel::Rgb;
-        m.pixel_type = PixelType::U8;
-        assert_eq!(m.buffer_size(Region::new(0, 0, 10, 5)), 150);
-        assert_eq!(m.shape(Region::new(0, 0, 10, 5)), [5, 10, 3]);
-    }
-
-    #[test]
-    fn check_request_accepts_valid_request() {
-        let m = meta();
-        let level = m
-            .check_request(1, Plane::new(1, 2, 0), Region::new(244, 144, 256, 256), 256 * 256 * 2)
-            .unwrap();
-        assert_eq!(level.width, 500);
-    }
-
-    #[test]
-    fn check_request_rejects_invalid_requests() {
-        let m = meta();
-        let ok_region = Region::new(0, 0, 10, 10);
-        let ok_len = 200;
-        assert!(matches!(
-            m.check_request(2, Plane::default(), ok_region, ok_len),
-            Err(Error::LevelOutOfRange { level: 2, count: 2 })
-        ));
-        assert!(matches!(
-            m.check_request(0, Plane::new(2, 0, 0), ok_region, ok_len),
-            Err(Error::PlaneOutOfRange(_))
-        ));
-        assert!(matches!(
-            m.check_request(1, Plane::default(), Region::new(495, 0, 10, 10), ok_len),
-            Err(Error::RegionOutOfBounds(_))
-        ));
-        assert!(matches!(
-            m.check_request(0, Plane::default(), Region::new(0, 0, 0, 10), ok_len),
-            Err(Error::RegionOutOfBounds(_))
-        ));
-        assert!(matches!(
-            m.check_request(0, Plane::default(), Region::new(u64::MAX, 0, 10, 10), ok_len),
-            Err(Error::RegionOutOfBounds(_))
-        ));
-        assert!(matches!(
-            m.check_request(0, Plane::default(), ok_region, 199),
-            Err(Error::BufferTooSmall { needed: 200, got: 199 })
-        ));
+    fn check_plane_rejects_out_of_range() {
+        let m = SeriesMeta { size_c: 2, size_z: 3, size_t: 1, ..Default::default() };
+        assert!(m.check_plane(Plane::new(1, 2, 0)).is_ok());
+        assert!(matches!(m.check_plane(Plane::new(2, 0, 0)), Err(Error::OutOfRange(_))));
     }
 }

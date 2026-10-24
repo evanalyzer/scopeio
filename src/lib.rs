@@ -1,4 +1,6 @@
-//! # lib
+//! # scopeio
+//!
+//! Fast, pure-Rust, clean-room reader for microscopy and whole-slide images.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
@@ -9,35 +11,50 @@
 //! See LICENSE and LICENSE-EXCEPTION.
 //!
 //! ## Data model
-//! A file contains one or more **series**. Each series has one or more
-//! resolution **levels** (level 0 is full resolution) and a set of
-//! **planes** addressed by channel, z-slice and time point. Pixels are read
-//! as rectangular **regions** of one plane at one level.
+//! A file contains one or more **series** (scenes, positions, wells). Each
+//! series has resolution **levels** (level 0 is full resolution) and
+//! **planes** addressed by channel, z-slice and time point. A colour image
+//! is one channel with 3 (or 4) samples per pixel. Label, macro and
+//! thumbnail images are associated images, not series.
 //!
-//! ## Pixel data
-//! Samples are returned row-major and interleaved (height x width x samples
-//! per pixel), always in native byte order regardless of the file. Colour
-//! samples are always R, G, B(, A) with straight alpha, see [`ColorModel`]. Use
-//! [`ImageReaderExt::read_region_as`] for a typed `Vec<T>` or
-//! [`ImageReaderExt::read_region_buf`] if the type is only known at runtime.
-//! Both hand over to tensor libraries such as kornia-rs without copying,
-//! see [`ImageReaderExt`].
+//! ## Ready-to-use output
+//! Reads return native-endian, unpacked, correctly typed samples in the
+//! requested [`Layout`] (Hwc or Chw), [`ColorOrder`] and [`OutputType`],
+//! whatever the file stores. Buffers can be moved as they are into
+//! kornia-rs, OpenCV, ndarray or tch:
+//!
+//! ```no_run
+//! use scopeio::{ChannelSelect, Layout, OutputSpec, Region, RegionRequest};
+//!
+//! let reader = scopeio::open("image.ome.tif".as_ref())?;
+//! let mut req = RegionRequest::new(0, 0, Region::new(0, 0, 512, 512));
+//! req.channels = ChannelSelect::Channels(vec![0, 1, 2]);
+//! req.output = OutputSpec { layout: Layout::Chw, ..Default::default() };
+//! let img = reader.read_region(&req)?; // [3, 512, 512]
+//! let data: Vec<u16> = img.into_vec()?;
+//! # Ok::<(), scopeio::Error>(())
+//! ```
 //!
 //! ## Units
 //! All metadata uses fixed units: lengths and wavelengths in nanometres,
 //! times in seconds. Field names carry the unit (`_nm`, `_s`).
+//!
+//! ## Threads
+//! Handles are `Send + Sync` and stateless: share one `Arc<dyn ImageReader>`
+//! between threads and read tiles in parallel. scopeio keeps no pixel cache
+//! and starts no threads.
 
+mod codecs;
 mod errors;
-pub mod formats;
+mod formats;
 mod io;
+mod pixel;
 mod reader;
+mod scratch;
 mod types;
 
 pub use errors::{Error, Result};
-pub use formats::open;
-pub use reader::{ImageReader, ImageReaderExt};
-pub use types::{
-    ByteOrder, ChannelMeta, ColorModel, Geometry, LevelMeta, ObjectiveMeta, PhysicalSize, PixelBuf, PixelType,
-    Plane, PlaneMeta, PlateMeta, Position, Region, Roi, Sample, SeriesMeta, Shape, WellField,
-    WellMeta,
-};
+pub use formats::{open, open_with, probe, supported_formats};
+pub use pixel::Pixel;
+pub use reader::ImageReader;
+pub use types::*;

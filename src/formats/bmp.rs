@@ -4,12 +4,13 @@
 //!
 //! Supports the core, info and V2-V5 headers with 1, 2, 4, 8, 16, 24 and
 //! 32 bits per pixel, uncompressed, bit-field and RLE4/RLE8 compressed data.
-//! Palette images with a gray palette are returned as [`ColorModel::Gray`],
-//! other palette images are expanded to [`ColorModel::Rgb`]. Packed 16- and
+//! Palette images with a gray palette are returned as gray, other palette
+//! images are expanded to RGB. Packed 16- and
 //! 32-bit pixels are scaled to 8 bits per sample.
 //!
-//! Reference: Microsoft "Bitmap Storage", "Bitmap Compression" and the
-//! `BITMAP*HEADER` structure pages (see `doc/bmp/`).
+//! Provenance: Microsoft "Bitmap Storage", "Bitmap Compression" and the
+//! `BITMAP*HEADER` structure pages (see `doc/bmp/`); own analysis of sample
+//! files. No GPL code consulted.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
@@ -21,13 +22,22 @@
 
 use std::fs::File;
 use std::path::Path;
-use std::sync::OnceLock;
 
 use crate::io::read_exact_at;
+use crate::pixel::Sink;
+use crate::reader::Backend;
+use crate::scratch;
 use crate::{
-    ChannelMeta, ColorModel, Error, ImageReader, LevelMeta, PhysicalSize, PixelType, Plane,
-    Region, Result, SeriesMeta,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region,
+    Result, SeriesMeta,
 };
+
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bmp, "Windows Bitmap", "1");
+
+/// Returns `true` if `header` starts like a Windows bitmap file.
+pub(super) fn matches(header: &[u8]) -> bool {
+    header.len() >= 18 && &header[..2] == b"BM" && matches!(u32_at(header, 14), 12 | 40 | 52 | 56 | 64 | 108 | 124)
+}
 
 const FILE_HEADER_SIZE: u64 = 14;
 const BI_RGB: u32 = 0;
@@ -40,17 +50,16 @@ const CHUNK_BYTES: usize = 1 << 20;
 
 /// Reader for Windows bitmap files.
 #[derive(Debug)]
-pub struct BmpReader {
+pub(super) struct Bmp {
     file: File,
-    meta: SeriesMeta,
+    series: [SeriesMeta; 1],
     pixels: Pixels,
     data_offset: u64,
     data_len: u64,
     stride: usize,
     top_down: bool,
-    /// Palette indices of RLE-compressed files, one byte per pixel,
-    /// top row first; decoded on first read.
-    rle: Option<OnceLock<std::result::Result<Vec<u8>, String>>>,
+    /// RLE-compressed data, decoded on every read.
+    rle: bool,
 }
 
 /// Pixel encoding of the bitmap data.
@@ -92,7 +101,7 @@ impl Mask {
             return Err(Error::Corrupt(format!("colour mask {mask:#x} is not contiguous")));
         }
         if max > 0xFF {
-            return Err(Error::Unsupported(format!("colour mask {mask:#x} wider than 8 bits")));
+            return Err(Error::UnsupportedVariant(format!("colour mask {mask:#x} wider than 8 bits")));
         }
         Ok(Self { shift, max })
     }
@@ -118,28 +127,21 @@ struct Header {
     masks: [u32; 4],
 }
 
-impl BmpReader {
-    /// Returns `true` if `header` starts like a Windows bitmap file.
-    pub fn matches(header: &[u8]) -> bool {
-        header.len() >= 18
-            && &header[..2] == b"BM"
-            && matches!(u32_at(header, 14), 12 | 40 | 52 | 56 | 64 | 108 | 124)
-    }
-
+impl Bmp {
     /// Opens a bitmap file and parses its headers.
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Io`] if the file cannot be read, [`Error::Unsupported`]
+    /// Returns [`Error::Io`] if the file cannot be read, [`Error::UnsupportedVariant`]
     /// for JPEG/PNG payloads, OS/2 Huffman data and masks wider than 8 bits,
     /// and [`Error::Corrupt`] for invalid headers or truncated data.
-    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn open(path: &Path) -> Result<Self> {
         let file = File::open(path)?;
         let file_len = file.metadata()?.len();
         let mut head = [0u8; 14 + 124 + 16];
         let head_len = head.len().min(file_len as usize);
         read_exact_at(&file, &mut head[..head_len], 0)?;
-        if !Self::matches(&head[..head_len]) {
+        if !matches(&head[..head_len]) {
             return Err(Error::Corrupt("not a BMP file".into()));
         }
         let data_offset = u32_at(&head, 10) as u64;
@@ -173,7 +175,7 @@ impl BmpReader {
         let pixels = match (bits, h.compression) {
             // OS/2 2.x headers reuse codes 3 and 4 for Huffman and RLE24.
             (_, c @ (BI_BITFIELDS | 4)) if h.size == 64 => {
-                return Err(Error::Unsupported(format!("OS/2 bitmap compression {c}")));
+                return Err(Error::UnsupportedVariant(format!("OS/2 bitmap compression {c}")));
             }
             (1 | 2 | 4 | 8, BI_RGB) | (8, BI_RLE8) | (4, BI_RLE4) => {
                 let entry = if h.size == 12 { 3 } else { 4 };
@@ -193,7 +195,7 @@ impl BmpReader {
                 Pixels::Packed { bytes: (bits / 8) as u8, masks: packed_masks(&masks[..3], alpha)? }
             }
             (_, 4 | 5) => {
-                return Err(Error::Unsupported("BMP with embedded JPEG or PNG data".into()));
+                return Err(Error::UnsupportedVariant("BMP with embedded JPEG or PNG data".into()));
             }
             (b, c) => {
                 return Err(Error::Corrupt(format!("invalid bit count {b} for compression {c}")));
@@ -214,11 +216,10 @@ impl BmpReader {
             needed
         };
 
-        let color = match &pixels {
-            Pixels::Indexed { lut, .. } if lut.gray => ColorModel::Gray,
-            Pixels::Indexed { .. } | Pixels::Bgr24 => ColorModel::Rgb,
-            Pixels::Packed { masks, .. } if masks.len() == 4 => ColorModel::Rgba,
-            Pixels::Packed { .. } => ColorModel::Rgb,
+        let samples_per_pixel = match &pixels {
+            Pixels::Indexed { lut, .. } if lut.gray => 1,
+            Pixels::Indexed { .. } | Pixels::Bgr24 => 3,
+            Pixels::Packed { masks, .. } => masks.len() as u8,
         };
         let nm_per_pixel = |ppm: i32| (ppm > 0).then(|| 1e9 / ppm as f64);
         let meta = SeriesMeta {
@@ -226,33 +227,26 @@ impl BmpReader {
             size_z: 1,
             size_t: 1,
             pixel_type: PixelType::U8,
-            color,
-            levels: vec![LevelMeta {
-                width: width as u64,
-                height: height as u64,
-                tile_width: width,
-                tile_height: height,
-                downsample: 1.0,
-            }],
+            samples_per_pixel,
+            levels: vec![LevelMeta { size_x: width as u64, size_y: height as u64, tile: None, downsample: 1.0 }],
             physical_size: PhysicalSize {
                 x_nm: nm_per_pixel(h.x_ppm),
                 y_nm: nm_per_pixel(h.y_ppm),
                 z_nm: None,
             },
             channels: vec![ChannelMeta::default()],
-            original: original_meta(&h, top_down),
             ..Default::default()
         };
 
         Ok(Self {
             file,
-            meta,
+            series: [meta],
             pixels,
             data_offset,
             data_len,
             stride,
             top_down,
-            rle: rle.then(OnceLock::new),
+            rle,
         })
     }
 
@@ -308,83 +302,80 @@ impl BmpReader {
         }
     }
 
-    /// Returns the decoded palette indices of an RLE file.
-    fn rle_indices<'a>(&self, cell: &'a OnceLock<std::result::Result<Vec<u8>, String>>) -> Result<&'a [u8]> {
-        let decoded = cell.get_or_init(|| {
-            let mut data = vec![0u8; self.data_len as usize];
-            read_exact_at(&self.file, &mut data, self.data_offset).map_err(|e| e.to_string())?;
-            let level = &self.meta.levels[0];
-            let bits = match self.pixels {
-                Pixels::Indexed { bits, .. } => bits,
-                _ => unreachable!("RLE data is always indexed"),
-            };
-            Ok(decode_rle(&data, bits, level.width as usize, level.height as usize))
-        });
-        decoded.as_deref().map_err(|e| Error::Corrupt(e.clone()))
+    /// Decodes the palette indices of an RLE file, top row first.
+    fn rle_indices(&self) -> Result<Vec<u8>> {
+        let Pixels::Indexed { bits, .. } = self.pixels else {
+            return Err(Error::Corrupt("RLE data without palette".into()));
+        };
+        let level = &self.series[0].levels[0];
+        scratch::with(self.data_len as usize, |data| {
+            read_exact_at(&self.file, data, self.data_offset)?;
+            Ok(decode_rle(data, bits, level.size_x as usize, level.size_y as usize))
+        })
     }
 }
 
-impl ImageReader for BmpReader {
-    fn series_count(&self) -> usize {
-        1
+impl Backend for Bmp {
+    fn format(&self) -> &'static FormatInfo {
+        &FORMAT
     }
 
-    fn series_meta(&self, series: usize) -> Result<&SeriesMeta> {
-        match series {
-            0 => Ok(&self.meta),
-            _ => Err(Error::SeriesOutOfRange { series, count: 1 }),
-        }
+    fn series(&self) -> &[SeriesMeta] {
+        &self.series
     }
 
-    fn read_region_into(
-        &self,
-        series: usize,
-        level: usize,
-        plane: Plane,
-        region: Region,
-        buf: &mut [u8],
-    ) -> Result<()> {
-        let meta = self.series_meta(series)?;
-        let height = meta.check_request(level, plane, region, buf.len())?.height as usize;
-        let row_out = meta.buffer_size(Region::new(0, 0, region.width, 1));
-        let (x, y0, rows) = (region.x as usize, region.y as usize, region.height as usize);
-        let out_rows = buf[..row_out * rows].chunks_exact_mut(row_out);
+    fn original_metadata(&self, _series: usize) -> Result<OriginalMeta> {
+        let mut head = [0u8; 124];
+        let len = head.len().min(self.file.metadata()?.len().saturating_sub(14) as usize);
+        read_exact_at(&self.file, &mut head[..len], 14)?;
+        let h = parse_header(&head[..len])?;
+        Ok(OriginalMeta { pairs: original_meta(&h, self.top_down), ..Default::default() })
+    }
 
-        if let Some(cell) = &self.rle {
-            // Indices are stored one byte per pixel, so present them as 8-bit rows.
-            let width = meta.levels[0].width as usize;
-            let indices = self.rle_indices(cell)?;
-            let Pixels::Indexed { lut, .. } = &self.pixels else { unreachable!() };
-            let samples = meta.color.samples();
-            for (r, dst) in out_rows.enumerate() {
-                let src = &indices[(y0 + r) * width + x..][..region.width as usize];
-                for (out, &i) in dst.chunks_exact_mut(samples).zip(src) {
-                    out.copy_from_slice(&lut.rgb[i as usize][..samples]);
-                }
+    fn read_native(&self, _series: usize, _level: usize, _plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
+        let width = self.series[0].levels[0].size_x as usize;
+        let height = self.series[0].levels[0].size_y as usize;
+        let (x, y0, w, rows) = (region.x as usize, region.y as usize, region.width as usize, region.height as usize);
+
+        if self.rle {
+            let indices = self.rle_indices()?;
+            let Pixels::Indexed { lut, .. } = &self.pixels else { unreachable!("checked in rle_indices") };
+            let samples = if lut.gray { 1 } else { 3 };
+            for r in 0..rows {
+                let src = &indices[(y0 + r) * width + x..][..w];
+                sink.write_with(r, 0, w, |dst| {
+                    for (out, &i) in dst.chunks_exact_mut(samples).zip(src) {
+                        out.copy_from_slice(&lut.rgb[i as usize][..samples]);
+                    }
+                    Ok(())
+                })?;
             }
             return Ok(());
         }
 
         // Rows of the region are contiguous in the file; read them in chunks.
         let chunk_rows = (CHUNK_BYTES / self.stride).clamp(1, rows);
-        let mut scratch = vec![0u8; chunk_rows * self.stride];
-        let mut out_rows = out_rows;
-        let mut done = 0;
-        while done < rows {
-            let n = chunk_rows.min(rows - done);
-            let first = y0 + done;
-            // Index of the lowest stored row in this chunk.
-            let stored = if self.top_down { first } else { height - first - n };
-            let block = &mut scratch[..n * self.stride];
-            read_exact_at(&self.file, block, self.data_offset + (stored * self.stride) as u64)?;
-            for r in 0..n {
-                let s = if self.top_down { r } else { n - 1 - r };
-                let src = &block[s * self.stride..(s + 1) * self.stride];
-                self.convert_row(src, x, out_rows.next().expect("row count matches"));
+        scratch::with(chunk_rows * self.stride, |scratch| {
+            let mut done = 0;
+            while done < rows {
+                let n = chunk_rows.min(rows - done);
+                let first = y0 + done;
+                // Index of the lowest stored row in this chunk.
+                let stored = if self.top_down { first } else { height - first - n };
+                let block = &mut scratch[..n * self.stride];
+                read_exact_at(&self.file, block, self.data_offset + (stored * self.stride) as u64)?;
+                for r in 0..n {
+                    let s = if self.top_down { r } else { n - 1 - r };
+                    let src = &block[s * self.stride..(s + 1) * self.stride];
+                    sink.write_with(done + r, 0, w, |dst| {
+                        self.convert_row(src, x, dst);
+                        Ok(())
+                    })?;
+                }
+                done += n;
             }
-            done += n;
-        }
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -561,7 +552,7 @@ mod tests {
         let m = Mask::new(0x7C00).unwrap();
         assert_eq!((m.sample(0x7C00), m.sample(0), m.sample(1 << 10)), (255, 0, 8));
         assert!(Mask::new(0x0F0F).is_err());
-        assert!(matches!(Mask::new(0x3FF), Err(Error::Unsupported(_))));
+        assert!(matches!(Mask::new(0x3FF), Err(Error::UnsupportedVariant(_))));
     }
 
     #[test]

@@ -1,0 +1,3 @@
+# Known differences between scopeio and the reference readers.
+file	tool	tolerance	reason
+tests/reference/ome/OME-TIFF/2016-06/companion/multifile.companion.ome	bioformats-rs		returns the first plane for all five z planes; scopeio matches Bio-Formats
