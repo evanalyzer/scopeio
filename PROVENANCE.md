@@ -274,6 +274,21 @@ as black-box command-line tools to produce reference output
   with its own [MS-CFB] writer; bioformats-rs reads its planes in another
   order (see `tests/expected/oif_divergences.tsv`).
 
+## Olympus OIR (`src/formats/oir.rs`)
+
+- OpenReadout OIR notes (MIT OR Apache-2.0) in `doc/olympus-oir/`: header,
+  block index, block kinds, chunk tags and names, continuation files, XML
+  documents and the fields taken from them.
+- `oirfile` (BSD-3-Clause, Christoph Gohlke; notice in
+  THIRD_PARTY_NOTICES.md) read as documentation: chunk name pattern,
+  channel order by `@order`, frame positions.
+- Own analysis of the OME samples (`Olympus-OIR`, CC BY 4.0): files without
+  `pixelUnit` give lengths in micrometres. Pixels identical to Bio-Formats
+  (black box) on all eleven image samples; bioformats-rs adds empty channels
+  (see `tests/expected/oir_divergences.tsv`).
+- Synthetic sample with a continuation file written by
+  `tests/scripts/make_oir_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

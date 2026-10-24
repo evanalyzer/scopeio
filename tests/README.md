@@ -66,6 +66,7 @@ python3 -I tests/scripts/fetch_openslide.py
 python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
 python3 -I tests/scripts/make_plain_samples.py    # PNG, JPEG, JPEG 2000; needs ImageMagick
 python3 -I tests/scripts/make_oif_samples.py      # Olympus OIF/OIB (own compound-file writer)
+python3 -I tests/scripts/make_oir_samples.py      # Olympus OIR with a continuation file
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -89,6 +90,21 @@ REP=3 sh tests/scripts/make_plain_bench.sh
 python3 -I tests/scripts/fetch_ome.py "Olympus-FluoView/imagesc-71616/20220824_4492_cord_dapi__iba568_60x.oib"
 python3 -I tests/scripts/oracle.py oif --repeat 3 tests/reference/ome/Olympus-FluoView/imagesc-71616/*.oib
 python3 -I tests/scripts/oracle.py oif --append tests/data/oif/synthetic.oib tests/data/oif/synthetic.oif
+# Olympus OIR: OME samples (CC BY 4.0; the stitched one with its 0.8 GB continuation file)
+O=Olympus-OIR; G=$O/gh-4205
+python3 -I tests/scripts/fetch_ome.py "$O/etienne/amy slice z stack_0001.oir" "$O/etienne/coupe shg stack_0001.oir" \
+    "$O/etienne/venus stack.oir" $O/imagesc-105684/1202-interval_10sec_sequence_frame.oir \
+    "$O/imagesc-105684/1202-interval_30sec_sequence_frame_z stack.oir" $O/imagesc-105684/1202-interval_freeRun_sequence_frame.oir \
+    $O/imagesc-105684/1202-interval_30sec_sequence_frame.oir $G/zenodo-12773657/DAPI-mCherry_3T_4Z_5Lambda-420-630-w10nm-s50nm.oir \
+    $G/zenodo-12773657/DAPI_mCherry_22Lambda-420-630-w10nm-s10nm.oir $G/zenodo-12773657/DAPI_mCherry_4T_5Lambda-420-630-w10nm-s50nm.oir \
+    $G/zenodo-12773657/DAPI_mCherry_4Z_5Lambda-420-630-w10nm-s50nm.oir $G/zenodo-13680725/Map_A01.oir \
+    $G/zenodo-13680725/tiling-sample-brain-section_A01_G001_0001.oir \
+    $G/zenodo-13680725/Stitch_A01_G001.oir $G/zenodo-13680725/Stitch_A01_G001_00001
+find tests/reference/ome/Olympus-OIR -name "*.oir" ! -name "*0002.oir" ! -name "*0003.oir" ! -name "Stitch*" -print0 | \
+    sort -z | xargs -0 python3 -I tests/scripts/oracle.py oir --repeat 3
+python3 -I tests/scripts/oracle.py oir --repeat 1 --series 0 --crop 1500,1000,512,512 --append \
+    tests/reference/ome/Olympus-OIR/gh-4205/zenodo-13680725/Stitch_A01_G001.oir
+python3 -I tests/scripts/oracle.py oir --append tests/data/oir/synthetic.oir
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

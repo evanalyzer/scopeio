@@ -1,0 +1,9 @@
+# Known differences for Olympus OIR.
+file	tool	series	tolerance	reason
+tests/reference/ome/Olympus-OIR/gh-4205/zenodo-13680725/tiling-sample-brain-section_A01_G001_0001.oir	bioformats-rs	-		bioformats-rs adds two all-zero channels (configured channels without pixel data); its first two channels are the channels scopeio and Bio-Formats return
+tests/reference/ome/Olympus-OIR/imagesc-105684/1202-interval_10sec_sequence_frame.oir	bioformats-rs	-		bioformats-rs adds two all-zero channels (configured channels without pixel data); its first two channels are the channels scopeio and Bio-Formats return
+tests/reference/ome/Olympus-OIR/imagesc-105684/1202-interval_30sec_sequence_frame.oir	bioformats-rs	-		bioformats-rs adds two all-zero channels (configured channels without pixel data); its first two channels are the channels scopeio and Bio-Formats return
+tests/reference/ome/Olympus-OIR/imagesc-105684/1202-interval_30sec_sequence_frame_z stack.oir	bioformats-rs	-		bioformats-rs adds two all-zero channels (configured channels without pixel data); its first two channels are the channels scopeio and Bio-Formats return
+tests/reference/ome/Olympus-OIR/imagesc-105684/1202-interval_freeRun_sequence_frame.oir	bioformats-rs	-		bioformats-rs adds two all-zero channels (configured channels without pixel data); its first two channels are the channels scopeio and Bio-Formats return
+tests/data/oir/synthetic.oir	bioformats	-		the minimal synthetic file lacks metadata Bio-Formats needs (NullPointerException); spec-derived truth and the eleven OME samples are the references
+tests/data/oir/synthetic.oir	bioformats-rs	-		bioformats-rs wants image dimensions in metadata the minimal synthetic file does not write

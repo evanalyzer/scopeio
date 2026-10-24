@@ -40,6 +40,7 @@ pub enum FormatId {
     Oib,
     /// Olympus FluoView settings file with its `.oif.files` folder.
     Oif,
+    Oir,
 }
 
 /// Identification of the reader that produced the data, for

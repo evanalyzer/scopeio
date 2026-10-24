@@ -62,6 +62,7 @@ compared, "n/a" means the reader cannot open the format.
 | JPEG | 3 | 1 ms | 3.4 MiB | 228× / 16× | 1.9× / 2.5× | – |
 | JPEG 2000 | 3 | 1 ms | 3.7 MiB | 147× / 10× | 2.2× / 2.0× | – |
 | Olympus OIB/OIF | 3 | 1 ms | 3.7 MiB | 244× / 64× | 7.0× / 4.3× | – |
+| Olympus OIR | 15 | 18 ms | 11 MiB | 244× / 51× | 2.8× / 6.1× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -193,7 +194,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Olympus CellR/APL** | `.apl, .mtb, .tnb, .tif, .obsep` |  |
 | **Olympus FluoView FV1000** | `.oib, .oif` | ✅ |
 | **Olympus FluoView TIFF** | `.tif` |  |
-| **Olympus OIR** | `.oir` |  |
+| **Olympus OIR** | `.oir` | ✅ |
 | **Olympus OMP2INFO** | `.omp2info` |  |
 | **Olympus ScanR** | `.xml, .dat, .tif` |  |
 | **Olympus SIS TIFF** | `.tiff` |  |
