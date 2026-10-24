@@ -13,6 +13,10 @@
 //! resolution **levels** (level 0 is full resolution) and a set of
 //! **planes** addressed by channel, z-slice and time point. Pixels are read
 //! as rectangular **regions** of one plane at one level.
+//!
+//! ## Units
+//! All metadata uses fixed units: lengths and wavelengths in nanometres,
+//! times in seconds. Field names carry the unit (`_nm`, `_s`).
 
 mod errors;
 mod reader;
@@ -20,4 +24,7 @@ mod types;
 
 pub use errors::{Error, Result};
 pub use reader::ImageReader;
-pub use types::{LevelMeta, PhysicalSize, PixelType, Plane, Region, SeriesMeta};
+pub use types::{
+    ChannelMeta, Geometry, LevelMeta, ObjectiveMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
+    PlateMeta, Position, Region, Roi, SeriesMeta, Shape, WellField, WellMeta,
+};

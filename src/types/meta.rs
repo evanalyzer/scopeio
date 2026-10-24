@@ -8,18 +8,20 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::{Error, Plane, PixelType, Region, Result};
+use crate::{ChannelMeta, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
 
-/// Physical pixel size in micrometres. Fields are `None` if unknown.
+/// Physical size of one pixel (x, y) and the z-step, in nanometres.
+/// Fields are `None` if unknown.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct PhysicalSize {
-    pub x: Option<f64>,
-    pub y: Option<f64>,
-    pub z: Option<f64>,
+    pub x_nm: Option<f64>,
+    pub y_nm: Option<f64>,
+    pub z_nm: Option<f64>,
 }
 
 /// Dimensions and storage layout of one resolution level.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct LevelMeta {
     pub width: u64,
     pub height: u64,
@@ -32,18 +34,36 @@ pub struct LevelMeta {
 }
 
 /// Metadata of one series.
-#[derive(Debug, Clone, PartialEq)]
+///
+/// Units are fixed: lengths and wavelengths in nanometres, times in seconds.
+#[derive(Debug, Clone, PartialEq, Default)]
+#[non_exhaustive]
 pub struct SeriesMeta {
     pub name: Option<String>,
+    pub description: Option<String>,
+    /// Acquisition start as ISO 8601 string.
+    pub acquisition_date: Option<String>,
     pub size_c: u32,
     pub size_z: u32,
     pub size_t: u32,
     pub pixel_type: PixelType,
+    /// Bits actually used per sample, e.g. 12 for 12-bit data stored as u16.
+    pub significant_bits: Option<u8>,
     /// Interleaved samples per pixel (3 for RGB brightfield, 1 otherwise).
     pub samples_per_pixel: u8,
     /// Resolution levels, level 0 first. Never empty.
     pub levels: Vec<LevelMeta>,
-    pub physical_size: Option<PhysicalSize>,
+    pub physical_size: PhysicalSize,
+    /// Nominal interval between time points.
+    pub time_increment_s: Option<f64>,
+    /// One entry per channel, `len() == size_c`.
+    pub channels: Vec<ChannelMeta>,
+    pub objective: Option<ObjectiveMeta>,
+    pub stage_position: Option<Position>,
+    pub rois: Vec<Roi>,
+    /// Format-specific key-value metadata not mapped to a field above,
+    /// in file order.
+    pub original: Vec<(String, String)>,
 }
 
 impl SeriesMeta {
@@ -53,6 +73,18 @@ impl SeriesMeta {
             * region.height as usize
             * self.samples_per_pixel as usize
             * self.pixel_type.bytes()
+    }
+
+    /// Checks that `plane` lies within the series dimensions.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::PlaneOutOfRange`] if any coordinate is too large.
+    pub fn check_plane(&self, plane: Plane) -> Result<()> {
+        if plane.c >= self.size_c || plane.z >= self.size_z || plane.t >= self.size_t {
+            return Err(Error::PlaneOutOfRange(plane));
+        }
+        Ok(())
     }
 
     /// Validates a read request against this series.
@@ -85,9 +117,7 @@ impl SeriesMeta {
             level,
             count: self.levels.len(),
         })?;
-        if plane.c >= self.size_c || plane.z >= self.size_z || plane.t >= self.size_t {
-            return Err(Error::PlaneOutOfRange(plane));
-        }
+        self.check_plane(plane)?;
         let fits = |pos: u64, len: u32, max: u64| {
             len > 0 && pos.checked_add(len as u64).is_some_and(|end| end <= max)
         };
@@ -112,7 +142,6 @@ mod tests {
 
     fn meta() -> SeriesMeta {
         SeriesMeta {
-            name: None,
             size_c: 2,
             size_z: 3,
             size_t: 1,
@@ -122,7 +151,7 @@ mod tests {
                 LevelMeta { width: 1000, height: 800, tile_width: 256, tile_height: 256, downsample: 1.0 },
                 LevelMeta { width: 500, height: 400, tile_width: 256, tile_height: 256, downsample: 2.0 },
             ],
-            physical_size: None,
+            ..Default::default()
         }
     }
 

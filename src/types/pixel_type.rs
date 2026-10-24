@@ -9,9 +9,10 @@
 //! See LICENSE and LICENSE-EXCEPTION.
 
 /// Data type of a single sample.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[non_exhaustive]
 pub enum PixelType {
+    #[default]
     U8,
     I8,
     U16,
