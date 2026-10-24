@@ -190,7 +190,8 @@ crop with `openslide-write-png` (our canvas starts at OpenSlide's bounds):
 ```sh
 M=tests/reference/openslide/Mirax/CMU-1-Saved-1_16/CMU-1-Saved-1_16.mrxs
 python3 -I tests/scripts/oracle.py mrxs --tools openslide --openslide-bounds --ours-series 0/0 --crop 1600,2400,1024,1024 $M
-# all crops: bash tests/scripts/oracle_mrxs.sh (REP=3 for timings)
+# all crops: bash tests/scripts/oracle_mrxs.sh (REP=3 for timings);
+# the Mirax2.2-1 crops need fetch_openslide.py --large
 ```
 
 Divergence files may name one reference series (`series` column) or one

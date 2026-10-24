@@ -30,3 +30,11 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs crop 2500,1700,512,512 | 15 KiB | openslide | ok | 0.111 | 0.112 | 14.5 |
 | tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs crop 600,400,256,256 | 15 KiB | scopeio | ok | 0.007 | 0.008 | 4.0 |
 | tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs crop 600,400,256,256 | 15 KiB | openslide | ok | 0.070 | 0.071 | 12.7 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 44000,61000,1024,1024 | 264 KiB | scopeio | ok | 0.041 | 0.043 | 22.9 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 44000,61000,1024,1024 | 264 KiB | openslide | ok | 0.394 | 0.404 | 46.5 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 11000,15250,512,512 | 264 KiB | scopeio | ok | 0.038 | 0.040 | 23.2 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 11000,15250,512,512 | 264 KiB | openslide | ok | 0.146 | 0.148 | 42.6 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 1300,1800,256,256 | 264 KiB | scopeio | ok | 0.031 | 0.032 | 22.8 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 1300,1800,256,256 | 264 KiB | openslide | ok | 0.089 | 0.099 | 39.5 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 0,0,185,349 | 264 KiB | scopeio | ok | 0.033 | 0.034 | 23.0 |
+| tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs crop 0,0,185,349 | 264 KiB | openslide | ok | 0.121 | 0.123 | 39.0 |

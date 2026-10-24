@@ -26,8 +26,9 @@ DEFAULT = [
     "Leica/Leica-Fluorescence-1.scn", "Leica/Leica-1.scn",
     "Ventana/Ventana-1.bif",
 ]
-# Large files with layouts the default set lacks (NDPI offsets above 4 GiB).
-LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi"]
+# Large files with layouts the default set lacks (NDPI offsets above 4 GiB,
+# MIRAX slide version 2.2).
+LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi", "Mirax/Mirax2.2-1.zip"]
 
 
 def sha256(path):

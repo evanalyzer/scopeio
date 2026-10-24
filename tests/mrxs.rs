@@ -25,7 +25,14 @@ use scopeio::AssociatedKind;
 #[test]
 fn synthetic_slide_matches_spec_truth() {
     let dir = root().join("tests/data/mrxs");
-    let r = scopeio::open(&dir.join("synthetic.mrxs")).unwrap();
+    // synthetic22: the same slide with a compressed position buffer (version 2.2).
+    for name in ["synthetic.mrxs", "synthetic22.mrxs"] {
+        check_synthetic(&dir, name);
+    }
+}
+
+fn check_synthetic(dir: &std::path::Path, name: &str) {
+    let r = scopeio::open(&dir.join(name)).unwrap();
     assert_eq!(r.format().id, scopeio::FormatId::Mrxs);
     let m = r.series_meta(0).unwrap();
     // Two photos of 32 x 16 overlapping by 4 pixels, the second 4 lower.
@@ -39,7 +46,7 @@ fn synthetic_slide_matches_spec_truth() {
             "level1" => decode_level(r.as_ref(), 0, 1).unwrap().pixels,
             _ => r.read_associated(&AssociatedKind::Label, &Default::default()).unwrap().as_bytes().to_vec(),
         };
-        assert_eq!(crc(&got), t["crc32"], "{}", t["image"]);
+        assert_eq!(crc(&got), t["crc32"], "{name} {}", t["image"]);
     }
 }
 
@@ -48,25 +55,27 @@ fn corrupt_slides_do_not_panic() {
     // Damage each slide file in a copy of the slide folder.
     let src = root().join("tests/data/mrxs");
     let tmp = std::env::temp_dir().join(format!("scopeio-mrxs-{}", std::process::id()));
-    for name in ["Index.dat", "Slidedat.ini", "Data0000.dat"] {
-        let _ = std::fs::remove_dir_all(&tmp);
-        std::fs::create_dir_all(tmp.join("synthetic")).unwrap();
-        std::fs::copy(src.join("synthetic.mrxs"), tmp.join("synthetic.mrxs")).unwrap();
-        for f in ["Index.dat", "Slidedat.ini", "Data0000.dat"] {
-            std::fs::copy(src.join("synthetic").join(f), tmp.join("synthetic").join(f)).unwrap();
-        }
-        let original = std::fs::read(src.join("synthetic").join(name)).unwrap();
-        for at in (0..original.len()).step_by(5) {
-            let mut d = original.clone();
-            if at % 2 == 0 {
-                d.truncate(at);
-            } else {
-                d[at] ^= 0x5A;
+    for stem in ["synthetic", "synthetic22"] {
+        for name in ["Index.dat", "Slidedat.ini", "Data0000.dat"] {
+            let _ = std::fs::remove_dir_all(&tmp);
+            std::fs::create_dir_all(tmp.join(stem)).unwrap();
+            std::fs::copy(src.join(format!("{stem}.mrxs")), tmp.join(format!("{stem}.mrxs"))).unwrap();
+            for f in ["Index.dat", "Slidedat.ini", "Data0000.dat"] {
+                std::fs::copy(src.join(stem).join(f), tmp.join(stem).join(f)).unwrap();
             }
-            std::fs::write(tmp.join("synthetic").join(name), &d).unwrap();
-            if let Ok(r) = scopeio::open(&tmp.join("synthetic.mrxs")) {
-                common::decode_small(r.as_ref());
-                let _ = r.read_associated(&AssociatedKind::Label, &Default::default());
+            let original = std::fs::read(src.join(stem).join(name)).unwrap();
+            for at in (0..original.len()).step_by(5) {
+                let mut d = original.clone();
+                if at % 2 == 0 {
+                    d.truncate(at);
+                } else {
+                    d[at] ^= 0x5A;
+                }
+                std::fs::write(tmp.join(stem).join(name), &d).unwrap();
+                if let Ok(r) = scopeio::open(&tmp.join(format!("{stem}.mrxs"))) {
+                    common::decode_small(r.as_ref());
+                    let _ = r.read_associated(&AssociatedKind::Label, &Default::default());
+                }
             }
         }
     }

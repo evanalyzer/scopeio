@@ -8,7 +8,10 @@ slide position buffer (one 9-byte entry per camera position). Two photos of
 2 x 2 images that overlap; JPEG images written by ImageMagick (run as a
 program) with constant 8 x 8 gray blocks, which decode exactly. Also writes
 truth.tsv with the CRC-32 of each level, composed here by the documented
-placement. Output in tests/data/mrxs/ is committed.
+placement. synthetic22 is the same slide as version 2.2 writes it: the
+position buffer zlib-compressed in the StitchingIntensityLayer record, with a
+second data item (4 bytes per position) after it. Output in tests/data/mrxs/
+is committed.
 
 Usage: python3 -I tests/scripts/make_mrxs_samples.py   (needs `magick`)
 """
@@ -58,7 +61,17 @@ def compose(w, h, pieces):
 def main():
     if OUT.exists():
         shutil.rmtree(OUT)
-    (OUT / "synthetic").mkdir(parents=True)
+    truth = make("synthetic", False)
+    make("synthetic22", True)
+    with open(OUT / "truth.tsv", "w") as f:
+        f.write("image\tcrc32\n")
+        for name, px in truth:
+            f.write(f"{name}\t{zlib.crc32(px):08x}\n")
+
+
+def make(stem, v22):
+    """Writes slide `stem`; `v22`: slide version 2.2 (compressed positions)."""
+    (OUT / stem).mkdir(parents=True)
     nx, ny = DIV * len(PHOTOS), DIV
     data = bytearray(b"01.02" + SLIDE_ID.encode() + b"000" + bytes(256))
     level_items = [[], []]
@@ -85,10 +98,16 @@ def main():
     data += jpeg(label, TW, TH)
     label_item = (off, len(data) - off)
     positions = b"".join(struct.pack("<Bii", 1, x, y) for x, y in PHOTOS)
+    if v22:
+        positions = zlib.compress(positions)
     off = len(data)
     data += positions
-    pos_item = (off, len(positions))
-    (OUT / "synthetic" / "Data0000.dat").write_bytes(bytes(data))
+    pos_items = [(0, 0, off, len(positions), 0)]
+    if v22:
+        extra = zlib.compress(bytes(range(4 * len(PHOTOS))))
+        pos_items.append((0, 0, len(data), len(extra), 0))
+        data += extra
+    (OUT / stem / "Data0000.dat").write_bytes(bytes(data))
 
     # Canvas: bounding box of level 0.
     x0 = min(p[3] for p in level0)
@@ -122,17 +141,17 @@ def main():
     for level, items in enumerate(level_items):
         struct.pack_into("<I", idx, hier_table + 4 * level, page_list([(i, o, n, 0) for i, o, n in items], 4))
     struct.pack_into("<I", idx, nonhier_table, page_list([(0, 0, label_item[0], label_item[1], 0)], 5))
-    struct.pack_into("<I", idx, nonhier_table + 4, page_list([(0, 0, pos_item[0], pos_item[1], 0)], 5))
+    struct.pack_into("<I", idx, nonhier_table + 4, page_list(pos_items, 5))
     struct.pack_into("<II", idx, roots_at, hier_table, nonhier_table)
-    (OUT / "synthetic" / "Index.dat").write_bytes(bytes(idx))
+    (OUT / stem / "Index.dat").write_bytes(bytes(idx))
 
     ini = f"""﻿[GENERAL]
 SLIDE_VERSION = 01.03
-SLIDE_NAME = synthetic
+SLIDE_NAME = {stem}
 SLIDE_ID = {SLIDE_ID}
 IMAGENUMBER_X = {nx}
 IMAGENUMBER_Y = {ny}
-CURRENT_SLIDE_VERSION = 1.9
+CURRENT_SLIDE_VERSION = {"2.2" if v22 else "1.9"}
 SLIDE_CREATIONDATETIME = 01/02/2021 03:04:05
 OBJECTIVE_MAGNIFICATION = 40
 CameraImageDivisionsPerSide = {DIV}
@@ -149,9 +168,9 @@ HIER_0_VAL_1_SECTION = LAYER_0_LEVEL_1_SECTION
 NONHIER_0_NAME = Scan data layer
 NONHIER_0_COUNT = 1
 NONHIER_0_VAL_0 = ScanDataLayer_SlideBarcode
-NONHIER_1_NAME = VIMSLIDE_POSITION_BUFFER
+NONHIER_1_NAME = {"StitchingIntensityLayer" if v22 else "VIMSLIDE_POSITION_BUFFER"}
 NONHIER_1_COUNT = 1
-NONHIER_1_VAL_0 = default
+NONHIER_1_VAL_0 = {"StitchingIntensityLevel" if v22 else "default"}
 [DATAFILE]
 FILE_COUNT = 1
 FILE_0 = Data0000.dat
@@ -169,12 +188,9 @@ DIGITIZER_HEIGHT = {TH}
 IMAGE_CONCAT_FACTOR = 1
 IMAGE_FORMAT = JPEG
 """
-    (OUT / "synthetic" / "Slidedat.ini").write_text(ini.replace("\n", "\r\n"), encoding="utf-8")
-    (OUT / "synthetic.mrxs").write_bytes(jpeg(blocks(7), TW, TH))
-    with open(OUT / "truth.tsv", "w") as f:
-        f.write("image\tcrc32\n")
-        for name, px in truth:
-            f.write(f"{name}\t{zlib.crc32(px):08x}\n")
+    (OUT / stem / "Slidedat.ini").write_text(ini.replace("\n", "\r\n"), encoding="utf-8")
+    (OUT / f"{stem}.mrxs").write_bytes(jpeg(blocks(7), TW, TH))
+    return truth
 
 
 if __name__ == "__main__":

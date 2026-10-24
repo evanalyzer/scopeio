@@ -11,3 +11,7 @@ tests/reference/openslide/Mirax/CMU-1-Saved-1_2/CMU-1-Saved-1_2.mrxs	openslide	-
 tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	5000,3500,1024,1024	0.2	JPEG IDCT rounding
 tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	2500,1700,512,512	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
 tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	600,400,256,256	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs	openslide	-	44000,61000,1024,1024	1.0	JPEG IDCT rounding and 4:2:0 chroma upsampling (zune-jpeg vs libjpeg-turbo)
+tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs	openslide	-	11000,15250,512,512	6.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs	openslide	-	1300,1800,256,256	8.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels (fine texture)
+tests/reference/openslide/Mirax/Mirax2.2-1/Mirax2.2-1.mrxs	openslide	-	0,0,185,349	10.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels (whole level, image means agree within 0.2)

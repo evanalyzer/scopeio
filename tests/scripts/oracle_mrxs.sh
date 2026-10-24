@@ -22,3 +22,8 @@ crop $M/CMU-1-Saved-1_2/CMU-1-Saved-1_2.mrxs 5 400 600 256 256
 crop $M/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs 0 5000 3500 1024 1024
 crop $M/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs 1 2500 1700 512 512
 crop $M/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs 3 600 400 256 256
+# Slide version 2.2: compressed position buffer
+crop $M/Mirax2.2-1/Mirax2.2-1.mrxs 0 44000 61000 1024 1024
+crop $M/Mirax2.2-1/Mirax2.2-1.mrxs 2 11000 15250 512 512
+crop $M/Mirax2.2-1/Mirax2.2-1.mrxs 5 1300 1800 256 256
+crop $M/Mirax2.2-1/Mirax2.2-1.mrxs 9 0 0 185 349

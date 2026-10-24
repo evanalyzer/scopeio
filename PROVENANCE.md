@@ -154,7 +154,12 @@ as black-box command-line tools to produce reference output
   per-photo pieces and the drawing order (image number) were found by
   locating decoded images in renderings of OpenSlide 3.4.1 run as a black
   box (`openslide-write-png`).
-- Synthetic sample written from that model by
+- Slide version 2.2 and later (openslide.org page): the position buffer is
+  DEFLATE-compressed and referenced by
+  `StitchingIntensityLayer.StitchingIntensityLevel`; the sample
+  `Mirax2.2-1` holds a zlib stream (header `78 9C`) and a second data item,
+  which is ignored. Placement checked against OpenSlide crops.
+- Synthetic samples written from that model by
   `tests/scripts/make_mrxs_samples.py` (JPEGs by ImageMagick, run as a program).
 
 ## Zeiss LSM (`src/formats/lsm.rs`)

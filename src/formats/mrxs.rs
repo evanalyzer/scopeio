@@ -17,8 +17,10 @@
 //! itself is a preview JPEG. Associated images: barcode (label), slide
 //! thumbnail (macro), preview (thumbnail).
 //!
-//! Not supported: PNG and BMP image data, compressed position buffers
-//! (slide version 2.2 and later).
+//! From slide version 2.2 the position buffer is DEFLATE-compressed and
+//! referenced by `StitchingIntensityLayer.StitchingIntensityLevel`.
+//!
+//! Not supported: PNG and BMP image data.
 //!
 //! Provenance: openslide.org MIRAX format page (prose, CC BY-SA 4.0) in
 //! `doc/3dhistech-mrxs/`; own analysis of sample files; piece placement
@@ -334,16 +336,23 @@ impl Mrxs {
         // Camera positions, one per photo, in level-0 pixels.
         let (px, py) = (ceil_div(nx, div), ceil_div(ny, div));
         let positions: Vec<Option<(i64, i64)>> = {
-            if version >= 2.2 {
-                return Err(Error::UnsupportedVariant("MRXS slide version 2.2 or later (compressed positions)".into()));
-            }
-            let rec = nonhier.get("VIMSLIDE_POSITION_BUFFER.default").copied();
+            let compressed = version >= 2.2;
+            let key = if compressed { "StitchingIntensityLayer.StitchingIntensityLevel" } else { "VIMSLIDE_POSITION_BUFFER.default" };
+            let rec = nonhier.get(key).copied();
+            // The first data item; a second one holds other per-photo data.
             match rec.map(|r| index.items(index.nonhier_root, r, 5)).transpose()?.and_then(|v| v.into_iter().next()) {
                 Some(item) => {
                     let b = blob(&item);
+                    let n = (px * py) as usize;
                     let mut buf = vec![0u8; b.len as usize];
                     mrxs.read_blob(b, &mut buf)?;
-                    let n = (px * py) as usize;
+                    if compressed {
+                        let mut out = vec![0u8; 9 * n];
+                        let zlib = buf.first() == Some(&0x78);
+                        let len = crate::codecs::deflate(&buf, &mut out, zlib)?;
+                        out.truncate(len);
+                        buf = out;
+                    }
                     (0..n)
                         .map(|i| {
                             let e = buf.get(9 * i..9 * i + 9)?;
