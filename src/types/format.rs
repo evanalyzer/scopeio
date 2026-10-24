@@ -18,6 +18,7 @@ pub enum FormatId {
     Tiff,
     OmeTiff,
     OmeZarr,
+    Vsi,
 }
 
 /// Identification of the reader that produced the data, for

@@ -14,6 +14,8 @@
 mod bmp;
 #[cfg(feature = "tiff")]
 mod tiff;
+#[cfg(feature = "vsi")]
+mod vsi;
 #[cfg(feature = "zarr")]
 mod zarr;
 
@@ -38,6 +40,8 @@ static SUPPORTED: &[FormatInfo] = &[
     tiff::OME_FORMAT,
     #[cfg(feature = "zarr")]
     zarr::FORMAT,
+    #[cfg(feature = "vsi")]
+    vsi::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -68,6 +72,11 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "bmp")]
     if bmp::matches(&head) {
         return Ok(Some(FormatId::Bmp));
+    }
+    // VSI files start with a TIFF header; check them before plain TIFF.
+    #[cfg(feature = "vsi")]
+    if vsi::matches(&head) {
+        return Ok(Some(FormatId::Vsi));
     }
     #[cfg(feature = "tiff")]
     if let Some(id) = tiff::probe(path, &head)? {
@@ -103,6 +112,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "vsi")]
+        Some(FormatId::Vsi) => Ok(Arc::new(Reader(vsi::Vsi::open(path, opts)?))),
         #[cfg(feature = "zarr")]
         Some(FormatId::OmeZarr) => Ok(Arc::new(Reader(zarr::Zarr::open(path, opts)?))),
         _ => Err(Error::UnsupportedFormat(path.display().to_string())),

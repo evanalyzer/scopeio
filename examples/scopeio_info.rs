@@ -8,7 +8,8 @@
 //!
 //! With `--no-checksum` only the pixels are read, for timing the reader.
 //! `--dump <file>` writes the raw pixels of series 0 and `--meta` prints the
-//! series metadata, both for debugging.
+//! series metadata, both for debugging. `--series N` reads only series N and
+//! `--crop x,y,w,h` only that region of level 0.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
@@ -37,9 +38,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // `--meta` prints the series metadata.
     let show_meta = args.iter().any(|a| a == "--meta");
     args.retain(|a| a != "--meta");
+    // `--series N` reads one series, `--crop x,y,w,h` one region of level 0.
+    let mut option = |name: &str| {
+        args.iter().position(|a| a == name).map(|i| {
+            let v = args.get(i + 1).cloned().unwrap_or_default();
+            args.drain(i..(i + 2).min(args.len()));
+            v
+        })
+    };
+    let only_series = option("--series").map(|v| v.parse::<usize>()).transpose()?;
+    let crop = option("--crop")
+        .map(|v| {
+            let n: Vec<u64> = v.split(',').filter_map(|p| p.trim().parse().ok()).collect();
+            if n.len() == 4 { Ok(Region::new(n[0], n[1], n[2], n[3])) } else { Err("crop must be x,y,w,h") }
+        })
+        .transpose()?;
     let path = args.first().ok_or("usage: scopeio_info [--no-checksum] [--meta] [--dump <file>] <file>")?;
     let reader = scopeio::open(path.as_ref())?;
     for series in 0..reader.series_count() {
+        if only_series.is_some_and(|s| s != series) {
+            continue;
+        }
         let meta = reader.series_meta(series)?;
         if show_meta {
             println!("{meta:#?}");
@@ -48,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{original:#?}");
         }
         let level = &meta.levels[0];
-        let mut req = RegionRequest::new(series, 0, Region::new(0, 0, level.size_x, level.size_y));
+        let mut req = RegionRequest::new(series, 0, crop.unwrap_or(Region::new(0, 0, level.size_x, level.size_y)));
         req.output = OutputSpec { keep_alpha: true, ..Default::default() };
         let shape = reader.output_shape(&req)?;
         // One buffer, reused for every plane.
@@ -73,8 +92,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let nm = |v: Option<f64>| v.map_or("-".to_string(), |v| format!("{v:.3}"));
         println!(
             "series={series}\twidth={}\theight={}\tsamples={}\tsize_c={}\tsize_z={}\tsize_t={}\tpixel_type={:?}\tphys_x_nm={}\tphys_y_nm={}\tcrc32={:08x}",
-            level.size_x,
-            level.size_y,
+            req.region.width,
+            req.region.height,
             meta.samples_per_pixel,
             meta.size_c,
             meta.size_z,

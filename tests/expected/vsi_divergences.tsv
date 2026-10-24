@@ -1,0 +1,6 @@
+# Known differences between scopeio and the reference readers.
+file	tool	tolerance	reason
+tests/external/olympus_02.vsi	bioformats	1.0	lossy JPEG 2000: decoders differ by rounding (block means within 0.05 of 65535)
+tests/external/whole_slide_olympus_01.vsi	bioformats	1.0	lossy JPEG 2000: decoders differ by rounding (block means within 0.01 of 65535)
+tests/external/histo_01.vsi	bioformats	1.0	lossy JPEG thumbnail: decoders differ by rounding (block means within 0.05); the main image matches exactly
+tests/external/histo_01.vsi	bioformats-rs	1.0	lossy JPEG thumbnail: decoders differ by rounding (block means within 0.09)

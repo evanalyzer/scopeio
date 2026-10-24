@@ -18,6 +18,8 @@
 pub(crate) mod blosc;
 #[cfg(feature = "jpeg")]
 pub(crate) mod jpeg;
+#[cfg(feature = "jpeg2000")]
+pub(crate) mod jpeg2000;
 
 use crate::{Error, Result};
 

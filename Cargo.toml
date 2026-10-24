@@ -7,6 +7,7 @@ license = "AGPL-3.0-only"
 
 [dependencies]
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"], optional = true }
+hayro-jpeg2000 = { version = "0.4", optional = true }
 lz4_flex = { version = "0.14", default-features = false, features = ["std"], optional = true }
 roxmltree = { version = "0.21", optional = true }
 ruzstd = { version = "0.9", optional = true }
@@ -16,15 +17,17 @@ zstd-c-lib = { package = "zstd", version = "0.13", default-features = false, opt
 zune-jpeg = { version = "0.5", optional = true }
 
 [features]
-default = ["bmp", "tiff", "zarr", "deflate", "lzw", "jpeg", "zstd", "blosc"]
+default = ["bmp", "tiff", "zarr", "vsi", "deflate", "lzw", "jpeg", "jpeg2000", "zstd", "blosc"]
 # Formats.
 bmp = []
 tiff = ["dep:roxmltree"]
 zarr = ["dep:serde_json"]
+vsi = ["tiff"]
 # Compression codecs. Files using a disabled codec return `Error::UnsupportedVariant`.
 deflate = ["dep:flate2"]
 lzw = ["dep:weezl"]
 jpeg = ["dep:zune-jpeg"]
+jpeg2000 = ["dep:hayro-jpeg2000"]
 zstd = ["dep:ruzstd"]
 # Zstandard through the C library (BSD, built from source); much faster
 # than the pure-Rust decoder, see PROVENANCE.md.

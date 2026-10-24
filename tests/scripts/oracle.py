@@ -38,7 +38,7 @@ MEASURE = ROOT / "target" / "release" / "measure"
 EXPECTED = ROOT / "tests" / "expected"
 
 COLUMNS = ["file", "tool", "series", "status", "channels", "width", "height", "size_z",
-           "size_t", "pixel_type", "phys_x_nm", "phys_y_nm", "crc32", "grid"]
+           "size_t", "pixel_type", "phys_x_nm", "phys_y_nm", "crc32", "grid", "crop", "ours_series"]
 
 # Block means for comparing lossy data, see `grid()`.
 GRID = 8
@@ -189,12 +189,19 @@ def canonical_order(values, axes, sizes):
     raise ValueError(f"unsupported ICS axis order {axes}")
 
 
-def oracle(tool, src, tmp, expand=True):
-    """Converts `src` with `tool` and returns (rows, cpu, wall, rss)."""
+def oracle(tool, src, tmp, expand=True, series=None, crop=None):
+    """Converts `src` with `tool` and returns (rows, cpu, wall, rss).
+
+    `series` and `crop` (x,y,w,h at full resolution) limit the conversion;
+    bioformats-rs has no such options and is skipped then.
+    """
     out_dir = Path(tempfile.mkdtemp(dir=tmp))
     if tool == "bioformats":
-        cmd = [str(BFCONVERT), "-no-upgrade", "-overwrite", *(["-expand"] if expand else []), str(src),
-               str(out_dir / "out_%s.ics")]
+        cmd = [str(BFCONVERT), "-no-upgrade", "-overwrite", *(["-expand"] if expand else []),
+               *(["-series", str(series)] if series is not None else []),
+               *(["-crop", crop] if crop else []), str(src), str(out_dir / "out_%s.ics")]
+    elif series is not None or crop:
+        return [{"series": series or 0, "status": "skipped: no series or crop option"}], 0.0, 0.0, 0
     else:
         cmd = [str(BFRS), str(src), str(out_dir / "out.ics")]
     code, log, cpu, wall, rss = run(cmd)
@@ -206,9 +213,10 @@ def oracle(tool, src, tmp, expand=True):
         reason = reason.replace('Exception in thread "main" ', "").replace(str(src), "<file>")
         return [{"series": 0, "status": "error: " + reason.replace("\t", " ")[:200]}], cpu, wall, rss
     rows = []
-    for series, path in enumerate(outputs):
+    for index, path in enumerate(outputs):
+        number = series if series is not None else index
         try:
-            row = {"series": series, "status": "ok",
+            row = {"series": number, "status": "ok",
                    **parse_ics(path, int32_little=source_little(src) if tool == "bioformats" else True,
                                planar_colour=tool == "bioformats-rs" and source_little(src) is not None)}
             if tool == "bioformats-rs":
@@ -216,7 +224,7 @@ def oracle(tool, src, tmp, expand=True):
                 row["phys_x_nm"] = row["phys_y_nm"] = "-"
             rows.append(row)
         except (ValueError, KeyError) as e:
-            rows.append({"series": series, "status": f"error: unreadable output: {e}"})
+            rows.append({"series": number, "status": f"error: unreadable output: {e}"})
     return rows, cpu, wall, rss
 
 
@@ -246,8 +254,9 @@ def bf_physical_sizes(src):
     return sizes
 
 
-def ours(src):
-    code, out, cpu, wall, rss = run([str(SCOPEIO), "--no-checksum", str(src)])
+def ours(src, series=None, crop=None):
+    opts = [*(["--series", str(series)] if series is not None else []), *(["--crop", crop] if crop else [])]
+    code, out, cpu, wall, rss = run([str(SCOPEIO), "--no-checksum", *opts, str(src)])
     status = "ok" if code == 0 else "error: " + out.strip().splitlines()[-1][:200]
     return status, cpu, wall, rss
 
@@ -284,6 +293,14 @@ def main():
     ap.add_argument("--repeat", type=int, default=3, help="runs per tool for timing (median)")
     ap.add_argument("--no-expand", action="store_true",
                     help="keep palette indices in Bio-Formats output (formats returning indices)")
+    ap.add_argument("--series", type=int, help="convert only this Bio-Formats series")
+    ap.add_argument("--crop", help="convert only this region, x,y,w,h at full resolution")
+    ap.add_argument("--ours-series",
+                    help="scopeio series compared with --series (default: the same index), or "
+                         "assoc:<kind> for an associated image (label, macro, thumbnail)")
+    ap.add_argument("--keep-series", type=int,
+                    help="record only this series of the reference output")
+    ap.add_argument("--append", action="store_true", help="add to the existing reference files")
     args = ap.parse_args()
 
     for tool in (BFCONVERT, BFRS):
@@ -302,28 +319,53 @@ def main():
             print(rel, file=sys.stderr)
             stats = {}
             for tool in ("bioformats", "bioformats-rs"):
-                runs = [oracle(tool, src, tmp, not args.no_expand) for _ in range(args.repeat)]
+                runs = [oracle(tool, src, tmp, not args.no_expand, args.series, args.crop)
+                        for _ in range(args.repeat)]
                 phys = bf_physical_sizes(src) if tool == "bioformats" else []
                 for r in runs[0][0]:
+                    if args.keep_series is not None and r["series"] != args.keep_series:
+                        continue
                     if tool == "bioformats" and r["status"] == "ok":
                         x, y = phys[r["series"]] if r["series"] < len(phys) else ("-", "-")
                         r["phys_x_nm"], r["phys_y_nm"] = x, y
+                    r["crop"] = args.crop or "-"
+                    if args.ours_series is not None:
+                        r["ours_series"] = args.ours_series
                     rows.append({"file": rel, "tool": tool, **r})
                 stats[tool] = (runs[0][0][0]["status"], *(statistics.median(r[i] for r in runs)
                                                           for i in (1, 2, 3)))
-            runs = [ours(src) for _ in range(args.repeat)]
+            ours_series = args.ours_series if args.ours_series is not None else args.series
+            if isinstance(ours_series, str) and not ours_series.isdigit():
+                ours_series = None
+            runs = [ours(src, ours_series, args.crop) for _ in range(args.repeat)]
             stats["scopeio"] = (runs[0][0], *(statistics.median(r[i] for r in runs) for i in (1, 2, 3)))
             size = sum(f.stat().st_size for f in src.rglob("*") if f.is_file()) if src.is_dir() else src.stat().st_size
-            bench.append((rel, size, stats))
+            label = rel + (f" (series {args.series})" if args.series is not None else "") + \
+                (f" crop {args.crop}" if args.crop else "")
+            bench.append((label, size, stats))
 
     EXPECTED.mkdir(exist_ok=True)
-    with open(EXPECTED / f"{args.format}.tsv", "w") as f:
-        f.write("\t".join(COLUMNS) + "\n")
+    tsv = EXPECTED / f"{args.format}.tsv"
+    append = args.append and tsv.exists()
+    with open(tsv, "a" if append else "w") as f:
+        if not append:
+            f.write("\t".join(COLUMNS) + "\n")
         for r in rows:
             f.write("\t".join(str(r.get(c, "-")) for c in COLUMNS) + "\n")
 
     bf_version, rs_version = tool_versions()
-    with open(EXPECTED / f"{args.format}_bench.md", "w") as f:
+    bench_md = EXPECTED / f"{args.format}_bench.md"
+    if append and bench_md.exists():
+        with open(bench_md, "a") as f:
+            for rel, size, stats in bench:
+                for tool in ("scopeio", "bioformats", "bioformats-rs"):
+                    status, cpu, wall, rss = stats[tool]
+                    status = "ok" if status == "ok" else status.replace("|", "/")[:60]
+                    f.write(f"| {rel} | {size / 1024:.0f} KiB | {tool} | {status} | {cpu:.3f} | "
+                            f"{wall:.3f} | {rss / 1024:.1f} |\n")
+        print(f"appended to {tsv} and {bench_md.name}", file=sys.stderr)
+        return
+    with open(bench_md, "w") as f:
         f.write(f"# {args.format}: CPU and RAM compared with the reference readers\n\n")
         f.write(f"Generated {datetime.date.today()} by `tests/scripts/oracle.py`.\n\n")
         f.write(f"- Machine: {machine()}\n")

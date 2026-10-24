@@ -73,6 +73,31 @@ pub fn read(reader: &dyn ImageReader, series: usize, level: usize, plane: Plane,
     Ok(reader.read_region(&req)?.as_bytes().to_vec())
 }
 
+/// Decodes `region` of level 0 of one series.
+pub fn decode_region(reader: &dyn ImageReader, s: usize, region: Region) -> scopeio::Result<Series> {
+    let meta = reader.series_meta(s)?;
+    let mut req = RegionRequest::new(s, 0, region);
+    (req.channels, req.output) = all_channels(meta.size_c);
+    let mut pixels = Vec::new();
+    for t in 0..meta.size_t {
+        for z in 0..meta.size_z {
+            (req.z, req.t) = (z, t);
+            pixels.extend_from_slice(reader.read_region(&req)?.as_bytes());
+        }
+    }
+    Ok(Series {
+        width: region.width,
+        height: region.height,
+        size_z: meta.size_z,
+        size_t: meta.size_t,
+        channels: meta.samples_per_pixel as usize * meta.size_c as usize,
+        pixel_type: format!("{:?}", meta.pixel_type),
+        phys_x_nm: meta.physical_size.x_nm,
+        phys_y_nm: meta.physical_size.y_nm,
+        pixels,
+    })
+}
+
 /// Decodes one resolution level of one series.
 pub fn decode_level(reader: &dyn ImageReader, s: usize, level_index: usize) -> scopeio::Result<Series> {
     let meta = reader.series_meta(s)?;
@@ -246,30 +271,94 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             skipped += 1;
             continue;
         }
-        let ours = decoded.entry(r["file"].clone()).or_insert_with(|| {
-            scopeio::open(&path).and_then(|reader| decode(reader.as_ref())).map_err(|e| e.to_string())
-        });
         let key = (r["file"].clone(), r["tool"].clone());
         let tolerance = divergences.get(&key).copied().flatten();
         let listed = divergences.contains_key(&key) && tolerance.is_none();
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
         let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
-        let ours = match (ours, unsupported) {
-            (Ok(_), true) => {
-                failures.push(format!("{}: listed as unreadable by scopeio but opens now", r["file"]));
+        let cropped = r.get("crop").is_some_and(|c| c.as_str() != "-")
+            || r.get("ours_series").is_some_and(|v| v.starts_with("assoc:"));
+        if (r["status"] != "ok" || cropped) && !unsupported {
+            if r["status"] != "ok" {
                 continue;
             }
-            (Err(_), true) => continue,
-            (Ok(series), false) => series,
-            (Err(e), false) => {
-                failures.push(format!("{}: scopeio failed: {e}", r["file"]));
+        } else {
+            // Decode whole files only when a row needs them.
+            let ours = decoded.entry(r["file"].clone()).or_insert_with(|| {
+                scopeio::open(&path).and_then(|reader| decode(reader.as_ref())).map_err(|e| e.to_string())
+            });
+            match (ours, unsupported) {
+                (Ok(_), true) => {
+                    failures.push(format!("{}: listed as unreadable by scopeio but opens now", r["file"]));
+                    continue;
+                }
+                (Err(_), true) => continue,
+                (Ok(_), false) => {}
+                (Err(e), false) => {
+                    failures.push(format!("{}: scopeio failed: {e}", r["file"]));
+                    continue;
+                }
+            }
+            if r["status"] != "ok" {
                 continue;
             }
-        };
-        if r["status"] != "ok" {
+        }
+        // Associated images: `assoc:<kind>`.
+        if let Some(kind) = r.get("ours_series").and_then(|v| v.strip_prefix("assoc:")) {
+            let kind = match kind {
+                "label" => scopeio::AssociatedKind::Label,
+                "macro" => scopeio::AssociatedKind::Macro,
+                "thumbnail" => scopeio::AssociatedKind::Thumbnail,
+                other => scopeio::AssociatedKind::Other(other.to_string()),
+            };
+            let spec = OutputSpec { keep_alpha: true, ..Default::default() };
+            let diffs = match scopeio::open(&path).and_then(|reader| reader.read_associated(&kind, &spec)) {
+                Ok(img) => {
+                    let s = Series {
+                        width: img.width,
+                        height: img.height,
+                        size_z: 1,
+                        size_t: 1,
+                        channels: img.channels as usize,
+                        pixel_type: format!("{:?}", img.data.pixel_type()),
+                        phys_x_nm: None,
+                        phys_y_nm: None,
+                        pixels: img.as_bytes().to_vec(),
+                    };
+                    compare(&s, r, tolerance)
+                }
+                Err(e) => vec![format!("associated {kind:?}: {e}")],
+            };
+            match (diffs.is_empty(), listed) {
+                (false, false) => failures.push(format!("{} vs {} {kind:?}: {}", r["file"], r["tool"], diffs.join("; "))),
+                (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
+                _ => {}
+            }
             continue;
         }
-        let series: usize = r["series"].parse().expect("series index");
+        let series: usize = match r.get("ours_series").map(String::as_str) {
+            Some(v) if v != "-" => v.parse().expect("ours_series index"),
+            _ => r["series"].parse().expect("series index"),
+        };
+        // Cropped references compare the same region of level 0.
+        if let Some(crop) = r.get("crop").filter(|c| c.as_str() != "-") {
+            let n: Vec<u64> = crop.split(',').map(|v| v.parse().expect("crop x,y,w,h")).collect();
+            let region = Region::new(n[0], n[1], n[2], n[3]);
+            let diffs = match scopeio::open(&path).and_then(|reader| decode_region(reader.as_ref(), series, region)) {
+                Ok(s) => compare(&s, r, tolerance),
+                Err(e) => vec![format!("crop {crop}: {e}")],
+            };
+            match (diffs.is_empty(), listed) {
+                (false, false) => failures.push(format!("{} vs {} crop {crop}: {}", r["file"], r["tool"], diffs.join("; "))),
+                (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
+                _ => {}
+            }
+            continue;
+        }
+        let ours = match &decoded[&r["file"]] {
+            Ok(series) => series,
+            Err(_) => continue,
+        };
         let diffs = match ours.get(series) {
             Some(s) => compare(s, r, tolerance),
             // Bio-Formats returns pyramid levels as extra series by default;

@@ -53,9 +53,25 @@ python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/z
 python3 -I tests/scripts/make_bmp_samples.py      # only when samples change
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
+python3 -I tests/scripts/make_vsi_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
+```
+
+Large or multi-series files are compared on parts: `--series N` converts one
+Bio-Formats series (pyramid levels count as series there), `--crop x,y,w,h`
+one region, `--ours-series S` (or `assoc:thumbnail`) names the scopeio
+series compared with it, `--keep-series N` records one series of the
+output, and `--append` adds the run to the existing references. VSI:
+
+```sh
+E=tests/external
+python3 -I tests/scripts/oracle.py vsi $E/olympus_01.vsi --series 1 --ours-series 0
+python3 -I tests/scripts/oracle.py vsi $E/histo_01.vsi --series 1 --ours-series 0 --append
+python3 -I tests/scripts/oracle.py vsi $E/olympus_02.vsi --series 0 --ours-series 0 --crop 8192,8192,1024,1024 --append
+python3 -I tests/scripts/oracle.py vsi $E/whole_slide_olympus_01.vsi --series 13 --ours-series 0 --crop 4096,12288,1024,1024 --append
+for f in olympus_01 histo_01; do python3 -I tests/scripts/oracle.py vsi $E/$f.vsi --keep-series 0 --ours-series assoc:thumbnail --append; done
 ```
 
 `oracle.py` converts each file with both readers to ICS, records metadata and

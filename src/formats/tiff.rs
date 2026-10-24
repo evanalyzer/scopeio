@@ -24,8 +24,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-mod ifd;
-mod image;
+pub(super) mod ifd;
+pub(super) mod image;
 mod imagej;
 mod ome;
 

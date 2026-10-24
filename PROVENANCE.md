@@ -43,6 +43,19 @@ as black-box command-line tools to produce reference output
   plate), downloaded by `tests/scripts/fetch_ome_zarr.py`; synthetic stores
   written from the specifications by `tests/scripts/make_zarr_samples.py`.
 
+## Olympus/Evident VSI + ETS (`src/formats/vsi*`)
+
+- OpenReadout VSI format notes and provenance log (MIT OR Apache-2.0;
+  written from public sample files and permissively licensed readers, with
+  Bio-Formats only run as a black box) and bioio-vsi format notes (BSD-3;
+  partly from slideio's BSD-3 driver) in `doc/olympus-vsi/`.
+- Own analysis of sample files: record-tree type words (`0x90000000` marks
+  nested volumes, `0x40000000` inline values, `0x08000000` an index word),
+  embedded single-file datasets (planes as further TIFF IFDs), pyramid level
+  sizes checked against Bio-Formats' series sizes.
+- Synthetic dataset written from the documented layout by
+  `tests/scripts/make_vsi_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
@@ -70,5 +83,12 @@ decoded) takes 1.40 s CPU with ruzstd and 0.21 s with libzstd; output is
 identical. ruzstd stays the default to keep the default build pure Rust;
 `--features zstd-c` selects libzstd.
 
-JPEG 2000 and JPEG-XR are not supported yet; options are evaluated with
-the formats that need them (VSI, CZI, SVS).
+| JPEG 2000 | hayro-jpeg2000 | Apache-2.0 OR MIT | see below |
+
+JPEG 2000 benchmark (2026-10-24, one thread, 64 tiles of 512 x 512 16-bit
+from a VS200 slide): hayro-jpeg2000 32.6 Mpx/s, dicom-toolkit-jpeg2000 (a
+fork of hayro adding native-depth output) 20.6 Mpx/s. hayro's samples agree
+with OpenJPEG (via ImageMagick, black box) on 99 % of pixels, the rest by
+rounding; dicom-toolkit differs more. Block means of decoded tiles agree with
+Bio-Formats within 0.05 of 65535. openjp2 (BSD-2, Rust port of OpenJPEG) was
+not benchmarked. JPEG-XR is not supported yet (needed by CZI).
