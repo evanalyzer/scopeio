@@ -75,8 +75,8 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
     let pages = s.levels[0].len();
     if gray && pages == 1 && total > 1 && ij.images as usize == total && s.levels.len() == 1 {
         // Large ImageJ files: one IFD, the other planes follow contiguously.
-        if let Some(Slot::Ready(first)) = &s.levels[0][0] {
-            if let Some(plane_bytes) = first.image.contiguous_size(tiff)? {
+        if let Some(Slot::Ready(first)) = &s.levels[0][0]
+            && let Some(plane_bytes) = first.image.contiguous_size(tiff)? {
                 let file = first.file;
                 let end = first.image.data_start(tiff)?.saturating_add(plane_bytes.saturating_mul(total as u64));
                 if end <= tiff.len {
@@ -85,7 +85,6 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
                     s.levels[0].extend(images);
                 }
             }
-        }
     }
     if gray && s.levels[0].len() == total {
         s.meta.size_c = c;

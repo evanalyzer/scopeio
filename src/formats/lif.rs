@@ -146,8 +146,8 @@ impl Lif {
         let name = element.attribute("Name").unwrap_or("");
         // The top element is the project; its name is not part of image names.
         let path = if top { String::new() } else if prefix.is_empty() { name.to_string() } else { format!("{prefix}/{name}") };
-        if let Some(image) = child(element, "Data").and_then(|d| child(d, "Image")) {
-            if let Some(desc) = child(image, "ImageDescription") {
+        if let Some(image) = child(element, "Data").and_then(|d| child(d, "Image"))
+            && let Some(desc) = child(image, "ImageDescription") {
                 let memory = child(element, "Memory");
                 let id = memory.and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
                 let size: u64 = memory.and_then(|m| m.attribute("Size")).and_then(|s| s.parse().ok()).unwrap_or(0);
@@ -155,7 +155,6 @@ impl Lif {
                     self.add_image(element, image, desc, &path, offset, len.min(size))?;
                 }
             }
-        }
         if let Some(children) = child(element, "Children") {
             for c in children.children().filter(|c| c.has_tag_name("Element")) {
                 self.walk(c, &path, blocks, false, depth + 1)?;

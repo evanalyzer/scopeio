@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn view_checks_strides() {
-        let mut data = vec![0u8; 12];
+        let mut data = [0u8; 12];
         assert!(PixelViewMut::contiguous(&mut data[..], 2, 2, 3, Layout::Hwc).check().is_ok());
         assert!(PixelViewMut::contiguous(&mut data[..11], 2, 2, 3, Layout::Hwc).check().is_err());
         assert!(PixelViewMut::strided(&mut data[..], 2, 2, 3, Layout::Hwc, 5, 0).check().is_err());

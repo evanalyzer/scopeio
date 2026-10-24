@@ -431,7 +431,7 @@ impl TiffImage {
             && self.palette.is_none()
             && !self.fill_reversed
             && !self.invert
-            && self.bits % 8 == 0
+            && self.bits.is_multiple_of(8)
             && !(self.kind == Kind::Float && self.bits == 16)
             && native
             && match samples {

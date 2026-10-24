@@ -86,12 +86,12 @@ fn regions_equal_crops_of_full_image() {
             let full = common::read(reader.as_ref(), series, 0, plane, Region::new(0, 0, w, h)).unwrap();
             for region in [
                 Region::new(1, 1, w - 1, h - 1),
-                Region::new(w as u64 - 1, h as u64 - 1, 1, 1),
-                Region::new(w as u64 / 3, h as u64 / 2, w / 2, h / 2),
-                Region::new(0, h as u64 - 2, w, 2),
+                Region::new(w - 1, h - 1, 1, 1),
+                Region::new(w / 3, h / 2, w / 2, h / 2),
+                Region::new(0, h - 2, w, 2),
             ] {
                 let part = common::read(reader.as_ref(), series, 0, plane, region).unwrap();
-                let expected: Vec<u8> = (region.y..region.y + region.height as u64)
+                let expected: Vec<u8> = (region.y..region.y + region.height)
                     .flat_map(|y| {
                         let start = (y as usize * w as usize + region.x as usize) * px;
                         full[start..start + region.width as usize * px].iter().copied()

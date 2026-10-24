@@ -24,6 +24,9 @@ use std::fs::File;
 use crate::io::read_exact_at;
 use crate::{Error, Result};
 
+/// Raw key and child address of a version 1 B-tree entry.
+type BtreeEntry = (Vec<u8>, u64);
+
 const SIGNATURE: &[u8; 8] = b"\x89HDF\r\n\x1a\n";
 /// Largest metadata structure read at once, against corrupt files.
 const MAX_META: u64 = 64 << 20;
@@ -611,7 +614,7 @@ impl H5 {
     /// A version 1 B-tree node: its level and (key, child address) pairs.
     /// `key_len` is the key size; for chunk trees (type 1) the keys are
     /// returned raw.
-    fn btree1_node(&self, at: u64, node_type: u8, key_len: usize) -> Result<(u8, Vec<(Vec<u8>, u64)>)> {
+    fn btree1_node(&self, at: u64, node_type: u8, key_len: usize) -> Result<(u8, Vec<BtreeEntry>)> {
         let head = self.read(at, 8 + 2 * self.so as u64)?;
         if !head.starts_with(b"TREE") || head[4] != node_type {
             return Err(corrupt("B-tree node without signature"));

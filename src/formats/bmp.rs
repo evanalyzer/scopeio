@@ -508,7 +508,7 @@ fn decode_rle(data: &[u8], bits: u8, width: usize, height: usize) -> Vec<u8> {
 
 /// High nibble for even `k`, low nibble for odd `k`.
 fn nibble(byte: u8, k: usize) -> u8 {
-    if k % 2 == 0 { byte >> 4 } else { byte & 0x0F }
+    if k.is_multiple_of(2) { byte >> 4 } else { byte & 0x0F }
 }
 
 /// Header fields as key-value pairs for [`SeriesMeta::original`].

@@ -419,11 +419,10 @@ fn validity(v: Option<&Value>) -> Vec<bool> {
 /// Cuts the outermost loop if the loops describe more frames than stored.
 fn fit_loops(loops: &mut Vec<Loop>, frames: u64) {
     let inner: u64 = loops.iter().skip(1).map(|l| l.count).product();
-    if let Some(first) = loops.first_mut() {
-        if first.count * inner > frames && inner > 0 {
+    if let Some(first) = loops.first_mut()
+        && first.count * inner > frames && inner > 0 {
             first.count = frames.div_ceil(inner).max(1);
         }
-    }
     loops.retain(|l| l.count > 0);
 }
 

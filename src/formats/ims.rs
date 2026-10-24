@@ -98,7 +98,7 @@ fn numbered(links: &[(String, u64)], prefix: &str) -> Vec<u64> {
     v.into_iter().map(|(_, a)| a).collect()
 }
 
-fn find<'a>(links: &'a [(String, u64)], name: &str) -> Option<u64> {
+fn find(links: &[(String, u64)], name: &str) -> Option<u64> {
     links.iter().find(|(n, _)| n == name).map(|(_, a)| *a)
 }
 
@@ -290,7 +290,7 @@ impl Ims {
         let ch = *channels.get(c).ok_or_else(|| Error::Corrupt(format!("IMS channel {c} missing")))?;
         let data = find(&h.links(&h.object(ch)?)?, "Data").ok_or_else(|| Error::Corrupt("IMS channel without Data".into()))?;
         let ds = h.dataset(&h.object(data)?)?;
-        if ds.dims.len() != 3 && !(ds.dims.len() == 2) {
+        if ds.dims.len() != 3 && (ds.dims.len() != 2) {
             return Err(Error::UnsupportedVariant(format!("IMS data with {} dimensions", ds.dims.len())));
         }
         let mut chunks = HashMap::new();

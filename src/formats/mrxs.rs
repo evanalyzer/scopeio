@@ -105,6 +105,10 @@ impl Ini {
     }
 }
 
+/// A [`Piece`] before snapping: image index, fractional level-0 position
+/// x and y, and the source rectangle x, y, width, height in the image.
+type RawPiece = (u32, f64, f64, u16, u16, u16, u16);
+
 /// Where a stored image or associated blob lives.
 #[derive(Debug, Clone, Copy)]
 struct Blob {
@@ -362,7 +366,7 @@ impl Mrxs {
                         .collect()
                 }
                 // Without positions: the images abut on their grid.
-                None => (0..px * py).map(|i| Some(((i % px) * div * image_w as i64 >> c0, (i / px) * div * image_h as i64 >> c0))).collect(),
+                None => (0..px * py).map(|i| Some((((i % px) * div * image_w as i64) >> c0, ((i / px) * div * image_h as i64) >> c0))).collect(),
             }
         };
         let photo = |cx: i64, cy: i64| -> Option<(i64, i64)> {
@@ -370,7 +374,7 @@ impl Mrxs {
         };
 
         // Pieces of each level; level-0 coordinates relative to the origin.
-        let mut level_pieces: Vec<(Vec<Blob>, Vec<(u32, f64, f64, u16, u16, u16, u16)>)> = Vec::new();
+        let mut level_pieces: Vec<(Vec<Blob>, Vec<RawPiece>)> = Vec::new();
         for l in 0..zoom_count {
             let mut records = index.items(index.hier_root, l, 4)?;
             // Drawn in image order (row-major), later images on top.
@@ -479,12 +483,11 @@ impl Mrxs {
             ("ScanDataLayer_SlidePreview", AssociatedKind::Thumbnail),
         ] {
             let Some(&r) = nonhier.get(name) else { continue };
-            if let Some(item) = index.items(index.nonhier_root, r, 5)?.into_iter().next() {
-                if item[3] > 0 {
+            if let Some(item) = index.items(index.nonhier_root, r, 5)?.into_iter().next()
+                && item[3] > 0 {
                     mrxs.associated_kinds.push(kind);
                     mrxs.associated.push(blob(&item));
                 }
-            }
         }
         mrxs.ini = ini;
         Ok(mrxs)

@@ -56,13 +56,11 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     #[cfg(feature = "ndpi")]
     {
         // NDPI first IFDs may lie beyond 4 GiB; read them the NDPI way.
-        if head.starts_with(b"II*\0") {
-            if let Ok(t) = TiffFile::open_ndpi(path, 1) {
-                if t.ifds[0].has(super::ndpi::TAG_VERSION) {
+        if head.starts_with(b"II*\0")
+            && let Ok(t) = TiffFile::open_ndpi(path, 1)
+                && t.ifds[0].has(super::ndpi::TAG_VERSION) {
                     return Ok(Some(FormatId::Ndpi));
                 }
-            }
-        }
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
@@ -210,11 +208,10 @@ impl Tiff {
 
     fn open_plain(tiff: TiffFile, description: &str, ome_error: Option<String>) -> Result<Self> {
         let mut series = plain_series(&tiff, 0)?;
-        if let Some(ij) = imagej::parse(description) {
-            if let [s] = series.as_mut_slice() {
+        if let Some(ij) = imagej::parse(description)
+            && let [s] = series.as_mut_slice() {
                 imagej::apply(&ij, s, &tiff)?;
             }
-        }
         Ok(Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error))
     }
 
@@ -251,8 +248,8 @@ impl Backend for Tiff {
     fn original_metadata(&self, series: usize) -> Result<OriginalMeta> {
         let (file, ifd) = self.series[series].first_ifd;
         let mut meta = OriginalMeta::default();
-        if let Ok(tiff) = self.files[file].get() {
-            if let Some(ifd) = tiff.ifds.get(ifd) {
+        if let Ok(tiff) = self.files[file].get()
+            && let Some(ifd) = tiff.ifds.get(ifd) {
                 meta.pairs = original_meta(tiff, ifd)?;
                 let description = tiff.string(ifd, tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
                 if let Some(ij) = imagej::parse(&description) {
@@ -261,7 +258,6 @@ impl Backend for Tiff {
                     meta.documents.push(("ImageDescription".into(), description));
                 }
             }
-        }
         if let Some(e) = &self.ome_error {
             meta.pairs.push(("OME-XML error".into(), e.clone()));
         }
@@ -317,15 +313,14 @@ fn plain_series(tiff: &TiffFile, file: usize) -> Result<Vec<Series>> {
                 continue;
             }
         };
-        if subfile & REDUCED != 0 {
-            if let Some((pages, _)) = groups.last() {
+        if subfile & REDUCED != 0
+            && let Some((pages, _)) = groups.last() {
                 let base = reduced.last().and_then(|r| r.last()).unwrap_or(&pages[0]);
                 if pages.len() == 1 && image.width < base.width && image.height <= base.height && image.spp == base.spp {
                     reduced.last_mut().expect("one list per group").push(image);
                     continue;
                 }
             }
-        }
         match groups.last_mut() {
             Some((pages, ifds)) if pages[0].same_layout(&image) && reduced.last().is_some_and(|r| r.is_empty()) => {
                 pages.push(image);

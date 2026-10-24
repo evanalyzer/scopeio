@@ -270,7 +270,7 @@ impl TiffFile {
             1 | 6 | 7 => raw.iter().map(|&b| b as u64).collect(),
             3 | 8 => raw.chunks_exact(2).map(|b| self.u16(b) as u64).collect(),
             4 | 9 | 13 => raw.chunks_exact(4).map(|b| self.u32(b) as u64).collect(),
-            16 | 17 | 18 => raw.chunks_exact(8).map(|b| self.u64(b)).collect(),
+            16..=18 => raw.chunks_exact(8).map(|b| self.u64(b)).collect(),
             t => return Err(Error::Corrupt(format!("tag {} has non-integer type {t}", e.tag))),
         })
     }
@@ -286,7 +286,7 @@ impl TiffFile {
                 // NDPI keeps the high bits of inline offsets and sizes.
                 4 | 13 if self.ndpi => self.u64(v),
                 4 | 9 | 13 => self.u32(v) as u64,
-                16 | 17 | 18 if self.big => self.u64(v),
+                16..=18 if self.big => self.u64(v),
                 _ => return Ok(self.uints(ifd, tag)?.and_then(|v| v.first().copied())),
             }));
         }

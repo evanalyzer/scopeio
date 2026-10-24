@@ -107,9 +107,12 @@ pub(super) struct Bif {
     original: OriginalMeta,
 }
 
+/// Level-0 tiles by tile row, the tile size and the stitched width.
+type Stitching = (Vec<Vec<Placed>>, (u32, u32), u32);
+
 /// Level-0 placement from the `EncodeInfo` XMP; `None` if it is missing
 /// or describes no overlap (the TIFF tile grid is then used as is).
-fn stitching(xmp: &str, chunks: usize, across: u32) -> Result<Option<(Vec<Vec<Placed>>, (u32, u32), u32)>> {
+fn stitching(xmp: &str, chunks: usize, across: u32) -> Result<Option<Stitching>> {
     let Ok(doc) = Document::parse(xmp) else { return Ok(None) };
     let Some(encode) = child(doc.root_element(), "EncodeInfo").or_else(|| (doc.root_element().tag_name().name() == "EncodeInfo").then(|| doc.root_element())) else {
         return Ok(None);
@@ -250,15 +253,14 @@ impl Bif {
         let iscan = xmp(0).unwrap_or_default();
         let (mut mpp, mut mag, mut white, mut z_spacing) = (None, None, 255u8, None);
         let mut pairs = original_meta(&tiff, &tiff.ifds[scan_ifd])?;
-        if let Ok(doc) = Document::parse(&iscan) {
-            if let Some(n) = child(doc.root_element(), "iScan").or_else(|| (doc.root_element().tag_name().name() == "iScan").then(|| doc.root_element())) {
+        if let Ok(doc) = Document::parse(&iscan)
+            && let Some(n) = child(doc.root_element(), "iScan").or_else(|| (doc.root_element().tag_name().name() == "iScan").then(|| doc.root_element())) {
                 mpp = num::<f64>(n, "ScanRes").filter(|v| *v > 0.0);
                 mag = num::<f64>(n, "Magnification").filter(|v| *v > 0.0);
                 white = num::<u8>(n, "ScanWhitePoint").unwrap_or(255);
                 z_spacing = num::<f64>(n, "Z-spacing").filter(|v| *v > 0.0 && depth > 1);
                 pairs.extend(n.attributes().map(|a| (format!("ventana.{}", a.name()), a.value().to_string())));
             }
-        }
         let level_metas: Vec<LevelMeta> = levels
             .iter()
             .enumerate()

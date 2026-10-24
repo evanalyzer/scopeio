@@ -574,16 +574,15 @@ impl Array {
     fn strides(&self) -> [usize; MAX_DIMS] {
         let mut s = [0usize; MAX_DIMS];
         let mut acc = 1usize;
+        let dims = s[..self.ndim].iter_mut().zip(&self.chunk[..self.ndim]);
+        let mut put = |(stride, &size): (&mut usize, &u64)| {
+            *stride = acc;
+            acc *= size as usize;
+        };
         if self.fortran {
-            for d in 0..self.ndim {
-                s[d] = acc;
-                acc *= self.chunk[d] as usize;
-            }
+            dims.for_each(&mut put);
         } else {
-            for d in (0..self.ndim).rev() {
-                s[d] = acc;
-                acc *= self.chunk[d] as usize;
-            }
+            dims.rev().for_each(&mut put);
         }
         s
     }

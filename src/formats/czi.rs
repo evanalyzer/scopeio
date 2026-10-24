@@ -83,6 +83,9 @@ struct Block {
     key: (u32, u8, u32, u32, u32),
 }
 
+/// x, y, width, height in level pixels.
+type Rect = (i64, i64, i64, i64);
+
 /// Geometry of one series.
 #[derive(Debug)]
 struct Scene {
@@ -271,7 +274,7 @@ impl Czi {
     }
 
     /// Rectangle of `block` at `level`: x, y, width, height in level pixels.
-    fn placement(&self, series: usize, level: usize, block: &Block) -> (i64, i64, i64, i64) {
+    fn placement(&self, series: usize, level: usize, block: &Block) -> Rect {
         let s = &self.scenes[series];
         let f = s.factors[level];
         let x = ((block.x as i64 - s.x0) as f64 / f).floor() as i64;
@@ -284,7 +287,7 @@ impl Czi {
         let (pixel_type, spp) = self.scenes[series].geometry;
         let (rx0, ry0) = (region.x as i64, region.y as i64);
         let (rx1, ry1) = (rx0 + region.width as i64, ry0 + region.height as i64);
-        let hits: Vec<(&Block, (i64, i64, i64, i64))> = self
+        let hits: Vec<(&Block, Rect)> = self
             .plane_blocks(series, level, plane)
             .iter()
             .map(|b| (b, self.placement(series, level, b)))

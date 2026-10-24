@@ -51,12 +51,12 @@ fn regions_equal_crops_of_full_image() {
         for region in [
             Region::new(1, 1, w - 1, h - 1),
             Region::new(0, 0, 1, 1),
-            Region::new(w as u64 - 1, h as u64 - 1, 1, 1),
-            Region::new(w as u64 / 2, 0, w - w / 2, h),
-            Region::new(0, h as u64 / 2, w, 1),
+            Region::new(w - 1, h - 1, 1, 1),
+            Region::new(w / 2, 0, w - w / 2, h),
+            Region::new(0, h / 2, w, 1),
         ] {
             let part = common::read(reader.as_ref(), 0, 0, Plane::default(), region).unwrap();
-            let expected: Vec<u8> = (region.y..region.y + region.height as u64)
+            let expected: Vec<u8> = (region.y..region.y + region.height)
                 .flat_map(|y| {
                     let start = (y as usize * w as usize + region.x as usize) * px;
                     full[start..start + region.width as usize * px].iter().copied()
