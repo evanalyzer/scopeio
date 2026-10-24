@@ -31,6 +31,46 @@ let data: Vec<u16> = reader.read_region(&req)?.into_vec()?;
 Lengths are in nanometres and times in seconds throughout. Each format and
 each optional codec is a cargo feature; all are on by default.
 
+## Performance
+
+CPU time and peak RAM of scopeio against Bio-Formats 8.5.0, bioformats-rs
+0.1.8 and OpenSlide 3.4.1 on public sample files (Intel Core Ultra 9 185H,
+median of 3 runs, each a fresh process). An "op" is one measured read: a
+whole file, a crop or a pyramid level. Factors are how much more CPU or RAM
+the other reader needs for the same op (geometric mean); "–" means not
+compared, "n/a" means the reader cannot open the format.
+
+| Format | Ops | scopeio CPU (median) | scopeio RAM (median) | Bio-Formats CPU / RAM | bioformats-rs CPU / RAM | OpenSlide CPU / RAM |
+|---|---:|---:|---:|---:|---:|---:|
+| TIFF | 80 | 1 ms | 2.8 MiB | 1090× / 42× | 3.0× / 4.5× | – |
+| OME-TIFF | 96 | 1 ms | 2.8 MiB | 1231× / 46× | 4.0× / 4.8× | – |
+| OME-Zarr | 14 | 1 ms | 2.9 MiB | n/a | 3.5× / 7.2× | – |
+| Olympus VSI | 6 | 18 ms | 11 MiB | 89× / 26× | 1.7× / 2.4× | – |
+| Nikon ND2 | 11 | 45 ms | 5.3 MiB | 122× / 51× | 2.7× / 5.9× | – |
+| Zeiss CZI | 35 | 7 ms | 5.8 MiB | 494× / 57× | 2.2× / 3.5× | – |
+| Leica LIF | 12 | 7 ms | 4.3 MiB | 1021× / 128× | 0.9× / 8.1× | – |
+| Aperio SVS | 13 | 227 ms | 22 MiB | 6.0× / 2.4× | 13.8× / 2.1× | – |
+| Hamamatsu NDPI | 20 | 86 ms | 43 MiB | 14.5× / 4.7× | 4.3× / 2.9× | – |
+| 3DHistech MRXS | 13 | 7 ms | 6.8 MiB | n/a | n/a | 6.1× / 2.3× |
+| Zeiss LSM | 6 | 10 ms | 4.7 MiB | 156× / 33× | 3.8× / 7.1× | – |
+| Akoya QPTIFF | 9 | 128 ms | 17 MiB | 6.2× / 6.6× | 1.2× / 6.7× | – |
+| Leica SCN | 7 | 225 ms | 32 MiB | 19× / 5.6× | – | – |
+| Ventana BIF | 10 | 1.07 s | 25 MiB | 4.3× / 2.3× | – | 1.0× / 2.9× |
+| Imaris IMS | 4 | 56 ms | 6.8 MiB | 115× / 42× | 3.3× / 18× | – |
+| Windows BMP | 17 | 1 ms | 2.5 MiB | 757× / 37× | 2.0× / 4.9× | – |
+
+- Bio-Formats' large factors on small files are mostly JVM start-up (about
+  8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
+  the CPU and 2–7× the RAM.
+- The reference readers also write the pixels to disk (ICS output);
+  scopeio only decodes.
+- bioformats-rs failed on 53 of the ops that scopeio read.
+- Peaks above the medians (up to a few GB) come from reading a whole
+  gigapixel level into one output buffer, not from the reader itself.
+
+Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
+[tests/README.md](tests/README.md).
+
 ## Supported formats
 
 ✅ = supported by scopeio.
