@@ -10,7 +10,7 @@
 
 use std::fmt;
 
-use crate::{Plane, Region};
+use crate::{PixelType, Plane, Region};
 
 /// Result type used throughout the crate.
 pub type Result<T> = std::result::Result<T, Error>;
@@ -31,6 +31,8 @@ pub enum Error {
     RegionOutOfBounds(Region),
     /// The output buffer cannot hold the requested region.
     BufferTooSmall { needed: usize, got: usize },
+    /// A typed read requested a sample type different from the series type.
+    PixelTypeMismatch { stored: PixelType, requested: PixelType },
     /// The file uses a feature this reader does not implement.
     Unsupported(String),
     /// The file content is invalid.
@@ -57,6 +59,9 @@ impl fmt::Display for Error {
             ),
             Error::BufferTooSmall { needed, got } => {
                 write!(f, "buffer too small: need {needed} bytes, got {got}")
+            }
+            Error::PixelTypeMismatch { stored, requested } => {
+                write!(f, "pixel type mismatch: series stores {stored:?}, requested {requested:?}")
             }
             Error::Unsupported(msg) => write!(f, "unsupported: {msg}"),
             Error::Corrupt(msg) => write!(f, "corrupt file: {msg}"),

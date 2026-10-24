@@ -8,7 +8,7 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::{ChannelMeta, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
+use crate::{ChannelMeta, ColorModel, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
 
 /// Physical size of one pixel (x, y) and the z-step, in nanometres.
 /// Fields are `None` if unknown.
@@ -49,8 +49,8 @@ pub struct SeriesMeta {
     pub pixel_type: PixelType,
     /// Bits actually used per sample, e.g. 12 for 12-bit data stored as u16.
     pub significant_bits: Option<u8>,
-    /// Interleaved samples per pixel (3 for RGB brightfield, 1 otherwise).
-    pub samples_per_pixel: u8,
+    /// Meaning of the interleaved samples of one pixel.
+    pub color: ColorModel,
     /// Resolution levels, level 0 first. Never empty.
     pub levels: Vec<LevelMeta>,
     pub physical_size: PhysicalSize,
@@ -71,8 +71,16 @@ impl SeriesMeta {
     pub fn buffer_size(&self, region: Region) -> usize {
         region.width as usize
             * region.height as usize
-            * self.samples_per_pixel as usize
+            * self.color.samples()
             * self.pixel_type.bytes()
+    }
+
+    /// Tensor shape of `region` as `[height, width, samples per pixel]`.
+    ///
+    /// Matches the layout of the decoded data, e.g. for
+    /// `Tensor3::from_shape_vec` in kornia-rs.
+    pub fn shape(&self, region: Region) -> [usize; 3] {
+        [region.height as usize, region.width as usize, self.color.samples()]
     }
 
     /// Checks that `plane` lies within the series dimensions.
@@ -146,7 +154,7 @@ mod tests {
             size_z: 3,
             size_t: 1,
             pixel_type: PixelType::U16,
-            samples_per_pixel: 1,
+            color: ColorModel::Gray,
             levels: vec![
                 LevelMeta { width: 1000, height: 800, tile_width: 256, tile_height: 256, downsample: 1.0 },
                 LevelMeta { width: 500, height: 400, tile_width: 256, tile_height: 256, downsample: 2.0 },
@@ -159,9 +167,10 @@ mod tests {
     fn buffer_size_accounts_for_type_and_samples() {
         let mut m = meta();
         assert_eq!(m.buffer_size(Region::new(0, 0, 10, 5)), 100);
-        m.samples_per_pixel = 3;
+        m.color = ColorModel::Rgb;
         m.pixel_type = PixelType::U8;
         assert_eq!(m.buffer_size(Region::new(0, 0, 10, 5)), 150);
+        assert_eq!(m.shape(Region::new(0, 0, 10, 5)), [5, 10, 3]);
     }
 
     #[test]

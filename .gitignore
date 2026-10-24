@@ -1,2 +1,5 @@
 /target
 CLAUDE.local.md
+/tests/external
+/tests/reference
+/doc

@@ -14,6 +14,15 @@
 //! **planes** addressed by channel, z-slice and time point. Pixels are read
 //! as rectangular **regions** of one plane at one level.
 //!
+//! ## Pixel data
+//! Samples are returned row-major and interleaved (height x width x samples
+//! per pixel), always in native byte order regardless of the file. Colour
+//! samples are always R, G, B(, A) with straight alpha, see [`ColorModel`]. Use
+//! [`ImageReaderExt::read_region_as`] for a typed `Vec<T>` or
+//! [`ImageReaderExt::read_region_buf`] if the type is only known at runtime.
+//! Both hand over to tensor libraries such as kornia-rs without copying,
+//! see [`ImageReaderExt`].
+//!
 //! ## Units
 //! All metadata uses fixed units: lengths and wavelengths in nanometres,
 //! times in seconds. Field names carry the unit (`_nm`, `_s`).
@@ -23,8 +32,9 @@ mod reader;
 mod types;
 
 pub use errors::{Error, Result};
-pub use reader::ImageReader;
+pub use reader::{ImageReader, ImageReaderExt};
 pub use types::{
-    ChannelMeta, Geometry, LevelMeta, ObjectiveMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
-    PlateMeta, Position, Region, Roi, SeriesMeta, Shape, WellField, WellMeta,
+    ByteOrder, ChannelMeta, ColorModel, Geometry, LevelMeta, ObjectiveMeta, PhysicalSize, PixelBuf, PixelType,
+    Plane, PlaneMeta, PlateMeta, Position, Region, Roi, Sample, SeriesMeta, Shape, WellField,
+    WellMeta,
 };

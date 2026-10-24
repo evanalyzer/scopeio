@@ -11,6 +11,7 @@
 //! See LICENSE and LICENSE-EXCEPTION.
 
 mod channel;
+mod color_model;
 mod instrument;
 mod meta;
 mod pixel_type;
@@ -20,8 +21,10 @@ mod plate;
 mod position;
 mod region;
 mod roi;
+mod sample;
 
 pub use channel::ChannelMeta;
+pub use color_model::ColorModel;
 pub use instrument::ObjectiveMeta;
 pub use meta::{LevelMeta, PhysicalSize, SeriesMeta};
 pub use pixel_type::PixelType;
@@ -31,3 +34,5 @@ pub use plate::{PlateMeta, WellField, WellMeta};
 pub use position::Position;
 pub use region::Region;
 pub use roi::{Geometry, Roi, Shape};
+pub(crate) use sample::as_bytes_mut;
+pub use sample::{ByteOrder, PixelBuf, Sample};
