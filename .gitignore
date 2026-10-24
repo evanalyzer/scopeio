@@ -7,3 +7,4 @@ CLAUDE.local.md
 !/doc/README.md
 !/doc/_manifest_*.md
 __pycache__/
+promt.md
