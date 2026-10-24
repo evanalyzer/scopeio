@@ -1,0 +1,13 @@
+# OpenSlide (black box) draws pieces of stored images at fractional positions with resampling;
+# scopeio places them at the nearest whole pixel. Level 0 pieces are whole pixels in these
+# slides and differ only by JPEG IDCT rounding.
+file	tool	series	crop	tolerance	reason
+tests/reference/openslide/Mirax/CMU-1-Saved-1_16/CMU-1-Saved-1_16.mrxs	openslide	-	1600,2400,1024,1024	0.2	JPEG IDCT rounding
+tests/reference/openslide/Mirax/CMU-1-Saved-1_16/CMU-1-Saved-1_16.mrxs	openslide	-	800,1200,512,512	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/CMU-1-Saved-1_16/CMU-1-Saved-1_16.mrxs	openslide	-	100,250,256,256	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/CMU-1-Saved-1_2/CMU-1-Saved-1_2.mrxs	openslide	-	14000,20000,1024,1024	0.2	JPEG IDCT rounding
+tests/reference/openslide/Mirax/CMU-1-Saved-1_2/CMU-1-Saved-1_2.mrxs	openslide	-	3500,5000,512,512	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/CMU-1-Saved-1_2/CMU-1-Saved-1_2.mrxs	openslide	-	400,600,256,256	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	5000,3500,1024,1024	0.2	JPEG IDCT rounding
+tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	2500,1700,512,512	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels
+tests/reference/openslide/Mirax/Mirax2-Fluorescence-2/Mirax2-Fluorescence-2.mrxs	openslide	-	600,400,256,256	5.0	fractional piece positions: OpenSlide resamples, scopeio snaps to whole pixels

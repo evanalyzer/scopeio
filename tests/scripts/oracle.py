@@ -164,6 +164,38 @@ def parse_ics(path, int32_little=None, planar_colour=False):
     }
 
 
+def openslide_oracle(src, tmp, crop, level, bounds):
+    """Renders `crop` (x,y,w,h in level pixels) of `level` with OpenSlide's
+    `openslide-write-png`, run as a separate program (black box).
+
+    `bounds`: our canvas starts at OpenSlide's `openslide.bounds-x/y`
+    (formats whose canvas is the bounding box of the image data). Pixels
+    OpenSlide leaves transparent get its background colour.
+    """
+    _, props, *_ = run(["openslide-show-properties", str(src)], measure=False)
+    prop = dict(re.findall(r"^([\w.\[\]-]+): '(.*)'$", props, flags=re.M))
+    x, y, w, h = map(int, crop.split(","))
+    ds = float(prop.get(f"openslide.level[{level}].downsample", 1))
+    bx = int(prop.get("openslide.bounds-x", 0)) if bounds else 0
+    by = int(prop.get("openslide.bounds-y", 0)) if bounds else 0
+    out = Path(tempfile.mkdtemp(dir=tmp)) / "region.png"
+    code, log, cpu, wall, rss = run(["openslide-write-png", str(src), str(round(bx + x * ds)), str(round(by + y * ds)),
+                                     str(level), str(w), str(h), str(out)])
+    if code != 0:
+        return [{"series": 0, "status": "error: " + (log.strip().splitlines() or [f"exit {code}"])[-1][:200]}], cpu, wall, rss
+    rgba = subprocess.run(["magick", str(out), "-depth", "8", "rgba:-"], capture_output=True, check=True).stdout
+    bg = bytes.fromhex(prop.get("openslide.background-color", "FFFFFF"))
+    rgb = bytearray(w * h * 3)
+    for i in range(w * h):
+        px = rgba[4 * i:4 * i + 3] if rgba[4 * i + 3] == 255 else bg
+        rgb[3 * i:3 * i + 3] = px
+    mpp = prop.get("openslide.mpp-x"), prop.get("openslide.mpp-y")
+    nm = lambda v: f"{float(v) * 1000 * ds:.3f}" if v else "-"
+    return [{"series": 0, "status": "ok", "channels": 3, "width": w, "height": h, "size_z": 1, "size_t": 1,
+             "pixel_type": "U8", "phys_x_nm": nm(mpp[0]), "phys_y_nm": nm(mpp[1]),
+             "crc32": f"{zlib.crc32(bytes(rgb)):08x}", "grid": grid(bytes(rgb), "U8", 3, w, h, 1)}], cpu, wall, rss
+
+
 def source_little(src):
     """Byte order of a TIFF source file, None for other formats."""
     if Path(src).is_dir():
@@ -317,6 +349,10 @@ def main():
     ap.add_argument("--keep-series", type=int,
                     help="record only this series of the reference output")
     ap.add_argument("--append", action="store_true", help="add to the existing reference files")
+    ap.add_argument("--tools", default="bioformats,bioformats-rs",
+                    help="comma-separated reference tools: bioformats, bioformats-rs, openslide")
+    ap.add_argument("--openslide-bounds", action="store_true",
+                    help="scopeio's canvas starts at OpenSlide's bounds-x/y (MIRAX)")
     ap.add_argument("--per-series", action="store_true",
                     help="record each Bio-Formats series from a conversion of that series alone "
                          "(bfconvert returns wrong pixels for later series of some multi-series files)")
@@ -339,9 +375,15 @@ def main():
             rel = src.relative_to(ROOT).as_posix()
             print(rel, file=sys.stderr)
             stats = {}
-            for tool in ("bioformats", "bioformats-rs"):
-                runs = [oracle(tool, src, tmp, not args.no_expand, args.series, args.crop)
-                        for _ in range(args.repeat)]
+            for tool in args.tools.split(","):
+                if tool == "openslide":
+                    level = int(args.ours_series.split("/")[1]) if args.ours_series and "/" in args.ours_series else 0
+                    if not args.crop:
+                        sys.exit("openslide needs --crop")
+                    runs = [openslide_oracle(src, tmp, args.crop, level, args.openslide_bounds) for _ in range(args.repeat)]
+                else:
+                    runs = [oracle(tool, src, tmp, not args.no_expand, args.series, args.crop)
+                            for _ in range(args.repeat)]
                 phys = bf_physical_sizes(src) if tool == "bioformats" else []
                 if tool == "bioformats" and args.per_series and args.series is None and len(runs[0][0]) > 1:
                     runs[0] = ([oracle(tool, src, tmp, not args.no_expand, r["series"])[0][0]
@@ -382,7 +424,7 @@ def main():
     if append and bench_md.exists():
         with open(bench_md, "a") as f:
             for rel, size, stats in bench:
-                for tool in ("scopeio", "bioformats", "bioformats-rs"):
+                for tool in [t for t in ("scopeio", "bioformats", "bioformats-rs", "openslide") if t in stats]:
                     status, cpu, wall, rss = stats[tool]
                     status = "ok" if status == "ok" else status.replace("|", "/")[:60]
                     f.write(f"| {rel} | {size / 1024:.0f} KiB | {tool} | {status} | {cpu:.3f} | "
@@ -395,6 +437,9 @@ def main():
         f.write(f"- Machine: {machine()}\n")
         f.write(f"- Bio-Formats {bf_version} (bftools, Java {platform_java()}), "
                 f"bioformats-rs {rs_version}\n")
+        if "openslide" in args.tools:
+            _, osv, *_ = run(["openslide-show-properties", "--version"], measure=False)
+            f.write(f"- {osv.splitlines()[0]} (black box): `openslide-write-png` of the same region, PNG encoding included.\n")
         f.write(f"- Median of {args.repeat} runs, each a fresh process.\n")
         f.write("- scopeio: `scopeio_info --no-checksum` example, reads every plane of every "
                 "series.\n")
@@ -406,7 +451,7 @@ def main():
         f.write("| File | Size | Reader | Status | CPU s | Wall s | Peak RAM MiB |\n")
         f.write("|---|---:|---|---|---:|---:|---:|\n")
         for rel, size, stats in bench:
-            for tool in ("scopeio", "bioformats", "bioformats-rs"):
+            for tool in [t for t in ("scopeio", "bioformats", "bioformats-rs", "openslide") if t in stats]:
                 status, cpu, wall, rss = stats[tool]
                 status = "ok" if status == "ok" else status.replace("|", "/")[:60]
                 f.write(f"| {rel} | {size / 1024:.0f} KiB | {tool} | {status} | {cpu:.3f} | "

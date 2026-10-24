@@ -247,6 +247,32 @@ fn flattened_level(path: &Path, total: usize, series: usize) -> Option<Series> {
     decode_level(reader.as_ref(), s, l).ok()
 }
 
+/// Downsample of `level`, 1 if unknown.
+fn downsample(reader: &dyn ImageReader, series: usize, level: usize) -> f64 {
+    reader.series_meta(series).ok().and_then(|m| m.levels.get(level).map(|l| l.downsample)).unwrap_or(1.0)
+}
+
+/// Compares a level (or a region of it): references give a level the pixel
+/// size of level 0 or its own, the latter possibly from the level's own
+/// rounded resolution (within 1 %).
+fn compare_level(mut s: Series, r: &HashMap<String, String>, tolerance: Option<f64>, f: f64) -> Vec<String> {
+    let first = compare(&s, r, tolerance);
+    if f == 1.0 {
+        return first;
+    }
+    let near = |ours: Option<f64>, key: &str| {
+        let scaled = ours.map(|v| v * f);
+        match (scaled, r[key].parse::<f64>()) {
+            (Some(v), Ok(reference)) if (v - reference).abs() <= 0.01 * reference.abs() => Some(reference),
+            _ => scaled,
+        }
+    };
+    s.phys_x_nm = near(s.phys_x_nm, "phys_x_nm");
+    s.phys_y_nm = near(s.phys_y_nm, "phys_y_nm");
+    let scaled = compare(&s, r, tolerance);
+    if scaled.len() < first.len() { scaled } else { first }
+}
+
 fn level_of_last_series(path: &Path, count: usize, series: usize) -> Option<Series> {
     let reader = scopeio::open(path).ok()?;
     let last = count.checked_sub(1)?;
@@ -278,13 +304,23 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
     let divergences: HashMap<(String, String), Option<f64>> = divergence_rows
         .iter()
         .filter(|d| d.get("series").is_none_or(|s| s.is_empty() || s == "-"))
+        .filter(|d| d.get("crop").is_none_or(|c| c.is_empty() || c == "-"))
         .map(|d| ((d["file"].clone(), d["tool"].clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
         .collect();
     let series_divergences: HashMap<(String, String, String), Option<f64>> = divergence_rows
         .iter()
+        .filter(|d| d.get("crop").is_none_or(|c| c.is_empty() || c == "-"))
         .filter_map(|d| {
             let s = d.get("series").filter(|s| !s.is_empty() && *s != "-")?;
             Some(((d["file"].clone(), d["tool"].clone(), s.clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
+        })
+        .collect();
+    // An optional `crop` column limits an entry to one cropped reference.
+    let crop_divergences: HashMap<(String, String, String), Option<f64>> = divergence_rows
+        .iter()
+        .filter_map(|d| {
+            let c = d.get("crop").filter(|c| !c.is_empty() && *c != "-")?;
+            Some(((d["file"].clone(), d["tool"].clone(), c.clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
         })
         .collect();
 
@@ -299,7 +335,8 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         }
         let key = (r["file"].clone(), r["tool"].clone());
         let series_key = (r["file"].clone(), r["tool"].clone(), r["series"].clone());
-        let entry = series_divergences.get(&series_key).or(divergences.get(&key));
+        let crop_key = (r["file"].clone(), r["tool"].clone(), r.get("crop").cloned().unwrap_or_default());
+        let entry = crop_divergences.get(&crop_key).or(series_divergences.get(&series_key)).or(divergences.get(&key));
         let tolerance = entry.copied().flatten();
         let listed = entry.is_some() && tolerance.is_none();
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
@@ -381,8 +418,8 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         if let Some(crop) = r.get("crop").filter(|c| c.as_str() != "-") {
             let n: Vec<u64> = crop.split(',').map(|v| v.parse().expect("crop x,y,w,h")).collect();
             let region = Region::new(n[0], n[1], n[2], n[3]);
-            let diffs = match scopeio::open(&path).and_then(|reader| decode_region(reader.as_ref(), series, level, region)) {
-                Ok(s) => compare(&s, r, tolerance),
+            let diffs = match scopeio::open(&path).and_then(|reader| decode_region(reader.as_ref(), series, level, region).map(|s| (s, reader))) {
+                Ok((s, reader)) => compare_level(s, r, tolerance, downsample(reader.as_ref(), series, level)),
                 Err(e) => vec![format!("crop {crop}: {e}")],
             };
             match (diffs.is_empty(), listed) {
@@ -394,23 +431,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         }
         if level > 0 {
             let diffs = match scopeio::open(&path).and_then(|reader| decode_level(reader.as_ref(), series, level).map(|s| (s, reader))) {
-                Ok((mut s, reader)) => {
-                    // References give a level the pixel size of level 0 or its own.
-                    let first = compare(&s, r, tolerance);
-                    let f = reader.series_meta(series).map(|m| m.levels[level].downsample).unwrap_or(1.0);
-                    // Within 1 %: references may use the level's own rounded resolution.
-                    let near = |ours: Option<f64>, key: &str| {
-                        let scaled = ours.map(|v| v * f);
-                        match (scaled, r[key].parse::<f64>()) {
-                            (Some(v), Ok(reference)) if (v - reference).abs() <= 0.01 * reference.abs() => Some(reference),
-                            _ => scaled,
-                        }
-                    };
-                    s.phys_x_nm = near(s.phys_x_nm, "phys_x_nm");
-                    s.phys_y_nm = near(s.phys_y_nm, "phys_y_nm");
-                    let scaled = compare(&s, r, tolerance);
-                    if scaled.len() < first.len() { scaled } else { first }
-                }
+                Ok((s, reader)) => compare_level(s, r, tolerance, downsample(reader.as_ref(), series, level)),
                 Err(e) => vec![format!("level {level}: {e}")],
             };
             match (diffs.is_empty(), listed) {

@@ -64,6 +64,7 @@ python3 -I tests/scripts/make_czi_samples.py
 python3 -I tests/scripts/make_lif_samples.py
 python3 -I tests/scripts/make_svs_samples.py
 python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
+python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -150,8 +151,19 @@ for f in "$M"/*.ndpi; do
 done
 ```
 
-Divergence files may name one reference series in an optional `series`
-column. Options go before the file names. Every reader runs under `measure`, which
+MIRAX: Bio-Formats and bioformats-rs only read the preview JPEG that the
+`.mrxs` file is, so OpenSlide (`apt install openslide-tools`, run as a black
+box) is the reference. `--tools openslide --openslide-bounds` renders the same
+crop with `openslide-write-png` (our canvas starts at OpenSlide's bounds):
+
+```sh
+M=tests/reference/openslide/Mirax/CMU-1-Saved-1_16/CMU-1-Saved-1_16.mrxs
+python3 -I tests/scripts/oracle.py mrxs --tools openslide --openslide-bounds --ours-series 0/0 --crop 1600,2400,1024,1024 $M
+# all crops: bash tests/scripts/oracle_mrxs.sh (REP=3 for timings)
+```
+
+Divergence files may name one reference series (`series` column) or one
+cropped reference (`crop` column). Options go before the file names. Every reader runs under `measure`, which
 kills it once its process group exceeds `MEASURE_MAX_RSS_MIB` (default
 8192) of resident memory. bioformats-rs otherwise grows to more than 50 GiB
 on `Exception9_e3.nd2`.

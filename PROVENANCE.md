@@ -124,6 +124,20 @@ as black-box command-line tools to produce reference output
   `tests/scripts/make_ndpi_samples.py` (JPEG streams by ImageMagick, run as a
   program).
 
+## 3DHistech MIRAX (`src/formats/mrxs.rs`)
+
+- openslide.org MIRAX format page (prose, CC BY-SA 4.0) in
+  `doc/3dhistech-mrxs/`: Slidedat.ini sections, Index.dat record tables and
+  data pages, data files, slide position buffer, associated images.
+  OpenSlide's C code and ImHex patterns (LGPL repository) were not used.
+- Own analysis of sample files: positions are level-0 pixels of each camera
+  photo; stored images span 2^(concat + level) base images; placement of
+  per-photo pieces and the drawing order (image number) were found by
+  locating decoded images in renderings of OpenSlide 3.4.1 run as a black
+  box (`openslide-write-png`).
+- Synthetic sample written from that model by
+  `tests/scripts/make_mrxs_samples.py` (JPEGs by ImageMagick, run as a program).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

@@ -18,6 +18,8 @@ mod czi;
 mod lif;
 #[cfg(feature = "tiff")]
 mod slide;
+#[cfg(feature = "mrxs")]
+mod mrxs;
 #[cfg(feature = "ndpi")]
 mod ndpi;
 #[cfg(feature = "svs")]
@@ -64,6 +66,8 @@ static SUPPORTED: &[FormatInfo] = &[
     svs::FORMAT,
     #[cfg(feature = "ndpi")]
     ndpi::FORMAT,
+    #[cfg(feature = "mrxs")]
+    mrxs::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -88,6 +92,11 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     }
     if path.is_dir() {
         return Ok(None);
+    }
+    // The .mrxs file is a preview JPEG; its slide folder identifies MIRAX.
+    #[cfg(feature = "mrxs")]
+    if mrxs::matches(path) {
+        return Ok(Some(FormatId::Mrxs));
     }
     let mut head = Vec::with_capacity(MAGIC_LEN);
     File::open(path)?.take(MAGIC_LEN as u64).read_to_end(&mut head)?;
@@ -146,6 +155,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "mrxs")]
+        Some(FormatId::Mrxs) => Ok(Arc::new(Reader(mrxs::Mrxs::open(path, opts)?))),
         #[cfg(feature = "ndpi")]
         Some(FormatId::Ndpi) => Ok(Arc::new(Reader(ndpi::open(path, opts)?))),
         #[cfg(feature = "svs")]

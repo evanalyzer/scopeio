@@ -37,6 +37,19 @@ macro_rules! pixel_enums {
                 }
             }
 
+            /// Zero-filled buffer like [`PixelBuf::zeros`], or `None` if the
+            /// memory cannot be allocated.
+            pub fn try_zeros(pixel_type: PixelType, len: usize) -> Option<Self> {
+                match pixel_type {
+                    $(PixelType::$variant => {
+                        let mut v: Vec<$t> = Vec::new();
+                        v.try_reserve_exact(len).ok()?;
+                        v.resize(len, <$t>::default());
+                        Some(PixelBuf::$variant(v))
+                    })*
+                }
+            }
+
             /// Sample type of the buffer.
             pub fn pixel_type(&self) -> PixelType {
                 match self {

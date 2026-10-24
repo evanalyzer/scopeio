@@ -308,7 +308,7 @@ impl<B: Backend> ImageReader for Reader<B> {
         let map = samples.as_slice();
         let (w, h) = (img.width as usize, img.height as usize);
         let pixel_type = output_type(output.dtype, img.pixel_type);
-        let mut data = PixelBuf::zeros(pixel_type, w * h * map.len());
+        let mut data = PixelBuf::try_zeros(pixel_type, w * h * map.len()).ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", w * h * map.len())))?;
         {
             let mut slice = data.as_slice_mut();
             let (row_stride, plane_stride) = match output.layout {
@@ -400,7 +400,7 @@ impl<B: Backend> ImageReader for Reader<B> {
 
     fn read_region(&self, req: &RegionRequest) -> Result<ImageBuf> {
         let shape = self.output_shape(req)?;
-        let mut data = PixelBuf::zeros(shape.pixel_type, shape.len());
+        let mut data = PixelBuf::try_zeros(shape.pixel_type, shape.len()).ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", shape.len())))?;
         let view = PixelViewMut::contiguous(data.as_slice_mut(), shape.width, shape.height, shape.channels, shape.layout);
         self.read_region_into(req, view)?;
         Ok(ImageBuf {
