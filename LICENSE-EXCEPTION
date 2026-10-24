@@ -1,0 +1,27 @@
+scopeio EVAnalyzer Exception
+
+Additional permission under GNU AGPL version 3 section 7
+
+As a special exception, the copyright holders of scopeio give you
+permission to combine scopeio, or any part of it, with EVAnalyzer, and
+to convey the resulting combined work under the license terms of
+EVAnalyzer, without the requirements of the GNU Affero General Public
+License version 3 applying to the scopeio parts of that combined work.
+
+For the purposes of this exception, "EVAnalyzer" means the software
+published by Joachim Danmayr under the name "EVAnalyzer", including
+versions of it modified or released by Joachim Danmayr. Modified versions
+or forks of EVAnalyzer made by anyone else are not "EVAnalyzer" for the
+purposes of this exception.
+
+This exception does not change the license of scopeio itself. If you
+convey scopeio, or a modified version of it, on its own or combined with
+anything other than EVAnalyzer, the GNU Affero General Public License
+version 3 applies in full.
+
+If you modify scopeio, you may extend this exception to your version,
+but you are not obligated to do so. If you do not wish to do so, delete
+this exception statement from your version.
+
+Contributions to scopeio are accepted under the GNU Affero General Public
+License version 3 together with this exception.
