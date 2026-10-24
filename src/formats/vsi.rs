@@ -34,10 +34,10 @@ use tree::Field;
 use super::tiff::ifd::TiffFile;
 use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
-use crate::reader::{Backend, NativeImage};
+use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
     AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch,
+    PhysicalSize, Plane, Region, Result, SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Vsi, "Olympus VSI", "1");
@@ -533,32 +533,6 @@ impl Backend for Vsi {
     fn read_native(&self, series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
         self.images[series].read(self.tiff.as_ref(), level, plane, region, sink)
     }
-}
-
-/// Decodes `region` with `read` into a native buffer.
-fn native_image(
-    region: Region,
-    spp: u8,
-    pixel_type: PixelType,
-    read: impl FnOnce(&mut Sink) -> Result<()>,
-) -> Result<NativeImage> {
-    let (w, h) = (region.width as usize, region.height as usize);
-    let mut data = vec![0u8; w * h * spp as usize * pixel_type.bytes()];
-    let map: Vec<u8> = (0..spp).collect();
-    let mut sink = Sink::new(
-        &mut data,
-        crate::Layout::Hwc,
-        w * spp as usize,
-        0,
-        spp as usize,
-        0,
-        &map,
-        spp as usize,
-        pixel_type,
-        crate::OutputType::Native,
-    );
-    read(&mut sink)?;
-    Ok(NativeImage { width: region.width, height: region.height, samples_per_pixel: spp, pixel_type, data })
 }
 
 // --- Tests ------------------------------------------------------------------

@@ -6,3 +6,4 @@ CLAUDE.local.md
 /doc/*
 !/doc/README.md
 !/doc/_manifest_*.md
+__pycache__/

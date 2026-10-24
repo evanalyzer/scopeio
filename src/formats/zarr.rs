@@ -554,7 +554,7 @@ impl Array {
             #[cfg(feature = "blosc")]
             Compressor::Lz4 => {
                 let body = data.get(4..).ok_or_else(|| Error::Corrupt("LZ4 chunk truncated".into()))?;
-                codecs::blosc::lz4(body, out)?
+                codecs::lz4(body, out)?
             }
             #[cfg(not(feature = "blosc"))]
             Compressor::Blosc | Compressor::Lz4 => {

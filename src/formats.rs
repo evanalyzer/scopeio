@@ -12,6 +12,8 @@
 
 #[cfg(feature = "bmp")]
 mod bmp;
+#[cfg(feature = "czi")]
+mod czi;
 #[cfg(feature = "nd2")]
 mod nd2;
 #[cfg(feature = "tiff")]
@@ -46,6 +48,8 @@ static SUPPORTED: &[FormatInfo] = &[
     vsi::FORMAT,
     #[cfg(feature = "nd2")]
     nd2::FORMAT,
+    #[cfg(feature = "czi")]
+    czi::FORMAT,
 ];
 
 /// Formats this build can read.
@@ -76,6 +80,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "bmp")]
     if bmp::matches(&head) {
         return Ok(Some(FormatId::Bmp));
+    }
+    #[cfg(feature = "czi")]
+    if czi::matches(&head) {
+        return Ok(Some(FormatId::Czi));
     }
     #[cfg(feature = "nd2")]
     if nd2::matches(&head) {
@@ -120,6 +128,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "czi")]
+        Some(FormatId::Czi) => Ok(Arc::new(Reader(czi::Czi::open(path, opts)?))),
         #[cfg(feature = "nd2")]
         Some(FormatId::Nd2) => Ok(Arc::new(Reader(nd2::Nd2::open(path, opts)?))),
         #[cfg(feature = "vsi")]

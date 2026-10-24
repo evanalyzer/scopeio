@@ -140,6 +140,17 @@ pub(crate) fn inflate_vec(_src: &[u8], _limit: usize) -> Result<Vec<u8>> {
     Err(disabled("deflate"))
 }
 
+/// Decodes an LZ4 block (no frame) of known decoded size.
+#[cfg(feature = "lz4")]
+pub(crate) fn lz4(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    lz4_flex::block::decompress_into(src, out).map_err(|e| Error::Corrupt(format!("LZ4: {e}")))
+}
+
+#[cfg(not(feature = "lz4"))]
+pub(crate) fn lz4(_src: &[u8], _out: &mut [u8]) -> Result<usize> {
+    Err(disabled("lz4"))
+}
+
 /// Decodes a gzip member (RFC 1952): skips the header, inflates the data.
 pub(crate) fn gzip(src: &[u8], out: &mut [u8]) -> Result<usize> {
     let bad = || Error::Corrupt("invalid gzip header".into());

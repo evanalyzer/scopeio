@@ -232,6 +232,21 @@ fn compare(ours: &Series, r: &HashMap<String, String>, tolerance: Option<f64>) -
 }
 
 /// Level `series - (count - 1)` of the last of `count` series, if it exists.
+/// Series `series` of a reference that lists every pyramid level as a
+/// series of its own (Bio-Formats' default), when `total` reference series
+/// equal the levels of all our series.
+fn flattened_level(path: &Path, total: usize, series: usize) -> Option<Series> {
+    let reader = scopeio::open(path).ok()?;
+    let flat: Vec<(usize, usize)> = (0..reader.series_count())
+        .flat_map(|s| (0..reader.series_meta(s).map(|m| m.levels.len()).unwrap_or(1)).map(move |l| (s, l)))
+        .collect();
+    if flat.len() != total || flat.len() == reader.series_count() {
+        return None;
+    }
+    let &(s, l) = flat.get(series)?;
+    decode_level(reader.as_ref(), s, l).ok()
+}
+
 fn level_of_last_series(path: &Path, count: usize, series: usize) -> Option<Series> {
     let reader = scopeio::open(path).ok()?;
     let last = count.checked_sub(1)?;
@@ -257,9 +272,20 @@ fn level_of_last_series(path: &Path, count: usize, series: usize) -> Option<Seri
 pub fn check_against_oracles(format: &str) -> Vec<String> {
     let expected = root().join("tests/expected");
     let rows = read_tsv(&expected.join(format!("{format}.tsv")));
-    let divergences: HashMap<(String, String), Option<f64>> = read_tsv(&expected.join(format!("{format}_divergences.tsv")))
-        .into_iter()
+    // Keyed by file, tool and series; an optional `series` column limits an
+    // entry to one reference series.
+    let divergence_rows = read_tsv(&expected.join(format!("{format}_divergences.tsv")));
+    let divergences: HashMap<(String, String), Option<f64>> = divergence_rows
+        .iter()
+        .filter(|d| d.get("series").is_none_or(|s| s.is_empty() || s == "-"))
         .map(|d| ((d["file"].clone(), d["tool"].clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
+        .collect();
+    let series_divergences: HashMap<(String, String, String), Option<f64>> = divergence_rows
+        .iter()
+        .filter_map(|d| {
+            let s = d.get("series").filter(|s| !s.is_empty() && *s != "-")?;
+            Some(((d["file"].clone(), d["tool"].clone(), s.clone()), d.get("tolerance").and_then(|t| t.parse().ok())))
+        })
         .collect();
 
     let mut failures = Vec::new();
@@ -272,8 +298,10 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             continue;
         }
         let key = (r["file"].clone(), r["tool"].clone());
-        let tolerance = divergences.get(&key).copied().flatten();
-        let listed = divergences.contains_key(&key) && tolerance.is_none();
+        let series_key = (r["file"].clone(), r["tool"].clone(), r["series"].clone());
+        let entry = series_divergences.get(&series_key).or(divergences.get(&key));
+        let tolerance = entry.copied().flatten();
+        let listed = entry.is_some() && tolerance.is_none();
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
         let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
         let cropped = r.get("crop").is_some_and(|c| c.as_str() != "-")
@@ -325,7 +353,11 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                         phys_y_nm: None,
                         pixels: img.as_bytes().to_vec(),
                     };
-                    compare(&s, r, tolerance)
+                    // Associated images have no pixel size of their own.
+                    let mut row = r.clone();
+                    row.insert("phys_x_nm".into(), "-".into());
+                    row.insert("phys_y_nm".into(), "-".into());
+                    compare(&s, &row, tolerance)
                 }
                 Err(e) => vec![format!("associated {kind:?}: {e}")],
             };
@@ -359,7 +391,8 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             Ok(series) => series,
             Err(_) => continue,
         };
-        let diffs = match ours.get(series) {
+        let total = rows.iter().filter(|o| o["file"] == r["file"] && o["tool"] == r["tool"] && o.get("crop").is_none_or(|c| c == "-")).count();
+        let diffs = match flattened_level(&path, total, series).as_ref().or(ours.get(series)) {
             Some(s) => compare(s, r, tolerance),
             // Bio-Formats returns pyramid levels as extra series by default;
             // compare them with the levels of the last series instead.

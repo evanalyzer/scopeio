@@ -303,6 +303,9 @@ def main():
     ap.add_argument("--keep-series", type=int,
                     help="record only this series of the reference output")
     ap.add_argument("--append", action="store_true", help="add to the existing reference files")
+    ap.add_argument("--per-series", action="store_true",
+                    help="record each Bio-Formats series from a conversion of that series alone "
+                         "(bfconvert returns wrong pixels for later series of some multi-series files)")
     args = ap.parse_args()
 
     for tool in (BFCONVERT, BFRS):
@@ -324,6 +327,9 @@ def main():
                 runs = [oracle(tool, src, tmp, not args.no_expand, args.series, args.crop)
                         for _ in range(args.repeat)]
                 phys = bf_physical_sizes(src) if tool == "bioformats" else []
+                if tool == "bioformats" and args.per_series and args.series is None and len(runs[0][0]) > 1:
+                    runs[0] = ([oracle(tool, src, tmp, not args.no_expand, r["series"])[0][0]
+                                if r["status"] == "ok" else r for r in runs[0][0]], *runs[0][1:])
                 for r in runs[0][0]:
                     if args.keep_series is not None and r["series"] != args.keep_series:
                         continue

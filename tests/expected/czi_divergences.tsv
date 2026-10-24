@@ -1,0 +1,12 @@
+# Known differences between scopeio and the reference readers, each checked against
+# the libCZI documentation or the raw file bytes. Synthetic files in tests/data/czi are
+# checked against their spec truth only: both readers need further ZEN XML metadata.
+file	tool	series	tolerance	reason
+tests/reference/zenodo-7015307/S=3_1Pos_2Mosaic_T=2=Z=3_CH=2.czi	bioformats	4		Bio-Formats ignores the valid-pixel mask of the scene-2 pyramid subblock and shows its stored edge pixels (1609 pixels at level 1); libCZI's valid-pixel mask concept says invalid pixels are not rendered, scopeio shows background there
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964.czi	bioformats			Bio-Formats stitches the four separately saved files Image_1_...964.czi and (1)..(3) into one 3648 x 3648 mosaic by file name; each file is an independent document (own GUID, file part 0) of 1920 x 1920 pixels
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(1).czi	bioformats			Bio-Formats stitches the four separately saved files into one mosaic by file name; see Image_1_...964.czi
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(2).czi	bioformats			Bio-Formats stitches the four separately saved files into one mosaic by file name; see Image_1_...964.czi
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(3).czi	bioformats			Bio-Formats stitches the four separately saved files into one mosaic by file name; see Image_1_...964.czi
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(1).czi	bioformats-rs			bioformats-rs places the only tile (X start 864) at x 864 of a canvas starting at 0 and cuts it at the tile width: the left 864 columns are 0, the tile's right part is lost (pixel-checked); scopeio's canvas is the bounding box of the tiles
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(2).czi	bioformats-rs			bioformats-rs shifts the only tile by its X start on a canvas starting at 0; see (1)
+tests/reference/zenodo-8305531/Image_1_2023_08_18__14_32_31_964(3).czi	bioformats-rs			bioformats-rs shifts the only tile by its X start on a canvas starting at 0; see (1)

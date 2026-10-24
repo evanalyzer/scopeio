@@ -147,6 +147,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "openreadout-jpegxr"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e36e2e787cbaa846b7809c9c6ca250a97c3fe81c116eddb6c4441b988a418f9b"
+
+[[package]]
 name = "pkg-config"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -207,6 +213,7 @@ dependencies = [
  "flate2",
  "hayro-jpeg2000",
  "lz4_flex",
+ "openreadout-jpegxr",
  "roxmltree",
  "ruzstd",
  "serde_json",

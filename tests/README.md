@@ -55,6 +55,7 @@ python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
 python3 -I tests/scripts/make_nd2_samples.py
+python3 -I tests/scripts/make_czi_samples.py
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
@@ -82,7 +83,21 @@ find tests/reference/ome/ND2 -name "*.nd2" -size -120M -print0 | xargs -0 python
 for f in nicon_02 nicon_03; do python3 -I tests/scripts/oracle.py nd2 --series 0 --crop 1000,1000,512,512 --append tests/external/$f.nd2; done
 ```
 
-Options go before the file names. Every reader runs under `measure`, which
+CZI (`--per-series`: bfconvert returns wrong pixels for later series when
+converting all series of some multi-scene files in one run, so each series
+is converted alone):
+
+```sh
+find tests/reference/zenodo-7015307 tests/reference/zenodo-8305531 -name "*.czi" -size -120M -print0 | sort -z | xargs -0 python3 -I tests/scripts/oracle.py czi --per-series
+R=tests/reference/ome/Zeiss-CZI/zenodo-10577186/2023_11_30__RecognizedCode-27.czi
+python3 -I tests/scripts/oracle.py czi --series 0 --crop 12288,8192,2048,2048 --append $R
+python3 -I tests/scripts/oracle.py czi --series 0 --crop 3000,2000,2048,2048 --append tests/reference/zenodo-8305531/test_gray.czi
+python3 -I tests/scripts/oracle.py czi --repeat 1 --series 6 --ours-series assoc:label --append $R
+python3 -I tests/scripts/oracle.py czi --repeat 1 --series 7 --ours-series assoc:macro --append $R
+```
+
+Divergence files may name one reference series in an optional `series`
+column. Options go before the file names. Every reader runs under `measure`, which
 kills it once its process group exceeds `MEASURE_MAX_RSS_MIB` (default
 8192) of resident memory. bioformats-rs otherwise grows to more than 50 GiB
 on `Exception9_e3.nd2`.

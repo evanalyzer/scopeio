@@ -69,6 +69,21 @@ as black-box command-line tools to produce reference output
 - Synthetic samples written from the documented layout by
   `tests/scripts/make_nd2_samples.py`.
 
+## Zeiss CZI (`src/formats/czi*`)
+
+- OpenReadout CZI format notes and provenance log (MIT OR Apache-2.0;
+  derived from public samples, czifile's BSD-3 documentation and the libCZI
+  documentation pages) in `doc/zeiss-czi/`.
+- ZEISS libCZI documentation pages (MIT per libCZI's REUSE file: `docs/*`;
+  libCZI's source code is LGPL and was not consulted): chunked compression,
+  resolution protocol, valid-pixel mask concept, reader compatibility.
+- Own analysis of sample files: mosaic tiles are drawn in directory order
+  (later entries on top), checked pixel by pixel against Bio-Formats as a
+  black box; pyramid levels from the downsampling ratio of each subblock,
+  snapped to a power of two (level sizes agree with Bio-Formats).
+- Synthetic samples written from the documented layout by
+  `tests/scripts/make_czi_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
@@ -104,4 +119,14 @@ fork of hayro adding native-depth output) 20.6 Mpx/s. hayro's samples agree
 with OpenJPEG (via ImageMagick, black box) on 99 % of pixels, the rest by
 rounding; dicom-toolkit differs more. Block means of decoded tiles agree with
 Bio-Formats within 0.05 of 65535. openjp2 (BSD-2, Rust port of OpenJPEG) was
-not benchmarked. JPEG-XR is not supported yet (needed by CZI).
+not benchmarked.
+
+| JPEG XR | openreadout-jpegxr | BSD-2-Clause (port of Microsoft jxrlib) | see below |
+
+JPEG XR benchmark (2026-10-24, one thread, 40 subblocks of 1504 x 2048
+16-bit gray from `2023_11_30__RecognizedCode-27.czi`): openreadout-jpegxr
+48.5 Mpx/s, jxr-native (MIT/Apache-2.0) 33.2 Mpx/s with about three times
+the CPU time (rayon). Output of both is bit-identical on every subblock.
+openreadout-jpegxr is `forbid(unsafe_code)` and has no dependencies.
+jpegxr-pure-rs (BSD-3) was not considered: 693 `unsafe` blocks; jpegxr
+(BSD-3) binds the C jxrlib.

@@ -98,18 +98,13 @@ pub(crate) fn decode(src: &[u8], out: &mut [u8]) -> Result<usize> {
 /// Decodes one split with the codec numbered `codec` in the header flags.
 fn inner(codec: u8, src: &[u8], out: &mut [u8]) -> Result<usize> {
     match codec {
-        1 => lz4(src, out),
+        1 => super::lz4(src, out),
         3 => super::deflate(src, out, true),
         4 => super::zstd(src, out),
         0 => Err(Error::UnsupportedVariant("Blosc blosclz codec".into())),
         2 => Err(Error::UnsupportedVariant("Blosc snappy codec".into())),
         c => Err(Error::Corrupt(format!("Blosc codec {c}"))),
     }
-}
-
-/// Decodes an LZ4 block (no frame) of known decoded size.
-pub(crate) fn lz4(src: &[u8], out: &mut [u8]) -> Result<usize> {
-    lz4_flex::block::decompress_into(src, out).map_err(|e| Error::Corrupt(format!("LZ4: {e}")))
 }
 
 /// Reverses the byte shuffle: `src` holds byte `k` of all elements, then

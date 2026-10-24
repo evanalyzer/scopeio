@@ -8,6 +8,7 @@ license = "AGPL-3.0-only"
 [dependencies]
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"], optional = true }
 hayro-jpeg2000 = { version = "0.4", optional = true }
+openreadout-jpegxr = { version = "0.4", optional = true }
 lz4_flex = { version = "0.14", default-features = false, features = ["std"], optional = true }
 roxmltree = { version = "0.21", optional = true }
 ruzstd = { version = "0.9", optional = true }
@@ -17,24 +18,28 @@ zstd-c-lib = { package = "zstd", version = "0.13", default-features = false, opt
 zune-jpeg = { version = "0.5", optional = true }
 
 [features]
-default = ["bmp", "tiff", "zarr", "vsi", "nd2", "deflate", "lzw", "jpeg", "jpeg2000", "zstd", "blosc"]
+default = ["bmp", "tiff", "zarr", "vsi", "nd2", "czi", "deflate", "lzw", "jpeg", "jpeg2000", "jpegxr", "zstd", "lz4", "blosc"]
 # Formats.
 bmp = []
 tiff = ["dep:roxmltree"]
 zarr = ["dep:serde_json"]
 vsi = ["tiff"]
 nd2 = ["dep:roxmltree", "deflate"]
+czi = ["dep:roxmltree"]
 # Compression codecs. Files using a disabled codec return `Error::UnsupportedVariant`.
 deflate = ["dep:flate2"]
 lzw = ["dep:weezl"]
 jpeg = ["dep:zune-jpeg"]
 jpeg2000 = ["dep:hayro-jpeg2000"]
+# JPEG XR (openreadout-jpegxr, BSD-2, pure Rust port of jxrlib).
+jpegxr = ["dep:openreadout-jpegxr"]
+lz4 = ["dep:lz4_flex"]
 zstd = ["dep:ruzstd"]
 # Zstandard through the C library (BSD, built from source); much faster
 # than the pure-Rust decoder, see PROVENANCE.md.
 zstd-c = ["dep:zstd-c-lib"]
 # Blosc container; its inner codecs use the lz4, deflate and zstd decoders.
-blosc = ["dep:lz4_flex"]
+blosc = ["lz4"]
 
 # Tests decode many sample files; optimise them.
 [profile.test]
