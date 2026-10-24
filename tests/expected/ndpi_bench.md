@@ -53,3 +53,9 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi (series 1) | 2993 KiB | scopeio | ok | 0.027 | 0.028 | 17.2 |
 | tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi (series 1) | 2993 KiB | bioformats | ok | 1.918 | 1.012 | 277.9 |
 | tests/reference/ome/Hamamatsu-NDPI/manuel/test3-TRITC 2 (560).ndpi (series 1) | 2993 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 0) crop 120000,60000,2048,2048 | 6739285 KiB | scopeio | ok | 0.055 | 0.057 | 26.0 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 0) crop 120000,60000,2048,2048 | 6739285 KiB | bioformats | ok | 1.691 | 0.860 | 363.7 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 0) crop 120000,60000,2048,2048 | 6739285 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | scopeio | ok | 0.746 | 0.748 | 226.5 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | bioformats | ok | 2.967 | 1.904 | 762.7 |
+| tests/reference/openslide/Hamamatsu/Hamamatsu-1.ndpi (series 4) | 6739285 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
