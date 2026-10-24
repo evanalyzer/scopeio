@@ -158,3 +158,51 @@ Generated 2026-10-24 by `tests/scripts/oracle.py`.
 | tests/reference/ome/Leica-XLEF/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small/Series002.lof | 656 KiB | scopeio | ok | 0.002 | 0.003 | 4.4 |
 | tests/reference/ome/Leica-XLEF/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small/Series002.lof | 656 KiB | bioformats | ok | 5.103 | 2.578 | 491.1 |
 | tests/reference/ome/Leica-XLEF/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small/Series002.lof | 656 KiB | bioformats-rs | ok | 0.006 | 0.008 | 14.4 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef | 1 KiB | scopeio | ok | 0.993 | 0.995 | 6.4 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef | 1 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 5.685 | 1.935 | 700.2 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef | 1 KiB | bioformats-rs | error: Error opening <file>: Unsupported format: Leica LOF X | 0.080 | 0.082 | 177.5 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef | 1 KiB | scopeio | ok | 1.939 | 1.945 | 22.8 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef | 1 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 9.636 | 4.905 | 714.3 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef | 1 KiB | bioformats-rs | error: Error opening <file>: Unsupported format: Leica LOF X | 0.009 | 0.010 | 13.7 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 0) | 1 KiB | scopeio | ok | 0.473 | 0.474 | 6.2 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 0) | 1 KiB | bioformats | ok | 5.465 | 1.483 | 658.7 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 0) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 1) | 1 KiB | scopeio | ok | 0.507 | 0.508 | 6.4 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 1) | 1 KiB | bioformats | ok | 5.286 | 1.566 | 592.6 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 1) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 2) | 1 KiB | scopeio | ok | 0.068 | 0.070 | 6.6 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 2) | 1 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 4.794 | 1.046 | 430.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef (series 2) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 0) | 1 KiB | scopeio | ok | 0.937 | 0.939 | 22.9 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 0) | 1 KiB | bioformats | ok | 8.286 | 3.486 | 691.9 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 0) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 1) | 1 KiB | scopeio | ok | 0.986 | 0.988 | 22.8 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 1) | 1 KiB | bioformats | ok | 8.219 | 3.418 | 683.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 1) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 2) | 1 KiB | scopeio | ok | 0.140 | 0.142 | 22.6 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 2) | 1 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 5.570 | 1.231 | 481.8 |
+| tests/reference/ome/Leica-XLEF/rgb channel test/XLEF-TIF rgb channel test/rgb channel test.xlef (series 2) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef | 1 KiB | scopeio | ok | 0.088 | 0.090 | 6.2 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef | 1 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 8.194 | 1.706 | 687.3 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef | 1 KiB | bioformats-rs | ok | 0.118 | 0.120 | 154.9 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 0) | 1 KiB | scopeio | ok | 0.007 | 0.008 | 6.2 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 0) | 1 KiB | bioformats | ok | 7.622 | 1.422 | 549.5 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 0) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 1) | 1 KiB | scopeio | ok | 0.014 | 0.015 | 6.6 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 1) | 1 KiB | bioformats | ok | 7.795 | 1.606 | 604.4 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 1) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 2) | 1 KiB | scopeio | ok | 0.021 | 0.022 | 6.4 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 2) | 1 KiB | bioformats | ok | 7.963 | 1.704 | 639.5 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 2) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 3) | 1 KiB | scopeio | ok | 0.022 | 0.023 | 6.1 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 3) | 1 KiB | bioformats | ok | 8.621 | 1.662 | 632.5 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 3) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 4) | 1 KiB | scopeio | ok | 0.049 | 0.050 | 6.2 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 4) | 1 KiB | bioformats | ok | 9.168 | 2.086 | 693.4 |
+| tests/reference/ome/Leica-XLEF/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef (series 4) | 1 KiB | bioformats-rs | skipped: no series or crop option | 0.000 | 0.000 | 0.0 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-LOF Thunder Organoid Tilescan/XLEF-LOF Thunder Organoid Tilescan.xlef | 1 KiB | scopeio | ok | 0.049 | 0.051 | 4.6 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-LOF Thunder Organoid Tilescan/XLEF-LOF Thunder Organoid Tilescan.xlef | 1 KiB | bioformats | ok | 4.039 | 1.740 | 443.3 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-LOF Thunder Organoid Tilescan/XLEF-LOF Thunder Organoid Tilescan.xlef | 1 KiB | bioformats-rs | ok | 0.078 | 0.079 | 156.4 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-TIF Thunder Organoid Tilescan/XLEF-TIF Thunder Organoid Tilescan.xlef | 1 KiB | scopeio | ok | 0.161 | 0.162 | 6.4 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-TIF Thunder Organoid Tilescan/XLEF-TIF Thunder Organoid Tilescan.xlef | 1 KiB | bioformats | ok | 5.604 | 2.198 | 540.2 |
+| tests/reference/ome/Leica-XLEF/thunder organoid tilescan/XLEF-TIF Thunder Organoid Tilescan/XLEF-TIF Thunder Organoid Tilescan.xlef | 1 KiB | bioformats-rs | error: Error reading plane 1: Plane index 1 out of range | 0.096 | 0.097 | 26.9 |

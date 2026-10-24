@@ -371,6 +371,21 @@ impl Lif {
         // Channels in storage order; RGB when tags 1-3 lie within one pixel.
         let mut order: Vec<Node> = chans.clone();
         order.sort_by_key(|c| int(*c, "BytesInc"));
+        // Several colour triples (blue, green, red bytes of one pixel) as
+        // gray channels: red first within each.
+        if order.len() > 3 {
+            let mut i = 0;
+            while i + 3 <= order.len() {
+                let w = &order[i..i + 3];
+                let inc: Vec<u64> = w.iter().map(|c| int(*c, "BytesInc")).collect();
+                if w.iter().map(|c| int(*c, "ChannelTag")).eq([3, 2, 1]) && inc[1] == inc[0] + bytes as u64 && inc[2] == inc[1] + bytes as u64 {
+                    order[i..i + 3].reverse();
+                    i += 3;
+                } else {
+                    i += 1;
+                }
+            }
+        }
         let tags: Vec<u64> = order.iter().map(|c| int(*c, "ChannelTag")).collect();
         let rgb = (order.len() == 3 && tags.iter().all(|t| (1..=3).contains(t)) && int(order[2], "BytesInc") < x.inc.max(1)).then(|| {
             let at = |tag: u64| order.iter().find(|c| int(**c, "ChannelTag") == tag).map(|c| int(*c, "BytesInc")).unwrap_or(0);

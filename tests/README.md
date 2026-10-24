@@ -203,6 +203,11 @@ python3 -I tests/scripts/fetch_ome.py Leica-XLEF/
 X=tests/reference/ome/Leica-XLEF; Y="$X/falcon_sample_data_small/XLEF-LOF falcon_sample_data_small"
 find $X -path "$X/lif" -prune -o -name "*.xlef" -print0 | sort -z | xargs -0 python3 -I tests/scripts/oracle.py xlef --per-series --repeat 1
 python3 -I tests/scripts/oracle.py xlef --per-series --repeat 1 --append "$Y/Image001.lof" "$Y/Series002.lof"
+# Bio-Formats fails on these as a whole ("Invalid plane index") but converts each series
+R="$X/rgb channel test"; T="$X/tau_selection/XLEF-LOF tau_selection/tau_selection.xlef"
+for k in 0 1 2; do for f in "$R/XLEF-LOF rgb channel test/XLEF-LOF rgb channel test.xlef" "$R/XLEF-TIF rgb channel test/rgb channel test.xlef"; do
+    python3 -I tests/scripts/oracle.py xlef --repeat 1 --series $k --append "$f"; done; done
+for k in 0 1 2 3 4; do python3 -I tests/scripts/oracle.py xlef --repeat 1 --series $k --append "$T"; done
 ```
 
 SVS (`--ours-series 0/2` compares a Bio-Formats pyramid series with level 2
