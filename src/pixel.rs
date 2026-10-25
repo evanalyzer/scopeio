@@ -64,17 +64,14 @@ pub(crate) fn as_bytes_mut<T: Pixel>(samples: &mut [T]) -> &mut [u8] {
 /// Reading a native sample as f32.
 trait Elem: Copy {
     const SIZE: usize;
-    /// Divisor of [`OutputType::F32Normalized`].
-    const NORM: f32;
     fn read(b: &[u8]) -> f32;
 }
 
 macro_rules! impl_elem {
-    ($($t:ty, $norm:expr);* $(;)?) => {
+    ($($t:ty),* $(,)?) => {
         $(
             impl Elem for $t {
                 const SIZE: usize = size_of::<$t>();
-                const NORM: f32 = $norm;
                 fn read(b: &[u8]) -> f32 {
                     <$t>::from_ne_bytes(b[..size_of::<$t>()].try_into().expect("sample size")) as f32
                 }
@@ -83,8 +80,50 @@ macro_rules! impl_elem {
     };
 }
 
-impl_elem!(u8, u8::MAX as f32; i8, i8::MAX as f32; u16, u16::MAX as f32; i16, i16::MAX as f32;
-    u32, u32::MAX as f32; i32, i32::MAX as f32; f32, 1.0; f64, 1.0);
+impl_elem!(u8, i8, u16, i16, u32, i32, f32, f64);
+
+/// Value range of an integer sample type; `None` for floats.
+fn int_range(t: PixelType) -> Option<(f64, f64)> {
+    Some(match t {
+        PixelType::U8 => (0.0, u8::MAX as f64),
+        PixelType::I8 => (i8::MIN as f64, i8::MAX as f64),
+        PixelType::U16 => (0.0, u16::MAX as f64),
+        PixelType::I16 => (i16::MIN as f64, i16::MAX as f64),
+        PixelType::U32 => (0.0, u32::MAX as f64),
+        PixelType::I32 => (i32::MIN as f64, i32::MAX as f64),
+        PixelType::F32 | PixelType::F64 => return None,
+    })
+}
+
+/// `value * scale + offset` (then clamped to 0..1 if `clamp`) of an f32
+/// output type for samples of `t` with `bits` significant bits.
+fn linear(dtype: OutputType, t: PixelType, bits: Option<u8>) -> (f32, f32, bool) {
+    let range = int_range(t);
+    let (scale, offset, clamp) = match dtype {
+        OutputType::F32Normalized => (range.map_or(1.0, |r| 1.0 / r.1), 0.0, false),
+        OutputType::F32Range { min, max } => {
+            let span = if max != min { (max - min) as f64 } else { 1.0 };
+            (1.0 / span, -min as f64 / span, true)
+        }
+        OutputType::F32Scaled { scale, offset } => (scale as f64, offset as f64, false),
+        OutputType::F32SignificantBits => match range {
+            Some((min, max)) => {
+                let type_bits = 8 * t.bytes() as u32;
+                let b = bits.map_or(type_bits, |b| (b as u32).clamp(1, type_bits));
+                // Signed types keep one bit for the sign.
+                let b = if min < 0.0 { b.saturating_sub(1).max(1) } else { b };
+                (1.0 / (2f64.powi(b as i32) - 1.0).min(max), 0.0, false)
+            }
+            None => (1.0, 0.0, false),
+        },
+        OutputType::F32NormalizedShifted => match range {
+            Some((min, max)) => (1.0 / (max - min), -min / (max - min), false),
+            None => (1.0, 0.0, false),
+        },
+        OutputType::Native | OutputType::F32 => (1.0, 0.0, false),
+    };
+    (scale as f32, offset as f32, clamp)
+}
 
 /// Output element type of a dtype for samples of `pixel_type`.
 pub(crate) fn output_type(dtype: OutputType, pixel_type: PixelType) -> PixelType {
@@ -109,6 +148,10 @@ pub(crate) struct Sink<'a> {
     src_spp: usize,
     src_type: PixelType,
     dtype: OutputType,
+    /// f32 conversion: `value * scale + offset`, clamped if `clamp`.
+    scale: f32,
+    offset: f32,
+    clamp: bool,
     direct: bool,
 }
 
@@ -139,7 +182,15 @@ impl<'a> Sink<'a> {
                 Layout::Chw => src_spp == 1 && map.len() == 1,
             };
         let out_elem = output_type(dtype, src_type).bytes();
-        Self { out, out_elem, layout, row_stride, plane_stride, out_channels, base, map, src_spp, src_type, dtype, direct }
+        let (scale, offset, clamp) = linear(dtype, src_type, None);
+        Self { out, out_elem, layout, row_stride, plane_stride, out_channels, base, map, src_spp, src_type, dtype, scale, offset, clamp, direct }
+    }
+
+    /// Sets the significant bits of the samples, used by
+    /// [`OutputType::F32SignificantBits`].
+    pub fn with_significant_bits(mut self, bits: Option<u8>) -> Self {
+        (self.scale, self.offset, self.clamp) = linear(self.dtype, self.src_type, bits);
+        self
     }
 
     /// Bytes of one native source pixel.
@@ -206,16 +257,22 @@ impl<'a> Sink<'a> {
     }
 
     fn put_f32<S: Elem>(&mut self, y: usize, x: usize, src: &[u8]) {
-        let (scale, offset) = match self.dtype {
-            OutputType::F32Normalized => (1.0 / S::NORM, 0.0),
-            OutputType::F32Range { min, max } => {
-                let span = if max != min { max - min } else { 1.0 };
-                (1.0 / span, -min / span)
-            }
-            _ => (1.0, 0.0),
-        };
-        let clamp = matches!(self.dtype, OutputType::F32Range { .. });
+        let (scale, offset, clamp) = (self.scale, self.offset, self.clamp);
         let px = self.pixel_bytes();
+        // One output sample per pixel into a contiguous row: one tight loop.
+        if self.map.len() == 1 && (self.layout == Layout::Chw || self.out_channels == 1) {
+            let from = self.map[0] as usize * S::SIZE;
+            let start = self.index(y, x, 0) * 4;
+            let n = src.len() / px;
+            for (d, pixel) in self.out[start..start + 4 * n].chunks_exact_mut(4).zip(src.chunks_exact(px)) {
+                let mut v = S::read(&pixel[from..]) * scale + offset;
+                if clamp {
+                    v = v.clamp(0.0, 1.0);
+                }
+                d.copy_from_slice(&v.to_ne_bytes());
+            }
+            return;
+        }
         for (i, pixel) in src.chunks_exact(px).enumerate() {
             for (k, &s) in self.map.iter().enumerate() {
                 let mut v = S::read(&pixel[s as usize * S::SIZE..]) * scale + offset;
@@ -234,6 +291,21 @@ impl<'a> Sink<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn linear_conversions() {
+        assert_eq!(linear(OutputType::F32Normalized, PixelType::U8, None), (1.0 / 255.0, 0.0, false));
+        assert_eq!(linear(OutputType::F32SignificantBits, PixelType::U16, Some(12)), (1.0 / 4095.0, 0.0, false));
+        assert_eq!(linear(OutputType::F32SignificantBits, PixelType::U16, None), (1.0 / 65535.0, 0.0, false));
+        // More bits than the type holds fall back to the type.
+        assert_eq!(linear(OutputType::F32SignificantBits, PixelType::U8, Some(12)), (1.0 / 255.0, 0.0, false));
+        assert_eq!(linear(OutputType::F32SignificantBits, PixelType::I16, Some(12)), (1.0 / 2047.0, 0.0, false));
+        assert_eq!(linear(OutputType::F32SignificantBits, PixelType::F32, Some(12)), (1.0, 0.0, false));
+        let (s, o, c) = linear(OutputType::F32NormalizedShifted, PixelType::I8, None);
+        assert!(((-128.0 * s + o) - 0.0).abs() < 1e-7 && ((127.0 * s + o) - 1.0).abs() < 1e-6 && !c);
+        assert_eq!(linear(OutputType::F32Scaled { scale: 2.0, offset: -1.0 }, PixelType::U16, None), (2.0, -1.0, false));
+        assert!(linear(OutputType::F32Range { min: 0.0, max: 10.0 }, PixelType::U16, None).2);
+    }
 
     #[test]
     fn hwc_identity_is_direct() {

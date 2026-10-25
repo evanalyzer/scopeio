@@ -401,7 +401,8 @@ impl<B: Backend> ImageReader for Reader<B> {
                 meta.samples_per_pixel.max(1) as usize,
                 meta.pixel_type,
                 req.output.dtype,
-            );
+            )
+            .with_significant_bits(meta.significant_bits);
             self.0.read_native(req.series, req.level, Plane::new(c, req.z, req.t), r, &mut sink)?;
             base += map.len as usize;
         }

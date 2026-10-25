@@ -52,7 +52,14 @@ pub enum ColorOrder {
 }
 
 /// Element type of the output.
+///
+/// The f32 types convert in the same pass as the read, so no native buffer
+/// is allocated. Signed integers: `F32Normalized` and `F32SignificantBits`
+/// divide by the positive maximum (int8 -128 -> -1.008, 127 -> 1.0);
+/// `F32NormalizedShifted` shifts by the type's minimum first, like ImageJ
+/// (int8 -128 -> 0.0, 127 -> 1.0).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[non_exhaustive]
 pub enum OutputType {
     /// The stored type, lossless.
     #[default]
@@ -64,6 +71,15 @@ pub enum OutputType {
     F32Normalized,
     /// Linear rescale of [min, max] to 0..1, clamped.
     F32Range { min: f32, max: f32 },
+    /// `value * scale + offset`, not clamped.
+    F32Scaled { scale: f32, offset: f32 },
+    /// The value divided by the maximum of the series' significant bits
+    /// (`SeriesMeta::significant_bits`, else the type's bits): 12-bit data
+    /// in u16 becomes 0..1. Float data unchanged.
+    F32SignificantBits,
+    /// `(value - type min) / (type max - type min)`: 0..1 for unsigned and
+    /// signed integers alike. Float data unchanged.
+    F32NormalizedShifted,
 }
 
 /// How output buffers are laid out and typed.

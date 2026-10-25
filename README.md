@@ -31,6 +31,26 @@ let data: Vec<u16> = reader.read_region(&req)?.into_vec()?;
 Lengths are in nanometres and times in seconds throughout. Each format and
 each optional codec is a cargo feature; all are on by default.
 
+### Output options
+
+`OutputSpec::dtype` converts in the same pass as the read, without a native
+buffer:
+
+| `OutputType` | Value |
+|---|---|
+| `Native` | stored type, lossless |
+| `F32` | value as f32 |
+| `F32Normalized` | value / type maximum (int8: -128 -> -1.008, 127 -> 1.0) |
+| `F32SignificantBits` | value / (2^significant_bits - 1): 12-bit data in u16 -> 0..1 |
+| `F32NormalizedShifted` | (value - type min) / (type max - type min), like ImageJ (int8: -128 -> 0.0, 127 -> 1.0) |
+| `F32Range { min, max }` | (value - min) / (max - min), clamped to 0..1 |
+| `F32Scaled { scale, offset }` | value * scale + offset, not clamped |
+
+Float data is passed through unchanged by the normalizing types. Reading a
+3554 x 2540 u16 plane as `F32SignificantBits` peaks at 41 MiB, against 58 MiB
+for reading it natively and converting afterwards, at equal CPU time
+(`tests/expected/output_bench.md`).
+
 ## Performance
 
 CPU time and peak RAM of scopeio against Bio-Formats 8.5.0, bioformats-rs
