@@ -22,6 +22,8 @@ mod oif;
 mod nd;
 #[cfg(feature = "oir")]
 mod oir;
+#[cfg(feature = "omp2info")]
+mod omp2info;
 #[cfg(feature = "operetta")]
 mod operetta;
 #[cfg(feature = "zvi")]
@@ -138,6 +140,8 @@ static SUPPORTED: &[FormatInfo] = &[
     oif::OIF_FORMAT,
     #[cfg(feature = "oir")]
     oir::FORMAT,
+    #[cfg(feature = "omp2info")]
+    omp2info::FORMAT,
     #[cfg(feature = "dicom")]
     dicom::FORMAT,
     #[cfg(feature = "zvi")]
@@ -197,6 +201,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "dicom")]
     if dicom::matches(&head) {
         return Ok(Some(FormatId::Dicom));
+    }
+    #[cfg(feature = "omp2info")]
+    if omp2info::matches(path, &head) {
+        return Ok(Some(FormatId::Omp2info));
     }
     #[cfg(feature = "oir")]
     if oir::matches(&head) {
@@ -327,6 +335,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Zvi) => Ok(Arc::new(Reader(zvi::Zvi::open(path)?))),
         #[cfg(feature = "dicom")]
         Some(FormatId::Dicom) => Ok(Arc::new(Reader(dicom::Dicom::open(path)?))),
+        #[cfg(feature = "omp2info")]
+        Some(FormatId::Omp2info) => Ok(Arc::new(Reader(omp2info::Omp2info::open(path)?))),
         #[cfg(feature = "oir")]
         Some(FormatId::Oir) => Ok(Arc::new(Reader(oir::Oir::open(path)?))),
         #[cfg(feature = "oif")]

@@ -79,6 +79,7 @@ python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
 python3 -I tests/scripts/make_scanr_samples.py    # Olympus scan^R
 python3 -I tests/scripts/make_nikon_tiff_samples.py # Nikon NIS-Elements TIFF
 python3 -I tests/scripts/make_nef_samples.py      # Nikon NEF
+python3 -I tests/scripts/make_omp2info_samples.py # Olympus OMP2INFO (after make_oir_samples.py)
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -195,6 +196,11 @@ python3 -I tests/scripts/oracle.py nikon-tiff --append --repeat 1 tests/data/nik
 python3 -I tests/scripts/fetch_rawpixls.py 929 924 928
 python3 -I tests/scripts/oracle.py nef --repeat 3 tests/reference/rawpixls/929.nef tests/reference/rawpixls/924.nef tests/reference/rawpixls/928.nef
 python3 -I tests/scripts/oracle.py nef --append --repeat 1 tests/data/nef/raw12.nef
+# Olympus OMP2INFO: the zenodo-13680725 tiling (CC BY 4.0, 25 tiles + vendor stitch, about 3.5 GB)
+O=Olympus-OIR/gh-4205/zenodo-13680725
+python3 -I tests/scripts/fetch_ome.py $O/matl.omp2info $O/Map_A01.oir $O/Stitch_A01_G001.oir $O/Stitch_A01_G001_00001 \
+    $(for i in $(seq -w 1 25); do echo $O/tiling-sample-brain-section_A01_G001_00$i.oir; done)
+python3 -I tests/scripts/oracle.py omp2info --repeat 1 tests/reference/ome/$O/matl.omp2info
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

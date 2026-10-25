@@ -76,6 +76,7 @@ compared, "n/a" means the reader cannot open the format.
 | Olympus scan^R | 2 | 302 ms | 6.4 MiB | 154× / 35× | see below | – |
 | Nikon NIS-Elements TIFF | 5 | 5 ms | 12 MiB | 332× / 16× | 4.1× / 2.2× | – |
 | Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
+| Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -98,6 +99,8 @@ compared, "n/a" means the reader cannot open the format.
 - NEF: scopeio returns the raw sensor (CFA) values; Bio-Formats and
   bioformats-rs demosaic to RGB. Nikon-compressed NEF (the camera default)
   is not supported.
+- OMP2INFO: scopeio reads the vendor stitch and all 25 tiles; the reference
+  readers build their own mosaic instead (see Format notes).
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -219,7 +222,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Olympus FluoView FV1000** | `.oib, .oif` | ✅ |
 | **Olympus FluoView TIFF** | `.tif` | ✅ |
 | **Olympus OIR** | `.oir` | ✅ |
-| **Olympus OMP2INFO** | `.omp2info` |  |
+| **Olympus OMP2INFO** | `.omp2info` | ✅ |
 | **Olympus ScanR** | `.xml, .dat, .tif` | ✅ |
 | **Olympus SIS TIFF** | `.tiff` | ✅ |
 | **Olympus/Evident VSI** | `.vsi, .ets` | ✅ |
@@ -277,6 +280,26 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Zeiss CZI** | `.czi` | ✅ |
 | **Zeiss LSM 510/710** | `.lsm` | ✅ |
 | **Zeiss XRM** | `.txm, .txrm` |  |
+
+### Format notes
+
+**Olympus OMP2INFO (multi-area / tiling acquisitions).** An `.omp2info` file
+lists the tile OIR files of a FLUOVIEW tiling acquisition and their grid
+indices. Olympus stitches the tiles by image matching (phase correlation)
+when the acquisition is saved; the matched tile positions are stored
+nowhere, only the result `Stitch_<area>_<group>.oir`. scopeio therefore
+returns:
+
+- **series 0: the vendor stitch** `Stitch_<area>_<group>.oir`, if it is in
+  the folder: exactly the mosaic Olympus produced;
+- **then one series per tile**, in the order of the `.omp2info` file, named
+  `tile x<i> y<j> (<file>)`, with the tile's nominal stage position (grid
+  origin plus index times tile size less the overlap) as `stage_position`.
+
+scopeio does not stitch tiles itself. Bio-Formats returns a single mosaic on
+a grid of its own (466 × 462 px pitch for the public sample, 3308 × 2360
+px), which matches neither the nominal grid (461 px) nor the vendor stitch
+(3554 × 2540 px).
 
 ## License
 

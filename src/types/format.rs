@@ -68,6 +68,8 @@ pub enum FormatId {
     NikonTiff,
     /// Nikon NEF camera raw (uncompressed raw data).
     Nef,
+    /// Olympus/Evident multi-area acquisition (`.omp2info` and its OIR files).
+    Omp2info,
 }
 
 /// Identification of the reader that produced the data, for

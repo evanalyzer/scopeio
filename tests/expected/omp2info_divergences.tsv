@@ -1,0 +1,4 @@
+# Known differences for Olympus OMP2INFO.
+file	tool	series	tolerance	reason
+tests/reference/ome/Olympus-OIR/gh-4205/zenodo-13680725/matl.omp2info	bioformats	-		Bio-Formats stitches the tiles on its own grid (3308 x 2360, pitch depending on the declared tile count); scopeio's series 0 is the vendor stitch Stitch_A01_G001.oir (3554 x 2540) and the tiles follow as series 1-25 (tile 1 equals Bio-Formats' reading of its OIR, see tests/omp2info.rs)
+tests/reference/ome/Olympus-OIR/gh-4205/zenodo-13680725/matl.omp2info	bioformats-rs	-		bioformats-rs stitches like Bio-Formats and adds two empty channels (as for the single OIR files)

@@ -470,6 +470,21 @@ as black-box command-line tools to produce reference output
   demosaiced channels of Bio-Formats (black box) within 1 % on average.
 - Synthetic sample written by `tests/scripts/make_nef_samples.py`.
 
+## Olympus OMP2INFO (`src/formats/omp2info.rs`)
+
+- Own analysis of the public multi-area acquisition
+  `Olympus-OIR/gh-4205/zenodo-13680725` (OME sample server, CC BY 4.0):
+  `matl:properties` XML (stage overlap, `matl:areaInfo`, `matl:area` with
+  OIR file and grid indices, `matl:stitchPOCParam`), vendor stitch
+  `Stitch_A01_G001.oir`. The tile OIRs, the map OIR and HDF5 and the
+  stitched OIR hold no per-tile placement, so the matched positions of the
+  vendor stitch cannot be reconstructed; the vendor stitch is returned as
+  it is and the tiles with nominal positions.
+- Bio-Formats run as a black box: it builds one mosaic whose tile pitch
+  depends on the declared tile count (466 x 462 px here), not used.
+- Synthetic acquisition written by `tests/scripts/make_omp2info_samples.py`
+  (copies of the synthetic OIR).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
