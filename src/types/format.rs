@@ -60,6 +60,8 @@ pub enum FormatId {
     Sis,
     /// Olympus FluoView TIFF (FV300, FV500).
     FluoView,
+    /// NIfTI-1 / NIfTI-2 (`.nii`, `.nii.gz`, `.hdr` + `.img`).
+    Nifti,
 }
 
 /// Identification of the reader that produced the data, for

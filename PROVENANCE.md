@@ -409,6 +409,21 @@ as black-box command-line tools to produce reference output
   an integer-typed tag of more than 8 doubles. bioformats-rs ignores
   MM_Header (see `tests/expected/fluoview_divergences.tsv`).
 
+## NIfTI (`src/formats/nifti.rs`)
+
+- NIfTI-1 data format specification `nifti1.h` and the NIfTI-2 header
+  definition `nifti2.h` (NIfTI Data Format Working Group, public domain) in
+  `doc/nifti/`: header fields of both versions, data types, `xyzt_units`,
+  `vox_offset`, magic strings of single files and header/image pairs,
+  storage order (`dim[1]` fastest, `dim[7]` slowest).
+- Official NIfTI test data (public domain; OME sample server `NIfTI/NIH`):
+  pixels identical to Bio-Formats and bioformats-rs (black boxes) on all
+  twelve `.nii`, `.hdr` + `.img` and `.nii.gz` files; voxels returned as
+  stored (no row flip). Bio-Formats assumes micrometres when the header
+  gives no spatial unit, reads 5-D files channel-fastest, reports RGB24 as
+  int8 and does not read NIfTI-2 (see `tests/expected/nifti_divergences.tsv`).
+- Synthetic samples written by `tests/scripts/make_nifti_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

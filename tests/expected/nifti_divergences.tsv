@@ -1,0 +1,13 @@
+# Known differences for NIfTI.
+file	tool	series	tolerance	reason
+tests/reference/ome/NIfTI/NIH/minimal.nii	bioformats	-		xyzt_units 0 (unknown units): Bio-Formats assumes micrometres, scopeio reports no pixel size
+tests/reference/ome/NIfTI/NIH/minimal.hdr	bioformats	-		see minimal.nii
+tests/reference/ome/NIfTI/NIH/newsirp_final_XML.nii	bioformats	-		xyzt_units 16 gives only the time unit (ms): Bio-Formats assumes micrometres for space, scopeio reports no pixel size
+tests/data/nifti/le_u16_5d.nii	bioformats	-		nifti1.h stores dim[1] fastest and dim[7] slowest, so the fifth dimension (channels) is outermost; Bio-Formats reads the planes channel-fastest (same sizes, other plane order); spec-derived truth is the reference
+tests/data/nifti/le_u16_5d.nii	bioformats-rs	-		see above
+tests/data/nifti/rgb.nii	bioformats	-		datatype 128 (RGB24) holds unsigned bytes; Bio-Formats reports int8 (same bytes)
+tests/data/nifti/rgb.nii	bioformats-rs	-		see above
+tests/data/nifti/v2_f64.nii.gz	bioformats	-		NIfTI-2 header (540 bytes) not supported by Bio-Formats
+tests/data/nifti/v2_f64.nii.gz	bioformats-rs	-		NIfTI-2 header not supported by bioformats-rs
+tests/data/nifti/v2_pair.hdr	bioformats	-		NIfTI-2 header not supported by Bio-Formats
+tests/data/nifti/v2_pair.hdr	bioformats-rs	-		NIfTI-2 header not supported by bioformats-rs

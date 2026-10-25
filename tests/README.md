@@ -75,6 +75,7 @@ python3 -I tests/scripts/make_dv_samples.py       # DeltaVision
 python3 -I tests/scripts/make_mrc_samples.py      # MRC
 python3 -I tests/scripts/make_sis_samples.py      # Olympus SIS TIFF
 python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
+python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -167,6 +168,13 @@ python3 -I tests/scripts/oracle.py sis --repeat 3 tests/reference/figshare/19467
 python3 -I tests/scripts/oracle.py sis --append --repeat 1 tests/data/sis/palette.tif
 # Olympus FluoView TIFF: synthetic files only (no public sample found)
 python3 -I tests/scripts/oracle.py fluoview --repeat 3 tests/data/fluoview/zc.tif tests/data/fluoview/ct.tif
+# NIfTI: official NIfTI test data (public domain) and the synthetic files
+N=NIfTI/NIH; D=tests/reference/ome/$N; T=tests/data/nifti
+python3 -I tests/scripts/fetch_ome.py $N/avg152T1_LR_nifti.hdr $N/avg152T1_LR_nifti.img $N/avg152T1_LR_nifti.nii $N/avg152T1_LR_nifti.nii.gz \
+    $N/avg152T1_RL_nifti.hdr $N/avg152T1_RL_nifti.img $N/avg152T1_RL_nifti.nii $N/minimal.hdr $N/minimal.img $N/minimal.nii \
+    $N/zstat1.nii $N/zstat1.nii.gz $N/filtered_func_data.nii $N/filtered_func_data.nii.gz $N/newsirp_final_XML.nii
+python3 -I tests/scripts/oracle.py nifti --repeat 3 $D/*.nii $D/*.hdr $D/*.nii.gz
+python3 -I tests/scripts/oracle.py nifti --append --repeat 1 $T/le_u16_5d.nii $T/rgb.nii $T/v2_f64.nii.gz $T/v2_pair.hdr
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

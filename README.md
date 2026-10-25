@@ -72,6 +72,7 @@ compared, "n/a" means the reader cannot open the format.
 | MRC | 7 | 1 ms | 4.1 MiB | 897× / 30× | 2.8× / 3.0× | – |
 | Olympus SIS TIFF | 4 | 7 ms | 13 MiB | 460× / 17× | 4.0× / 2.2× | – |
 | Olympus FluoView TIFF | 2 | 1 ms | 4.3 MiB | 1377× / 26× | 3.5× / 2.3× | – |
+| NIfTI | 16 | 3 ms | 4.1 MiB | 471× / 40× | 4.1× / 3.8× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -200,7 +201,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Molecular Imaging** | `.stp` |  |
 | **MRC (Medical Research Council)** | `.mrc, .st, .ali, .map, .rec, .mrcs` | ✅ |
 | **NEF (Nikon Electronic Format)** | `.nef, .tif` |  |
-| **NIfTI** | `.img, .hdr, .nii, .nii.gz` |  |
+| **NIfTI** | `.img, .hdr, .nii, .nii.gz` | ✅ |
 | **Nikon Elements TIFF** | `.tiff` |  |
 | **Nikon EZ-C1 TIFF** | `.tiff` |  |
 | **Nikon NIS-Elements ND2** | `.nd2` | ✅ |

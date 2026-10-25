@@ -44,6 +44,8 @@ mod lsm;
 mod mrc;
 #[cfg(feature = "mrxs")]
 mod mrxs;
+#[cfg(feature = "nifti")]
+mod nifti;
 #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
 mod plain;
 #[cfg(feature = "qptiff")]
@@ -140,6 +142,8 @@ static SUPPORTED: &[FormatInfo] = &[
     dv::FORMAT,
     #[cfg(feature = "mrc")]
     mrc::FORMAT,
+    #[cfg(feature = "nifti")]
+    nifti::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -251,6 +255,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "nifti")]
+    if nifti::matches(path, &head) {
+        return Ok(Some(FormatId::Nifti));
+    }
     #[cfg(feature = "mrc")]
     if mrc::matches(path, &head) {
         return Ok(Some(FormatId::Mrc));
@@ -295,6 +303,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "nifti")]
+        Some(FormatId::Nifti) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]
         Some(FormatId::Mrc) => Ok(Arc::new(Reader(mrc::Mrc::open(path)?))),
         #[cfg(feature = "operetta")]
