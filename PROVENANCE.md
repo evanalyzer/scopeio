@@ -424,6 +424,24 @@ as black-box command-line tools to produce reference output
   int8 and does not read NIfTI-2 (see `tests/expected/nifti_divergences.tsv`).
 - Synthetic samples written by `tests/scripts/make_nifti_samples.py`.
 
+## Olympus scan^R (`src/formats/scanr.rs`)
+
+- Own analysis of the public scan^R plate of IDR study idr0009
+  (`ScanR/idr0009/0307-10--2007-05-30` on the OME sample server, CC BY
+  4.0, fetched by `tests/scripts/fetch_ome.py`): `experiment_descriptor.xml`
+  is LabVIEW XML (`LVData`, typed `Name`/`Val` elements in `Cluster` and
+  `Array`) with the channel configurations, plate name and well selection
+  table; plane files `--W<well>--P<position>--Z<z>--T<t>--<channel>.tif`
+  in `data/`.
+- Checked against Bio-Formats as a black box: the plate is the standard
+  layout for the number of wells in the selection table (384: 16 x 24, not
+  the descriptor's custom 32 x 12), wells numbered from 1 row by row (all
+  357 imaged wells), one series per imaged well and position; pixels
+  identical in all 357 series. On a synthetic plate Bio-Formats ignores the
+  T index and keeps 12 bits per sample (see
+  `tests/expected/scanr_divergences.tsv`).
+- Synthetic plate written by `tests/scripts/make_scanr_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

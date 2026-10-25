@@ -73,6 +73,7 @@ compared, "n/a" means the reader cannot open the format.
 | Olympus SIS TIFF | 4 | 7 ms | 13 MiB | 460× / 17× | 4.0× / 2.2× | – |
 | Olympus FluoView TIFF | 2 | 1 ms | 4.3 MiB | 1377× / 26× | 3.5× / 2.3× | – |
 | NIfTI | 16 | 3 ms | 4.1 MiB | 471× / 40× | 4.1× / 3.8× | – |
+| Olympus scan^R | 2 | 302 ms | 6.4 MiB | 154× / 35× | see below | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -89,6 +90,9 @@ compared, "n/a" means the reader cannot open the format.
   whole; per plane scopeio needs 8 ms, bioformats-rs 11 ms.
 - Olympus FluoView TIFF: no public sample was found; measured on the
   synthetic files only (checked against Bio-Formats).
+- scan^R: bioformats-rs converts only the first of the 357 series of the
+  idr0009 plate; per plane scopeio needs 0.6 ms, bioformats-rs 14 ms. The
+  plate was measured in one run per reader.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -211,7 +215,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Olympus FluoView TIFF** | `.tif` | ✅ |
 | **Olympus OIR** | `.oir` | ✅ |
 | **Olympus OMP2INFO** | `.omp2info` |  |
-| **Olympus ScanR** | `.xml, .dat, .tif` |  |
+| **Olympus ScanR** | `.xml, .dat, .tif` | ✅ |
 | **Olympus SIS TIFF** | `.tiff` | ✅ |
 | **Olympus/Evident VSI** | `.vsi, .ets` | ✅ |
 | **OME-TIFF** | `.ome.tiff, .ome.tif, .ome.tf2, .ome.tf8, .ome.btf` | ✅ |

@@ -62,6 +62,8 @@ pub enum FormatId {
     FluoView,
     /// NIfTI-1 / NIfTI-2 (`.nii`, `.nii.gz`, `.hdr` + `.img`).
     Nifti,
+    /// Olympus scan^R high-content screening experiment.
+    ScanR,
 }
 
 /// Identification of the reader that produced the data, for

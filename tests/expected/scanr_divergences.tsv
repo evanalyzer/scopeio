@@ -1,0 +1,4 @@
+# Known differences for Olympus scan^R.
+file	tool	series	tolerance	reason
+tests/data/scanr/plate/experiment_descriptor.xml	bioformats	-		Bio-Formats ignores the T index of the plane names (T 1), keeps only the low 12 bits of each sample (series 0 equals the 12-bit, T=0 data) and returns other planes for later series of this synthetic plate; the public idr0009 plate (12-bit camera, one time point) matches in all 357 series; spec-derived truth is the reference
+tests/data/scanr/plate/experiment_descriptor.xml	bioformats-rs	-		bioformats-rs ignores the T index and converts only the first series

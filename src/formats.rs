@@ -50,6 +50,8 @@ mod nifti;
 mod plain;
 #[cfg(feature = "qptiff")]
 mod qptiff;
+#[cfg(feature = "scanr")]
+mod scanr;
 #[cfg(feature = "scn")]
 mod scn;
 #[cfg(feature = "ndpi")]
@@ -144,6 +146,8 @@ static SUPPORTED: &[FormatInfo] = &[
     mrc::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
+    #[cfg(feature = "scanr")]
+    scanr::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -197,6 +201,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "stk")]
     if nd::matches(path, &head) {
         return Ok(Some(FormatId::Nd));
+    }
+    #[cfg(feature = "scanr")]
+    if scanr::matches(path, &head) {
+        return Ok(Some(FormatId::ScanR));
     }
     #[cfg(feature = "operetta")]
     if operetta::matches(path, &head) {
@@ -307,6 +315,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nifti) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]
         Some(FormatId::Mrc) => Ok(Arc::new(Reader(mrc::Mrc::open(path)?))),
+        #[cfg(feature = "scanr")]
+        Some(FormatId::ScanR) => Ok(Arc::new(Reader(scanr::ScanR::open(path)?))),
         #[cfg(feature = "operetta")]
         Some(FormatId::Operetta) => Ok(Arc::new(Reader(operetta::Operetta::open(path)?))),
         #[cfg(feature = "zvi")]

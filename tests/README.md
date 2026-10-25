@@ -76,6 +76,7 @@ python3 -I tests/scripts/make_mrc_samples.py      # MRC
 python3 -I tests/scripts/make_sis_samples.py      # Olympus SIS TIFF
 python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
 python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
+python3 -I tests/scripts/make_scanr_samples.py    # Olympus scan^R
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -175,6 +176,10 @@ python3 -I tests/scripts/fetch_ome.py $N/avg152T1_LR_nifti.hdr $N/avg152T1_LR_ni
     $N/zstat1.nii $N/zstat1.nii.gz $N/filtered_func_data.nii $N/filtered_func_data.nii.gz $N/newsirp_final_XML.nii
 python3 -I tests/scripts/oracle.py nifti --repeat 3 $D/*.nii $D/*.hdr $D/*.nii.gz
 python3 -I tests/scripts/oracle.py nifti --append --repeat 1 $T/le_u16_5d.nii $T/rgb.nii $T/v2_f64.nii.gz $T/v2_pair.hdr
+# Olympus scan^R: IDR idr0009 plate (CC BY 4.0, 2.9 GB) and the synthetic plate
+python3 -I tests/scripts/fetch_ome.py ScanR/idr0009/0307-10--2007-05-30/
+python3 -I tests/scripts/oracle.py scanr --repeat 1 tests/reference/ome/ScanR/idr0009/0307-10--2007-05-30/experiment_descriptor.xml
+python3 -I tests/scripts/oracle.py scanr --append --repeat 1 tests/data/scanr/plate/experiment_descriptor.xml
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
