@@ -114,6 +114,28 @@ fn imagej_dimensions_and_calibration() {
 }
 
 #[test]
+fn imagej_rgb_stacks_are_z_stacks() {
+    let colours = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [0, 255, 255], [255, 0, 255]];
+    for (name, z, t) in
+        [("imagej_rgb_stack.tif", 5, 1), ("imagej_rgb_hyperstack.tif", 3, 2), ("imagej_rgb_contiguous.tif", 5, 1)]
+    {
+        let r = scopeio::open(&sample(name)).unwrap();
+        let m = r.series_meta(0).unwrap();
+        assert_eq!((m.size_c, m.size_z, m.size_t, m.samples_per_pixel), (1, z, t, 3), "{name}");
+        // ImageJ order: slice fastest, then frame.
+        for ti in 0..t {
+            for zi in 0..z {
+                let px = common::read(r.as_ref(), 0, 0, Plane::new(0, zi, ti), Region::new(0, 0, 4, 3)).unwrap();
+                let want = colours[(zi + z * ti) as usize];
+                assert!(px.chunks(3).all(|p| p == want), "{name} z {zi} t {ti}");
+            }
+        }
+    }
+    let r = scopeio::open(&sample("imagej_rgb_stack.tif")).unwrap();
+    assert_eq!(r.series_meta(0).unwrap().physical_size.z_nm, Some(2000.0));
+}
+
+#[test]
 fn pyramid_levels() {
     for name in ["pyramid_subifd.tif", "pyramid_reduced.tif"] {
         let r = scopeio::open(&sample(name)).unwrap();

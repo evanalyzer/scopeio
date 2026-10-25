@@ -484,6 +484,38 @@ def main():
                            for y in range(6)])
     record("imagej_hyperstack.tif", 0, planes, c, z, t, "U16")
 
+    # ImageJ RGB stacks: the colour is the pixel's samples, channels=1. Every
+    # page is one uniform colour.
+    colours = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
+    for name, z, t, extra_desc in [
+        ("imagej_rgb_stack.tif", 5, 1, "unit=um\nspacing=2.0\n"),
+        ("imagej_rgb_hyperstack.tif", 3, 2, "frames=2\nhyperstack=true\n"),
+    ]:
+        wr = Writer()
+        chain, planes = [], []
+        desc = f"ImageJ=1.53t\nimages={z * t}\nslices={z}\n{extra_desc}"
+        for page in range(z * t):
+            extra = {270: (ASCII, desc)} if page == 0 else None
+            tags, expected = add_image(wr, 4, 3, 3, 8, "uint", page=page, photometric=2, extra=extra,
+                                       values=lambda x, y, c, p=page: colours[p][c])
+            chain.append(wr.ifd(tags))
+            planes.append(expected)
+        wr.save(name, chain)
+        record(name, 0, planes, 3, z, t, "U8")
+
+    # Large ImageJ files have one IFD; the other planes follow its data.
+    wr = Writer()
+    planes = []
+    for page in range(5):
+        tags, expected = add_image(wr, 4, 3, 3, 8, "uint", page=page, photometric=2,
+                                   extra={270: (ASCII, "ImageJ=1.53t\nimages=5\nslices=5\n")},
+                                   values=lambda x, y, c, p=page: colours[p][c])
+        planes.append(expected)
+        if page == 0:
+            first = tags
+    wr.save("imagej_rgb_contiguous.tif", [wr.ifd(first)])
+    record("imagej_rgb_contiguous.tif", 0, planes, 3, 5, 1, "U8")
+
     # One image stored four ways; readers must return identical buffers.
     for name, kw in [
         ("same_rgb16_le_chunky.tif", dict()),

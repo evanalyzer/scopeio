@@ -72,8 +72,10 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
     let (c, z, t) = (ij.channels, ij.slices, ij.frames);
     let total = c as usize * z as usize * t as usize;
     let gray = s.meta.samples_per_pixel == 1 && s.meta.size_c == 1;
+    // RGB stacks: one colour page per plane; ImageJ writes channels=1.
+    let colour = s.meta.samples_per_pixel > 1 && s.meta.size_c == 1 && c == 1;
     let pages = s.levels[0].len();
-    if gray && pages == 1 && total > 1 && ij.images as usize == total && s.levels.len() == 1 {
+    if (gray || colour) && pages == 1 && total > 1 && ij.images as usize == total && s.levels.len() == 1 {
         // Large ImageJ files: one IFD, the other planes follow contiguously.
         if let Some(Slot::Ready(first)) = &s.levels[0][0]
             && let Some(plane_bytes) = first.image.contiguous_size(tiff)? {
@@ -94,6 +96,10 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
         // is the plane index order of the series.
         s.planes = (0..total).map(|page| Some(PlaneRef { page, samples: super::image::Samples::One(0) })).collect();
         s.meta.channels = vec![s.meta.channels[0].clone(); c as usize];
+    } else if colour && s.levels[0].len() == total {
+        s.meta.size_z = z;
+        s.meta.size_t = t;
+        s.planes = (0..total).map(|page| Some(PlaneRef { page, samples: super::image::Samples::All })).collect();
     }
     let ifd = &tiff.ifds[0];
     if let Some(nm) = ij.unit.as_deref().and_then(unit_nm) {

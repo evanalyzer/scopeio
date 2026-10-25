@@ -38,6 +38,9 @@ palette8_green.tif	0	1	1	1	U8	1	c9f17259
 pyramid_subifd.tif	0	1	1	1	U8	3	633ec50a
 pyramid_reduced.tif	0	1	1	1	U8	3	633ec50a
 imagej_hyperstack.tif	0	2	3	2	U16	1	cd9812dd
+imagej_rgb_stack.tif	0	3	5	1	U8	1	4fe016a6
+imagej_rgb_hyperstack.tif	0	3	3	2	U8	1	7f80e411
+imagej_rgb_contiguous.tif	0	3	5	1	U8	1	4fe016a6
 same_rgb16_le_chunky.tif	0	3	1	1	U16	1	165f291f
 same_rgb16_be_planar.tif	0	3	1	1	U16	1	165f291f
 same_rgb16_le_tiles_deflate_pred.tif	0	3	1	1	U16	1	165f291f
