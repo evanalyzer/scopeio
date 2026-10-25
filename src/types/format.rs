@@ -47,6 +47,8 @@ pub enum FormatId {
     Lof,
     /// Leica XML experiment, collection or image file.
     Xlef,
+    /// PerkinElmer/Revvity Harmony export (Operetta, Opera Phenix).
+    Operetta,
     DeltaVision,
     /// MetaMorph stack (TIFF with UIC tags).
     Stk,

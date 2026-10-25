@@ -68,17 +68,21 @@ compared, "n/a" means the reader cannot open the format.
 | Leica LOF/XLEF | 65 | 49 ms | 6.6 MiB | 122× / 50× | 2.5× / 14× | – |
 | MetaMorph STK/ND | 4 | 23 ms | 5.0 MiB | 228× / 66× | 4.1× / 15× | – |
 | DeltaVision | 7 | 2 ms | 4.2 MiB | 398× / 62× | 2.6× / 9.2× | – |
+| PerkinElmer Operetta | 7 | 66 ms | 19 MiB | 22× / 15× | 1.2× / 1.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
   the CPU and 2–7× the RAM.
 - The reference readers also write the pixels to disk (ICS output);
   scopeio only decodes.
-- bioformats-rs failed on 86 of the ops that scopeio read.
+- bioformats-rs failed on 87 of the ops that scopeio read.
 - Large plain images (24-megapixel RGB): PNG 0.31 s / 72 MiB (Bio-Formats
   1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.29 s / 145 MiB
   (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 4.9 s / 577 MiB
   (14.5 s / 716 MiB, 4.6 s / 401 MiB).
+- Operetta: bioformats-rs converts only the first series of the 29-series
+  omer export (108 of 3132 planes), so its factor is from the export it reads
+  whole; per plane scopeio needs 8 ms, bioformats-rs 11 ms.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -214,7 +218,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Perkin Elmer Densitometer** | `.pds` |  |
 | **PerkinElmer Columbus** | — |  |
 | **PerkinElmer Nuance** | `.im3` |  |
-| **PerkinElmer Operetta** | `.tiff, .xml` |  |
+| **PerkinElmer Operetta** | `.tiff, .xml` | ✅ |
 | **PerkinElmer UltraVIEW** | — |  |
 | **PerkinElmer Vectra/QPTIFF** | `.tif, .tiff, .qptiff` | ✅ |
 | **Photoshop TIFF** | `.tif, .tiff` |  |

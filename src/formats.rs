@@ -22,6 +22,8 @@ mod oif;
 mod nd;
 #[cfg(feature = "oir")]
 mod oir;
+#[cfg(feature = "operetta")]
+mod operetta;
 #[cfg(feature = "zvi")]
 mod zvi;
 #[cfg(feature = "czi")]
@@ -126,6 +128,8 @@ static SUPPORTED: &[FormatInfo] = &[
     dicom::FORMAT,
     #[cfg(feature = "zvi")]
     zvi::FORMAT,
+    #[cfg(feature = "operetta")]
+    operetta::FORMAT,
     #[cfg(feature = "dv")]
     dv::FORMAT,
     #[cfg(feature = "png")]
@@ -181,6 +185,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "stk")]
     if nd::matches(path, &head) {
         return Ok(Some(FormatId::Nd));
+    }
+    #[cfg(feature = "operetta")]
+    if operetta::matches(path, &head) {
+        return Ok(Some(FormatId::Operetta));
     }
     #[cfg(feature = "zvi")]
     if zvi::matches(path, &head) {
@@ -275,6 +283,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "operetta")]
+        Some(FormatId::Operetta) => Ok(Arc::new(Reader(operetta::Operetta::open(path)?))),
         #[cfg(feature = "zvi")]
         Some(FormatId::Zvi) => Ok(Arc::new(Reader(zvi::Zvi::open(path)?))),
         #[cfg(feature = "dicom")]

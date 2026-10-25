@@ -28,7 +28,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let checksum = !args.iter().any(|a| a == "--no-checksum");
     args.retain(|a| a != "--no-checksum");
-    // `--dump <file>` writes the raw pixels of all planes of series 0.
+    // `--dump <file>` writes the raw pixels of all planes of series 0 (or the
+    // one `--series` names).
     let dump = args.iter().position(|a| a == "--dump").map(|i| {
         let path = args.get(i + 1).cloned().unwrap_or_default();
         args.drain(i..(i + 2).min(args.len()));
@@ -85,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if checksum {
                         crc.update(buf.as_bytes());
                     }
-                    if dump.is_some() && series == 0 {
+                    if dump.is_some() && series == only_series.unwrap_or(0) {
                         dumped.extend_from_slice(buf.as_bytes());
                     }
                 }

@@ -50,8 +50,34 @@ pub struct Series {
 }
 
 /// Decodes every series of a file at full resolution.
+#[allow(dead_code)]
 pub fn decode(reader: &dyn ImageReader) -> scopeio::Result<Vec<Series>> {
     (0..reader.series_count()).map(|s| decode_level(reader, s, 0)).collect()
+}
+
+/// An opened file whose series are decoded on demand; only the last one is
+/// kept, so large multi-series files fit in memory.
+struct Lazy {
+    reader: std::sync::Arc<dyn ImageReader>,
+    last: Option<(usize, std::rc::Rc<Series>)>,
+}
+
+impl Lazy {
+    fn len(&self) -> usize {
+        self.reader.series_count()
+    }
+
+    fn get(&mut self, series: usize) -> scopeio::Result<std::rc::Rc<Series>> {
+        if let Some((i, s)) = &self.last
+            && *i == series
+        {
+            return Ok(s.clone());
+        }
+        self.last = None;
+        let s = std::rc::Rc::new(decode_level(self.reader.as_ref(), series, 0)?);
+        self.last = Some((series, s.clone()));
+        Ok(s)
+    }
 }
 
 /// All samples of all channels, alpha included, interleaved per pixel.
@@ -326,7 +352,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         .collect();
 
     let mut failures = Vec::new();
-    let mut decoded: HashMap<String, Result<Vec<Series>, String>> = HashMap::new();
+    let mut decoded: HashMap<String, Result<Lazy, String>> = HashMap::new();
     let mut skipped = 0;
     for r in &rows {
         let path = root().join(&r["file"]);
@@ -349,9 +375,14 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                 continue;
             }
         } else {
-            // Decode whole files only when a row needs them.
+            // Open files only when a row needs them; a file scopeio cannot
+            // read fails to open or to decode its first series.
             let ours = decoded.entry(r["file"].clone()).or_insert_with(|| {
-                scopeio::open(&path).and_then(|reader| decode(reader.as_ref())).map_err(|e| e.to_string())
+                let mut lazy = scopeio::open(&path).map(|reader| Lazy { reader, last: None }).map_err(|e| e.to_string())?;
+                if lazy.len() > 0 {
+                    lazy.get(0).map_err(|e| e.to_string())?;
+                }
+                Ok(lazy)
             });
             match (ours, unsupported) {
                 (Ok(_), true) => {
@@ -442,19 +473,24 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             }
             continue;
         }
-        let ours = match &decoded[&r["file"]] {
-            Ok(series) => series,
-            Err(_) => continue,
+        let ours = match decoded.get_mut(&r["file"]) {
+            Some(Ok(lazy)) => lazy,
+            _ => continue,
         };
         let total = rows.iter().filter(|o| o["file"] == r["file"] && o["tool"] == r["tool"] && o.get("crop").is_none_or(|c| c == "-")).count();
         let flat = flattened_level(&path, total, series);
-        let diffs = match flat.map(|(s, f)| compare_level(s, r, tolerance, f)).or_else(|| ours.get(series).map(|s| compare(s, r, tolerance))) {
+        let count = ours.len();
+        let own = |ours: &mut Lazy| match ours.get(series) {
+            Ok(s) => compare(&s, r, tolerance),
+            Err(e) => vec![format!("series {series}: {e}")],
+        };
+        let diffs = match flat.map(|(s, f)| compare_level(s, r, tolerance, f)).or_else(|| (series < count).then(|| own(ours))) {
             Some(d) => d,
             // Bio-Formats returns pyramid levels as extra series by default;
             // compare them with the levels of the last series instead.
-            None => match level_of_last_series(&path, ours.len(), series) {
+            None => match level_of_last_series(&path, count, series) {
                 Some(s) => compare(&s, r, tolerance),
-                None => vec![format!("series {series} missing, ours has {}", ours.len())],
+                None => vec![format!("series {series} missing, ours has {count}")],
             },
         };
         match (diffs.is_empty(), listed) {

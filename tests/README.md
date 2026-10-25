@@ -72,6 +72,7 @@ python3 -I tests/scripts/make_zvi_samples.py      # Zeiss ZVI (shares cfbwriter.
 python3 -I tests/scripts/make_xlef_samples.py     # Leica LOF and XLEF/XLCF/XLIF
 python3 -I tests/scripts/make_stk_samples.py      # MetaMorph STK
 python3 -I tests/scripts/make_dv_samples.py       # DeltaVision
+python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -144,6 +145,15 @@ python3 -I tests/scripts/fetch_ome.py DV/siRNAi-HeLa/IN_02.r3d DV/siRNAi-HeLa/IN
     DV/siRNAi-HeLa/VRAQ_01.r3d DV/siRNAi-HeLa/CSFV_10.r3d_D3D_PRJ.dv
 python3 -I tests/scripts/oracle.py dv --repeat 3 $D/IN_02.r3d $D/IN_02.r3d_D3D.dv $D/IN_02.r3d_D3D_PRJ.dv $D/VRAQ_01.r3d $D/CSFV_10.r3d_D3D_PRJ.dv
 python3 -I tests/scripts/oracle.py dv --append --repeat 1 tests/data/dv/wzt_be.r3d tests/data/dv/ztw_le.dv
+# PerkinElmer Operetta (Harmony exports): OME samples zenodo-7841360 and omer (CC BY 4.0) and 59548 (no
+# licence stated: downloaded only). 59548 keeps its planes gzipped in <guid>/; unpack them next to the .gz files.
+H=tests/reference/ome/PerkinElmer-Operetta
+python3 -I tests/scripts/fetch_ome.py PerkinElmer-Operetta/zenodo-7841360/ PerkinElmer-Operetta/59548/ PerkinElmer-Operetta/omer/
+for g in $H/59548/*/*.tiff.gz; do [ -e "${g%.gz}" ] || gzip -dkc "$g" > "${g%.gz}"; done
+python3 -I tests/scripts/oracle.py operetta --per-series --repeat 3 "$H/zenodo-7841360/Hoechst__2023-03-07T10_17_54-Measurement 2/Images/Index.idx.xml"
+python3 -I tests/scripts/oracle.py operetta --repeat 1 --append $H/59548/59548__*/Images/Index.ref.xml
+# omer: --per-series, bfconvert returns wrong pixels for later series when converting all at once
+python3 -I tests/scripts/oracle.py operetta --per-series --repeat 1 --append "$H/omer/006P_M3/006P__2017-08-19T12_42_59-Measurement 3/Images/Index.idx.xml"
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

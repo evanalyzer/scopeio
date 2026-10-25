@@ -1,0 +1,3 @@
+# Known differences for Harmony exports.
+file	tool	series	tolerance	reason
+tests/reference/ome/PerkinElmer-Operetta/59548/59548__2013-04-03T09_16_35-Measurement1/Images/Index.ref.xml	bioformats	-		Bio-Formats does not find the plane files (kept in the <guid>/ folder their URLs name, or next to the index): int8 zeros; scopeio reads them (checked against bioformats-rs)

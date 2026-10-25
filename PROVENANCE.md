@@ -351,6 +351,19 @@ as black-box command-line tools to produce reference output
   Bio-Formats and bioformats-rs (black boxes) on all five files.
 - Synthetic samples written by `tests/scripts/make_dv_samples.py`.
 
+## PerkinElmer Operetta / Opera Phenix (`src/formats/operetta.rs`)
+
+- Own analysis of the public Harmony exports on the OME sample server
+  (`PerkinElmer-Operetta/zenodo-7841360` and `omer`, CC BY 4.0; `59548`,
+  whose folder states no licence, is only downloaded, never committed):
+  `Index.idx.xml` / `Index.ref.xml` elements, plane files located next to
+  the index or in the `<guid>/` folder their URL names. Pixels identical
+  to Bio-Formats (black box, one series per run) on zenodo-7841360 and all
+  29 omer series, and to bioformats-rs where it reads them. On 59548 neither
+  reads the planes (Bio-Formats returns zeros, bioformats-rs rejects the
+  index); scopeio's planes there equal the plane files they name.
+- Synthetic export written by `tests/scripts/make_operetta_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
