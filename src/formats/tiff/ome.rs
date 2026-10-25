@@ -394,7 +394,7 @@ fn image_series(
         plane_meta[c + size_c as usize * (z + sz as usize * t)] =
             PlaneMeta { delta_t_s: time("DeltaT"), exposure_s: time("ExposureTime"), position: position(p) };
     }
-    Ok(Series { meta, levels, planes, plane_meta, first_ifd: (first_file, first_ifd) })
+    Ok(Series { meta, levels, planes, plane_meta, first_ifd: (first_file, first_ifd), original: Vec::new() })
 }
 
 /// Index of plane (z, c, t) in the order given by `DimensionOrder`.

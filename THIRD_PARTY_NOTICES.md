@@ -124,7 +124,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## tifffile (consulted as documentation for the MetaMorph STK reader)
+## tifffile (consulted as documentation for the MetaMorph STK, Olympus SIS and FluoView TIFF readers)
 
 ```text
 BSD-3-Clause license

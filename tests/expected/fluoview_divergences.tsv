@@ -1,0 +1,4 @@
+# Known differences for Olympus FluoView TIFF.
+file	tool	series	tolerance	reason
+tests/data/fluoview/zc.tif	bioformats-rs	-		bioformats-rs ignores MM_Header and returns the six pages as time points; Bio-Formats and the spec-derived truth agree (Z 3, C 2)
+tests/data/fluoview/ct.tif	bioformats-rs	-		see zc.tif (C 2, T 3 per MM_Header)

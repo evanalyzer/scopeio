@@ -70,6 +70,8 @@ compared, "n/a" means the reader cannot open the format.
 | DeltaVision | 7 | 2 ms | 4.2 MiB | 398× / 62× | 2.6× / 9.2× | – |
 | PerkinElmer Operetta | 7 | 66 ms | 19 MiB | 22× / 15× | 1.2× / 1.3× | – |
 | MRC | 7 | 1 ms | 4.1 MiB | 897× / 30× | 2.8× / 3.0× | – |
+| Olympus SIS TIFF | 4 | 7 ms | 13 MiB | 460× / 17× | 4.0× / 2.2× | – |
+| Olympus FluoView TIFF | 2 | 1 ms | 4.3 MiB | 1377× / 26× | 3.5× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -84,6 +86,8 @@ compared, "n/a" means the reader cannot open the format.
 - Operetta: bioformats-rs converts only the first series of the 29-series
   omer export (108 of 3132 planes), so its factor is from the export it reads
   whole; per plane scopeio needs 8 ms, bioformats-rs 11 ms.
+- Olympus FluoView TIFF: no public sample was found; measured on the
+  synthetic files only (checked against Bio-Formats).
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -203,11 +207,11 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **NRRD (Nearly Raw Raster Data)** | `.nrrd, .nhdr, .raw, .txt` |  |
 | **Olympus CellR/APL** | `.apl, .mtb, .tnb, .tif, .obsep` |  |
 | **Olympus FluoView FV1000** | `.oib, .oif` | ✅ |
-| **Olympus FluoView TIFF** | `.tif` |  |
+| **Olympus FluoView TIFF** | `.tif` | ✅ |
 | **Olympus OIR** | `.oir` | ✅ |
 | **Olympus OMP2INFO** | `.omp2info` |  |
 | **Olympus ScanR** | `.xml, .dat, .tif` |  |
-| **Olympus SIS TIFF** | `.tiff` |  |
+| **Olympus SIS TIFF** | `.tiff` | ✅ |
 | **Olympus/Evident VSI** | `.vsi, .ets` | ✅ |
 | **OME-TIFF** | `.ome.tiff, .ome.tif, .ome.tf2, .ome.tf8, .ome.btf` | ✅ |
 | **OME-XML** | `.ome, .ome.xml` |  |

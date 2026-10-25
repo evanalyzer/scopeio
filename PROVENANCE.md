@@ -381,6 +381,34 @@ as black-box command-line tools to produce reference output
   `tests/expected/mrc_divergences.tsv`).
 - Synthetic samples written by `tests/scripts/make_mrc_samples.py`.
 
+## Olympus SIS TIFF (`src/formats/tiff/sis.rs`)
+
+- tifffile (BSD-3-Clause, Christoph Gohlke; notice in
+  THIRD_PARTY_NOTICES.md) read as documentation of the OlympusSIS tag
+  (33560) and its `SIS0` record: acquisition time, name, sub-record 1 with
+  pixel size (times 10^exponent metres), magnification, camera, picture
+  type.
+- Own analysis of public analySIS 5.0 TEM images (Figshare 19467233,
+  19467287, 19640952; CC BY 4.0, fetched by `tests/scripts/fetch_figshare.py`):
+  gray images stored as palette images whose map is a gray ramp with
+  overlay colours (entries 1-6, 249-254); the indices are intensities.
+  Pixels and pixel sizes identical to Bio-Formats (black box), pixels to
+  bioformats-rs.
+- Synthetic sample written by `tests/scripts/make_sis_samples.py`.
+
+## Olympus FluoView TIFF (`src/formats/tiff/fluoview.rs`)
+
+- tifffile (BSD-3-Clause, Christoph Gohlke; notice in
+  THIRD_PARTY_NOTICES.md) read as documentation of MM_Header (tag 34361):
+  record layout, ten dimensions (name, size, origin, resolution, unit)
+  and their names (`Z`, `T`/`Time`, `Ch`/`Wavelength`).
+- No public FluoView TIFF was found. Synthetic files written by
+  `tests/scripts/make_fluoview_samples.py` were read by Bio-Formats as a
+  black box: it lists the dimensions after X and Y fastest first (same
+  planes, sizes and pixel sizes as scopeio). It needs MM_Stamp (34362) as
+  an integer-typed tag of more than 8 doubles. bioformats-rs ignores
+  MM_Header (see `tests/expected/fluoview_divergences.tsv`).
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

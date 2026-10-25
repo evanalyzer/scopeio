@@ -27,6 +27,10 @@
 pub(super) mod ifd;
 pub(super) mod image;
 mod imagej;
+#[cfg(feature = "fluoview")]
+mod fluoview;
+#[cfg(feature = "sis")]
+mod sis;
 #[cfg(feature = "stk")]
 mod stk;
 mod ome;
@@ -46,7 +50,12 @@ use crate::{
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Tiff, "TIFF", "1");
 pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1");
+#[cfg(feature = "stk")]
 pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1");
+#[cfg(feature = "sis")]
+pub(super) static SIS_FORMAT: FormatInfo = FormatInfo::new(FormatId::Sis, "Olympus SIS TIFF", "1");
+#[cfg(feature = "fluoview")]
+pub(super) static FLUOVIEW_FORMAT: FormatInfo = FormatInfo::new(FormatId::FluoView, "Olympus FluoView TIFF", "1");
 
 /// Detects TIFF, OME-TIFF and OME-XML companion files.
 pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
@@ -90,6 +99,14 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     if super::svs::matches(&description) {
         return Ok(Some(FormatId::Svs));
     }
+    #[cfg(feature = "fluoview")]
+    if first.ifds[0].has(fluoview::MM_HEADER) {
+        return Ok(Some(FormatId::FluoView));
+    }
+    #[cfg(feature = "sis")]
+    if sis::matches(&first.ifds[0]) {
+        return Ok(Some(FormatId::Sis));
+    }
     Ok(Some(if description.contains("<OME") { FormatId::OmeTiff } else { FormatId::Tiff }))
 }
 
@@ -104,8 +121,8 @@ pub(super) struct Tiff {
     ome: Option<ome::Source>,
     /// Why OME metadata was ignored, if it was.
     ome_error: Option<String>,
-    /// A MetaMorph STK stack.
-    stk: bool,
+    /// TIFF flavour (MetaMorph STK, Olympus SIS or FluoView), if any.
+    flavour: Option<&'static FormatInfo>,
 }
 
 /// Image of one plane at one level: file index and image.
@@ -181,6 +198,8 @@ struct Series {
     plane_meta: Vec<PlaneMeta>,
     /// File and main-chain IFD whose tags describe the series.
     first_ifd: (usize, usize),
+    /// Flavour-specific original metadata.
+    original: Vec<(String, String)>,
 }
 
 impl Tiff {
@@ -212,22 +231,43 @@ impl Tiff {
     }
 
     fn open_plain(tiff: TiffFile, description: &str, ome_error: Option<String>) -> Result<Self> {
-        let mut series = plain_series(&tiff, 0)?;
-        let mut stk = false;
+        #[cfg(feature = "sis")]
+        let is_sis = sis::matches(&tiff.ifds[0]);
+        #[cfg(not(feature = "sis"))]
+        let is_sis = false;
+        // analySIS palettes are gray ramps with overlay colours: indices.
+        let mut series = plain_series(&tiff, 0, is_sis)?;
+        #[cfg_attr(not(any(feature = "stk", feature = "fluoview", feature = "sis")), allow(unused_mut))]
+        let mut flavour = None;
         #[cfg(feature = "stk")]
         if let [s] = series.as_mut_slice() {
-            stk = stk::apply(s, &tiff)?;
+            if stk::apply(s, &tiff)? {
+                flavour = Some(&STK_FORMAT);
+            }
             if let Some((x, y)) = stk::metaseries_calibration(description) {
                 s.meta.physical_size.x_nm = Some(x);
                 s.meta.physical_size.y_nm = Some(y);
             }
         }
-        if let Some(ij) = imagej::parse(description).filter(|_| !stk)
+        #[cfg(feature = "fluoview")]
+        if let [s] = series.as_mut_slice()
+            && flavour.is_none()
+            && fluoview::apply(s, &tiff)? {
+                flavour = Some(&FLUOVIEW_FORMAT);
+            }
+        #[cfg(feature = "sis")]
+        if is_sis && flavour.is_none() {
+            for s in &mut series {
+                sis::apply(s, &tiff)?;
+            }
+            flavour = Some(&SIS_FORMAT);
+        }
+        if let Some(ij) = imagej::parse(description).filter(|_| flavour.is_none())
             && let [s] = series.as_mut_slice() {
                 imagej::apply(&ij, s, &tiff)?;
             }
         let mut t = Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error);
-        t.stk = stk;
+        t.flavour = flavour;
         Ok(t)
     }
 
@@ -239,19 +279,13 @@ impl Tiff {
         ome_error: Option<String>,
     ) -> Self {
         let metas = series.iter_mut().map(|s| std::mem::take(&mut s.meta)).collect();
-        Self { files, series, metas, plates, ome, ome_error, stk: false }
+        Self { files, series, metas, plates, ome, ome_error, flavour: None }
     }
 }
 
 impl Backend for Tiff {
     fn format(&self) -> &'static FormatInfo {
-        if self.ome.is_some() {
-            &OME_FORMAT
-        } else if self.stk {
-            &STK_FORMAT
-        } else {
-            &FORMAT
-        }
+        if self.ome.is_some() { &OME_FORMAT } else { self.flavour.unwrap_or(&FORMAT) }
     }
 
     fn series(&self) -> &[SeriesMeta] {
@@ -280,6 +314,7 @@ impl Backend for Tiff {
                     meta.documents.push(("ImageDescription".into(), description));
                 }
             }
+        meta.pairs.extend(self.series[series].original.iter().cloned());
         if let Some(e) = &self.ome_error {
             meta.pairs.push(("OME-XML error".into(), e.clone()));
         }
@@ -311,13 +346,18 @@ fn plane_index(meta: &SeriesMeta, p: Plane) -> usize {
     p.c as usize + meta.size_c as usize * (p.z as usize + meta.size_z as usize * p.t as usize)
 }
 
+/// Photometric interpretations read as gray (min-is-black) instead.
+const PALETTE: u64 = 3;
+const MIN_IS_BLACK: u16 = 1;
+
 /// Bit 0 of NewSubfileType: reduced-resolution version of another image.
 const REDUCED: u64 = 1;
 /// Bit 2 of NewSubfileType: transparency mask.
 const MASK: u64 = 4;
 
-/// Builds series from the main IFD chain of a plain TIFF file.
-fn plain_series(tiff: &TiffFile, file: usize) -> Result<Vec<Series>> {
+/// Builds series from the main IFD chain of a plain TIFF file;
+/// `palette_as_gray` returns the indices of palette images as intensities.
+fn plain_series(tiff: &TiffFile, file: usize, palette_as_gray: bool) -> Result<Vec<Series>> {
     // Pages with their main-chain IFD index.
     let mut groups: Vec<(Vec<TiffImage>, Vec<usize>)> = Vec::new();
     // Reduced-resolution IFDs following a single-page group, as levels.
@@ -328,7 +368,8 @@ fn plain_series(tiff: &TiffFile, file: usize) -> Result<Vec<Series>> {
         if subfile & MASK != 0 {
             continue;
         }
-        let image = match TiffImage::new(tiff, ifd) {
+        let gray = (palette_as_gray && tiff.uint(ifd, tag::PHOTOMETRIC)? == Some(PALETTE)).then_some(MIN_IS_BLACK);
+        let image = match TiffImage::with_photometric(tiff, ifd, gray) {
             Ok(i) => i,
             Err(e) => {
                 first_error.get_or_insert(e);
@@ -442,7 +483,7 @@ fn make_series(tiff: &TiffFile, file: usize, ifd_index: usize, levels: Vec<Vec<T
         .into_iter()
         .map(|l| l.into_iter().map(|image| Some(Slot::ready(file, image))).collect())
         .collect();
-    Ok(Series { meta, levels, planes, plane_meta: Vec::new(), first_ifd: (file, ifd_index) })
+    Ok(Series { meta, levels, planes, plane_meta: Vec::new(), first_ifd: (file, ifd_index), original: Vec::new() })
 }
 
 /// Pixel size from XResolution, YResolution and ResolutionUnit.

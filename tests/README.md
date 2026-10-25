@@ -73,6 +73,8 @@ python3 -I tests/scripts/make_xlef_samples.py     # Leica LOF and XLEF/XLCF/XLIF
 python3 -I tests/scripts/make_stk_samples.py      # MetaMorph STK
 python3 -I tests/scripts/make_dv_samples.py       # DeltaVision
 python3 -I tests/scripts/make_mrc_samples.py      # MRC
+python3 -I tests/scripts/make_sis_samples.py      # Olympus SIS TIFF
+python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -159,6 +161,12 @@ python3 -I tests/scripts/oracle.py operetta --per-series --repeat 1 --append "$H
 python3 -I tests/scripts/fetch_ome.py MRC/EMDB/EMD-2225/EMD-2225.map
 python3 -I tests/scripts/oracle.py mrc --repeat 3 tests/reference/ome/MRC/EMDB/EMD-2225/EMD-2225.map
 python3 -I tests/scripts/oracle.py mrc --append --repeat 1 tests/data/mrc/*.mrc tests/data/mrc/*.mrcs tests/data/mrc/*.st
+# Olympus SIS TIFF: analySIS TEM images from Figshare (CC BY 4.0) and the synthetic file
+python3 -I tests/scripts/fetch_figshare.py --ext .tif 19467287 19640952 19467233
+python3 -I tests/scripts/oracle.py sis --repeat 3 tests/reference/figshare/19467233/*.TIF tests/reference/figshare/19467287/*.TIF tests/reference/figshare/19640952/*.TIF
+python3 -I tests/scripts/oracle.py sis --append --repeat 1 tests/data/sis/palette.tif
+# Olympus FluoView TIFF: synthetic files only (no public sample found)
+python3 -I tests/scripts/oracle.py fluoview --repeat 3 tests/data/fluoview/zc.tif tests/data/fluoview/ct.tif
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

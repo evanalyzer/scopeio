@@ -56,6 +56,10 @@ pub enum FormatId {
     Nd,
     /// MRC / CCP4 electron microscopy map or image stack.
     Mrc,
+    /// Olympus Soft Imaging Solutions TIFF (analySIS, cellSens, iTEM).
+    Sis,
+    /// Olympus FluoView TIFF (FV300, FV500).
+    FluoView,
 }
 
 /// Identification of the reader that produced the data, for
