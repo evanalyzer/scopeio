@@ -75,6 +75,7 @@ compared, "n/a" means the reader cannot open the format.
 | NIfTI | 16 | 3 ms | 4.1 MiB | 471× / 40× | 4.1× / 3.8× | – |
 | Olympus scan^R | 2 | 302 ms | 6.4 MiB | 154× / 35× | see below | – |
 | Nikon NIS-Elements TIFF | 5 | 5 ms | 12 MiB | 332× / 16× | 4.1× / 2.2× | – |
+| Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -94,6 +95,9 @@ compared, "n/a" means the reader cannot open the format.
 - scan^R: bioformats-rs converts only the first of the 357 series of the
   idr0009 plate; per plane scopeio needs 0.6 ms, bioformats-rs 14 ms. The
   plate was measured in one run per reader.
+- NEF: scopeio returns the raw sensor (CFA) values; Bio-Formats and
+  bioformats-rs demosaic to RGB. Nikon-compressed NEF (the camera default)
+  is not supported.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -205,7 +209,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **MNG (Multiple-image Network Graphics)** | `.mng` |  |
 | **Molecular Imaging** | `.stp` |  |
 | **MRC (Medical Research Council)** | `.mrc, .st, .ali, .map, .rec, .mrcs` | ✅ |
-| **NEF (Nikon Electronic Format)** | `.nef, .tif` |  |
+| **NEF (Nikon Electronic Format)** | `.nef, .tif` | ✅ uncompressed raw only |
 | **NIfTI** | `.img, .hdr, .nii, .nii.gz` | ✅ |
 | **Nikon Elements TIFF** | `.tiff` | ✅ |
 | **Nikon EZ-C1 TIFF** | `.tiff` |  |

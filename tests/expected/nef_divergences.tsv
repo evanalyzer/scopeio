@@ -1,0 +1,8 @@
+# Known differences for Nikon NEF.
+file	tool	series	tolerance	reason
+tests/reference/rawpixls/929.nef	bioformats	-		Bio-Formats demosaics the CFA to RGB; scopeio returns the raw sensor values as one channel (per-colour cell means agree with Bio-Formats' channels within 1 %)
+tests/reference/rawpixls/929.nef	bioformats-rs	-		bioformats-rs demosaics differently from Bio-Formats (other checksum); scopeio returns raw CFA values
+tests/reference/rawpixls/924.nef	scopeio	-		Nikon-compressed raw data (compression 34713) is not supported
+tests/reference/rawpixls/928.nef	scopeio	-		Nikon-compressed raw data (compression 34713) is not supported
+tests/data/nef/raw12.nef	bioformats	-		Bio-Formats demosaics the CFA to RGB; spec-derived raw truth is the reference
+tests/data/nef/raw12.nef	bioformats-rs	-		see above

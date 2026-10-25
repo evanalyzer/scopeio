@@ -78,6 +78,7 @@ python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
 python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
 python3 -I tests/scripts/make_scanr_samples.py    # Olympus scan^R
 python3 -I tests/scripts/make_nikon_tiff_samples.py # Nikon NIS-Elements TIFF
+python3 -I tests/scripts/make_nef_samples.py      # Nikon NEF
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -190,6 +191,10 @@ python3 -I tests/scripts/oracle.py nikon-tiff --repeat 3 tests/reference/zenodo-
     tests/reference/zenodo-7677827/single_plane_1-2000_2xy01c1.tif tests/reference/zenodo-8006449/D4_E1_M_ROI.tif \
     tests/reference/zenodo-8245566/C12_E3_ROI.tif
 python3 -I tests/scripts/oracle.py nikon-tiff --append --repeat 1 tests/data/nikon-tiff/gray.tif
+# Nikon NEF: D300 samples from raw.pixls.us (CC0) and the synthetic file
+python3 -I tests/scripts/fetch_rawpixls.py 929 924 928
+python3 -I tests/scripts/oracle.py nef --repeat 3 tests/reference/rawpixls/929.nef tests/reference/rawpixls/924.nef tests/reference/rawpixls/928.nef
+python3 -I tests/scripts/oracle.py nef --append --repeat 1 tests/data/nef/raw12.nef
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

@@ -456,6 +456,20 @@ as black-box command-line tools to produce reference output
   which scopeio takes from the picture metadata.
 - Synthetic sample written by `tests/scripts/make_nikon_tiff_samples.py`.
 
+## Nikon NEF (`src/formats/tiff/nef.rs`)
+
+- TIFF 6.0 and TIFF/EP: CFA photometric (32803), CFARepeatPatternDim
+  (33421), CFAPattern (33422); tifffile (BSD-3-Clause) for the code of
+  Nikon's compression (34713), which is not implemented: every permissive
+  route was checked (rawloader, rawler, quickraw: LGPL-2.1; LibRaw: LGPL /
+  CDDL; dcraw: unclear licence) and none was used.
+- Own analysis of public Nikon D300 samples (raw.pixls.us, CC0, fetched by
+  `tests/scripts/fetch_rawpixls.py`): IFD0 thumbnail, SubIFDs with JPEG
+  preview and raw image, 12-bit samples packed MSB first. The raw values
+  are returned as one channel; per-colour 8 x 8 cell means agree with the
+  demosaiced channels of Bio-Formats (black box) within 1 % on average.
+- Synthetic sample written by `tests/scripts/make_nef_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

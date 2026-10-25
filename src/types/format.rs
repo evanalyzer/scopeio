@@ -66,6 +66,8 @@ pub enum FormatId {
     ScanR,
     /// Nikon NIS-Elements TIFF (NIS private tags 65325-65333).
     NikonTiff,
+    /// Nikon NEF camera raw (uncompressed raw data).
+    Nef,
 }
 
 /// Identification of the reader that produced the data, for

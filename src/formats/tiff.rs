@@ -29,6 +29,8 @@ pub(super) mod image;
 mod imagej;
 #[cfg(feature = "fluoview")]
 mod fluoview;
+#[cfg(feature = "nef")]
+mod nef;
 #[cfg(feature = "nikon-tiff")]
 mod nikon;
 #[cfg(feature = "sis")]
@@ -56,6 +58,8 @@ pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "O
 pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1");
 #[cfg(feature = "sis")]
 pub(super) static SIS_FORMAT: FormatInfo = FormatInfo::new(FormatId::Sis, "Olympus SIS TIFF", "1");
+#[cfg(feature = "nef")]
+pub(super) static NEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Nef, "Nikon NEF", "1");
 #[cfg(feature = "nikon-tiff")]
 pub(super) static NIKON_FORMAT: FormatInfo = FormatInfo::new(FormatId::NikonTiff, "Nikon NIS-Elements TIFF", "1");
 #[cfg(feature = "fluoview")]
@@ -102,6 +106,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     #[cfg(feature = "svs")]
     if super::svs::matches(&description) {
         return Ok(Some(FormatId::Svs));
+    }
+    #[cfg(feature = "nef")]
+    if nef::matches(&first) {
+        return Ok(Some(FormatId::Nef));
     }
     #[cfg(feature = "fluoview")]
     if first.ifds[0].has(fluoview::MM_HEADER) {
@@ -239,6 +247,13 @@ impl Tiff {
     }
 
     fn open_plain(tiff: TiffFile, description: &str, ome_error: Option<String>) -> Result<Self> {
+        #[cfg(feature = "nef")]
+        if nef::matches(&tiff) {
+            let series = nef::series(&tiff)?;
+            let mut t = Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error);
+            t.flavour = Some(&NEF_FORMAT);
+            return Ok(t);
+        }
         #[cfg(feature = "sis")]
         let is_sis = sis::matches(&tiff.ifds[0]);
         #[cfg(not(feature = "sis"))]
