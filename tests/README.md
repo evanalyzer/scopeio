@@ -77,6 +77,7 @@ python3 -I tests/scripts/make_sis_samples.py      # Olympus SIS TIFF
 python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
 python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
 python3 -I tests/scripts/make_scanr_samples.py    # Olympus scan^R
+python3 -I tests/scripts/make_nikon_tiff_samples.py # Nikon NIS-Elements TIFF
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
@@ -180,6 +181,15 @@ python3 -I tests/scripts/oracle.py nifti --append --repeat 1 $T/le_u16_5d.nii $T
 python3 -I tests/scripts/fetch_ome.py ScanR/idr0009/0307-10--2007-05-30/
 python3 -I tests/scripts/oracle.py scanr --repeat 1 tests/reference/ome/ScanR/idr0009/0307-10--2007-05-30/experiment_descriptor.xml
 python3 -I tests/scripts/oracle.py scanr --append --repeat 1 tests/data/scanr/plate/experiment_descriptor.xml
+# Nikon NIS-Elements TIFF: public exports from Zenodo (CC BY 4.0) and the synthetic file
+python3 -I tests/scripts/fetch_zenodo.py 7677868 h4k20me002xy13c2.tif
+python3 -I tests/scripts/fetch_zenodo.py 7677827 single_plane_1-2000_2xy01c1.tif
+python3 -I tests/scripts/fetch_zenodo.py 8006449 D4_E1_M_ROI.tif
+python3 -I tests/scripts/fetch_zenodo.py 8245566 C12_E3_ROI.tif
+python3 -I tests/scripts/oracle.py nikon-tiff --repeat 3 tests/reference/zenodo-7677868/h4k20me002xy13c2.tif \
+    tests/reference/zenodo-7677827/single_plane_1-2000_2xy01c1.tif tests/reference/zenodo-8006449/D4_E1_M_ROI.tif \
+    tests/reference/zenodo-8245566/C12_E3_ROI.tif
+python3 -I tests/scripts/oracle.py nikon-tiff --append --repeat 1 tests/data/nikon-tiff/gray.tif
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

@@ -94,6 +94,8 @@ static SUPPORTED: &[FormatInfo] = &[
     tiff::SIS_FORMAT,
     #[cfg(feature = "fluoview")]
     tiff::FLUOVIEW_FORMAT,
+    #[cfg(feature = "nikon-tiff")]
+    tiff::NIKON_FORMAT,
     #[cfg(feature = "stk")]
     nd::FORMAT,
     #[cfg(feature = "zarr")]
@@ -304,7 +306,7 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         #[cfg(feature = "bmp")]
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
-        Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk | FormatId::Sis | FormatId::FluoView) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk | FormatId::Sis | FormatId::FluoView | FormatId::NikonTiff) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
         #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
         Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
         #[cfg(feature = "stk")]

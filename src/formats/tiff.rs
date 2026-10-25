@@ -29,6 +29,8 @@ pub(super) mod image;
 mod imagej;
 #[cfg(feature = "fluoview")]
 mod fluoview;
+#[cfg(feature = "nikon-tiff")]
+mod nikon;
 #[cfg(feature = "sis")]
 mod sis;
 #[cfg(feature = "stk")]
@@ -54,6 +56,8 @@ pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "O
 pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1");
 #[cfg(feature = "sis")]
 pub(super) static SIS_FORMAT: FormatInfo = FormatInfo::new(FormatId::Sis, "Olympus SIS TIFF", "1");
+#[cfg(feature = "nikon-tiff")]
+pub(super) static NIKON_FORMAT: FormatInfo = FormatInfo::new(FormatId::NikonTiff, "Nikon NIS-Elements TIFF", "1");
 #[cfg(feature = "fluoview")]
 pub(super) static FLUOVIEW_FORMAT: FormatInfo = FormatInfo::new(FormatId::FluoView, "Olympus FluoView TIFF", "1");
 
@@ -107,6 +111,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     if sis::matches(&first.ifds[0]) {
         return Ok(Some(FormatId::Sis));
     }
+    #[cfg(feature = "nikon-tiff")]
+    if nikon::matches(&first.ifds[0]) {
+        return Ok(Some(FormatId::NikonTiff));
+    }
     Ok(Some(if description.contains("<OME") { FormatId::OmeTiff } else { FormatId::Tiff }))
 }
 
@@ -121,7 +129,7 @@ pub(super) struct Tiff {
     ome: Option<ome::Source>,
     /// Why OME metadata was ignored, if it was.
     ome_error: Option<String>,
-    /// TIFF flavour (MetaMorph STK, Olympus SIS or FluoView), if any.
+    /// TIFF flavour (MetaMorph STK, Olympus SIS or FluoView, NIS-Elements), if any.
     flavour: Option<&'static FormatInfo>,
 }
 
@@ -237,7 +245,7 @@ impl Tiff {
         let is_sis = false;
         // analySIS palettes are gray ramps with overlay colours: indices.
         let mut series = plain_series(&tiff, 0, is_sis)?;
-        #[cfg_attr(not(any(feature = "stk", feature = "fluoview", feature = "sis")), allow(unused_mut))]
+        #[cfg_attr(not(any(feature = "stk", feature = "fluoview", feature = "sis", feature = "nikon-tiff")), allow(unused_mut))]
         let mut flavour = None;
         #[cfg(feature = "stk")]
         if let [s] = series.as_mut_slice() {
@@ -261,6 +269,13 @@ impl Tiff {
                 sis::apply(s, &tiff)?;
             }
             flavour = Some(&SIS_FORMAT);
+        }
+        #[cfg(feature = "nikon-tiff")]
+        if flavour.is_none() && nikon::matches(&tiff.ifds[0]) {
+            for s in &mut series {
+                nikon::apply(s, &tiff)?;
+            }
+            flavour = Some(&NIKON_FORMAT);
         }
         if let Some(ij) = imagej::parse(description).filter(|_| flavour.is_none())
             && let [s] = series.as_mut_slice() {

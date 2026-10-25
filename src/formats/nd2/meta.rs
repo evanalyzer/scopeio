@@ -26,7 +26,7 @@ const MAX_INFLATED: usize = 256 << 20;
 
 /// A decoded metadata value.
 #[derive(Debug, Clone, PartialEq)]
-pub(super) enum Value {
+pub(in crate::formats) enum Value {
     Bool(bool),
     Int(i64),
     Float(f64),
@@ -103,7 +103,7 @@ impl Value {
 /// # Errors
 ///
 /// Returns [`Error::Corrupt`] for truncated or invalid data.
-pub(super) fn decode_lv(data: &[u8]) -> Result<Value> {
+pub(in crate::formats) fn decode_lv(data: &[u8]) -> Result<Value> {
     let mut items = Vec::new();
     let mut pos = 0;
     lv_items(data, &mut pos, usize::MAX, &mut items, 0)?;

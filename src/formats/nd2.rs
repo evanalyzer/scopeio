@@ -22,7 +22,7 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-mod meta;
+pub(super) mod meta;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -427,7 +427,7 @@ fn fit_loops(loops: &mut Vec<Loop>, frames: u64) {
 }
 
 /// ISO 8601 of a Julian day number (UTC); `None` outside 1900-2100.
-fn julian_to_iso(jdn: f64) -> Option<String> {
+pub(super) fn julian_to_iso(jdn: f64) -> Option<String> {
     let ms = ((jdn - 2_440_587.5) * 86_400_000.0).round();
     let secs = (ms / 1000.0).floor() as i64;
     if !(-2_208_988_800..=4_102_444_800).contains(&secs) {

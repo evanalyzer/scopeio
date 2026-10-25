@@ -442,6 +442,20 @@ as black-box command-line tools to produce reference output
   `tests/expected/scanr_divergences.tsv`).
 - Synthetic plate written by `tests/scripts/make_scanr_samples.py`.
 
+## Nikon NIS-Elements TIFF (`src/formats/tiff/nikon.rs`)
+
+- Own analysis of public NIS-Elements TIFF exports (Zenodo 7677868,
+  7677827, 8006449, 8245566; CC BY 4.0, fetched by
+  `tests/scripts/fetch_zenodo.py`): private tags 65325-65333; tag 65331 is
+  a directory of named entries whose `MetadataTiffV1_0` entry holds
+  `SLxPictureMetadata` in the ND2 lite-variant encoding (decoded by
+  `src/formats/nd2/meta.rs`, see the ND2 section).
+- Checked against Bio-Formats and bioformats-rs as black boxes: pixels
+  identical on all files; Bio-Formats identifies the files as Nikon
+  Elements TIFF but reports no pixel size, objective or stage position,
+  which scopeio takes from the picture metadata.
+- Synthetic sample written by `tests/scripts/make_nikon_tiff_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

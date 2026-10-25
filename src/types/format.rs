@@ -64,6 +64,8 @@ pub enum FormatId {
     Nifti,
     /// Olympus scan^R high-content screening experiment.
     ScanR,
+    /// Nikon NIS-Elements TIFF (NIS private tags 65325-65333).
+    NikonTiff,
 }
 
 /// Identification of the reader that produced the data, for
