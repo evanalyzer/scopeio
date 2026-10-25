@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Downloads an OME-Zarr store (NGFF 0.4/Zarr v2 or 0.5/Zarr v3) over HTTP.
 
 Walks the metadata, then fetches every existing chunk (or shard) of the

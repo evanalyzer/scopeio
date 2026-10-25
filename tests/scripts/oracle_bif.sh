@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Regenerates the Ventana BIF references (OpenSlide test data, CC0 and
 # distributable); OS-2 (iScan) needs fetch_openslide.py --large and is
 # compared with OpenSlide crops.

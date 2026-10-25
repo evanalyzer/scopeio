@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Downloads files of Figshare articles into tests/reference/figshare/<id>/.
 
 Only articles under a CC BY or CC0 licence are fetched (the licence is

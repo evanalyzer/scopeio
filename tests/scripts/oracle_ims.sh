@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Regenerates the Imaris IMS references (OME sample server, CC BY 4.0).
 #
 # Usage: REP=3 sh tests/scripts/oracle_ims.sh

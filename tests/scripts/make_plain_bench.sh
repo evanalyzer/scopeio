@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Writes larger PNG, JPEG and JPEG 2000 images for the plain-image benchmark
 # into tests/reference/plain/ (not committed) and records the reference
 # results. Needs ImageMagick (`magick`).

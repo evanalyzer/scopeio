@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Regenerates the MIRAX references: crops of several levels of each slide,
 # rendered by OpenSlide (black box) and read by scopeio.
 #

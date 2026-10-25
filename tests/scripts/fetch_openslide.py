@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Downloads selected OpenSlide test slides into tests/reference/openslide/.
 
 Files come from https://openslide.cs.cmu.edu/download/openslide-testdata/

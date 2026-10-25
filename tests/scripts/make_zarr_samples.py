@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Writes small synthetic OME-Zarr stores covering the variants of the format.
 
 Written from the OME-NGFF 0.4/0.5, Zarr v2 and Zarr v3 specifications in

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Writes a small synthetic Harmony export (Operetta / Opera Phenix).
 
 Layout from the public exports on the OME sample server: `Index.idx.xml`

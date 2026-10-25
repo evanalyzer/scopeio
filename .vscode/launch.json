@@ -4,12 +4,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'evanalyzer_gui'",
+            "name": "Debug example 'scopeio_info'",
             "cargo": {
-                "args": ["build", "--bin=evanalyzer_gui", "--package=evanalyzer_gui","--manifest-path=${workspaceFolder}/Cargo.toml"],
+                "args": ["build", "--example=scopeio_info", "--package=scopeio"],
                 "filter": {
-                    "name": "evanalyzer_gui",
-                    "kind": "bin"
+                    "name": "scopeio_info",
+                    "kind": "example"
                 }
             },
             "args": [],

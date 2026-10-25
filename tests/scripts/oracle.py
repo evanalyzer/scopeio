@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Generates reference results and resource measurements for one format.
 
 Runs Bio-Formats (bftools) and bioformats-rs strictly as separate processes,

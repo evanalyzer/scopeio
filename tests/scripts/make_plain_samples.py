@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Writes small synthetic PNG, JPEG and JPEG 2000 files.
 
 Pixel values are generated here and converted by ImageMagick (run as a

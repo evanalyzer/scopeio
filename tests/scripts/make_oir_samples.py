@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Writes a small synthetic Olympus OIR acquisition with a continuation file.
 
 Layout from the OpenReadout OIR notes (doc/olympus-oir/) and oirfile

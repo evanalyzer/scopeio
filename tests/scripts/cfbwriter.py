@@ -1,3 +1,6 @@
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
 """Minimal compound file (OLE2) writer for the synthetic samples.
 
 Follows Microsoft [MS-CFB] version 3: 512-byte sectors, streams below 4096

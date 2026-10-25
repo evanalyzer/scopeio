@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Writes TIFF samples with ImageMagick (libtiff) as an independent writer,
 # mainly for codecs not produced by make_tiff_samples.py (JPEG, Zstandard).
 # There is no spec-derived truth for these; tests compare them with the

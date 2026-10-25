@@ -1,4 +1,8 @@
 #!/bin/sh
+# Copyright 2026 Joachim Danmayr.
+# Licensed under the AGPL-3.0-only with the EVAnalyzer exception.
+# See LICENSE and LICENSE-EXCEPTION.
+#
 # Regenerates the Leica SCN references (OpenSlide test data, "distributable").
 # Bio-Formats lists the macro images as series before the main images.
 #
