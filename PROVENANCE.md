@@ -364,6 +364,23 @@ as black-box command-line tools to produce reference output
   index); scopeio's planes there equal the plane files they name.
 - Synthetic export written by `tests/scripts/make_operetta_samples.py`.
 
+## MRC / CCP4 (`src/formats/mrc.rs`)
+
+- MRC2014 specification (Cheng et al., "MRC2014: Extensions to the MRC
+  format header for electron cryo-microscopy and tomography", J. Struct.
+  Biol. 192 (2015)) and the CCP-EM MRC format page: header fields, pixel
+  modes 0-2, 6 and 12, machine stamp, `MAP ` marker, space group 401 for
+  volume stacks, extended header length `nsymbt`.
+- IMOD MRC header documentation (prose): IMOD stamp and signed-byte flag,
+  mode 101 (4-bit samples, low nibble first, rows padded to whole bytes).
+- Own analysis of the EMDB map EMD-2225 (OME sample server; EMDB data are
+  free of copyright restrictions): rows stored bottom-up. Pixels identical
+  to Bio-Formats and bioformats-rs (black boxes). Both read mode 12 and
+  mode 101 as bytes, mode 0 of MRC2014 files as unsigned and ignore volume
+  stacks (space group 401); scopeio follows the specification (see
+  `tests/expected/mrc_divergences.tsv`).
+- Synthetic samples written by `tests/scripts/make_mrc_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

@@ -1,0 +1,10 @@
+# Known differences for MRC.
+file	tool	series	tolerance	reason
+tests/data/mrc/f16.mrc	bioformats	-		mode 12 is a 16-bit float in MRC2014; Bio-Formats returns the bytes as int8 (twice the width); spec-derived truth is the reference
+tests/data/mrc/f16.mrc	bioformats-rs	-		see above
+tests/data/mrc/i8.mrc	bioformats	-		MRC2014 (version 20140) defines mode 0 as signed int8; Bio-Formats reports uint8 (same bytes)
+tests/data/mrc/i8.mrc	bioformats-rs	-		see above
+tests/data/mrc/nibble.mrc	bioformats	-		mode 101 (IMOD 4-bit samples) is returned as int8 bytes by Bio-Formats; scopeio unpacks the nibbles
+tests/data/mrc/nibble.mrc	bioformats-rs	-		bioformats-rs rejects mode 101 (payload shorter than declared)
+tests/data/mrc/u16_stack.mrcs	bioformats	-		space group 401 marks a stack of nz / mz volumes; Bio-Formats reports nz sections as Z (same planes, same order); scopeio reports Z = mz, T = nz / mz
+tests/data/mrc/u16_stack.mrcs	bioformats-rs	-		see above

@@ -40,6 +40,8 @@ mod lif;
 mod slide;
 #[cfg(feature = "lsm")]
 mod lsm;
+#[cfg(feature = "mrc")]
+mod mrc;
 #[cfg(feature = "mrxs")]
 mod mrxs;
 #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
@@ -132,6 +134,8 @@ static SUPPORTED: &[FormatInfo] = &[
     operetta::FORMAT,
     #[cfg(feature = "dv")]
     dv::FORMAT,
+    #[cfg(feature = "mrc")]
+    mrc::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -243,6 +247,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "mrc")]
+    if mrc::matches(path, &head) {
+        return Ok(Some(FormatId::Mrc));
+    }
     #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
     if let Some(id) = plain::probe(&head) {
         return Ok(Some(id));
@@ -283,6 +291,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "mrc")]
+        Some(FormatId::Mrc) => Ok(Arc::new(Reader(mrc::Mrc::open(path)?))),
         #[cfg(feature = "operetta")]
         Some(FormatId::Operetta) => Ok(Arc::new(Reader(operetta::Operetta::open(path)?))),
         #[cfg(feature = "zvi")]

@@ -69,6 +69,7 @@ compared, "n/a" means the reader cannot open the format.
 | MetaMorph STK/ND | 4 | 23 ms | 5.0 MiB | 228× / 66× | 4.1× / 15× | – |
 | DeltaVision | 7 | 2 ms | 4.2 MiB | 398× / 62× | 2.6× / 9.2× | – |
 | PerkinElmer Operetta | 7 | 66 ms | 19 MiB | 22× / 15× | 1.2× / 1.3× | – |
+| MRC | 7 | 1 ms | 4.1 MiB | 897× / 30× | 2.8× / 3.0× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -193,7 +194,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Minolta MRW** | — |  |
 | **MNG (Multiple-image Network Graphics)** | `.mng` |  |
 | **Molecular Imaging** | `.stp` |  |
-| **MRC (Medical Research Council)** | `.mrc, .st, .ali, .map, .rec, .mrcs` |  |
+| **MRC (Medical Research Council)** | `.mrc, .st, .ali, .map, .rec, .mrcs` | ✅ |
 | **NEF (Nikon Electronic Format)** | `.nef, .tif` |  |
 | **NIfTI** | `.img, .hdr, .nii, .nii.gz` |  |
 | **Nikon Elements TIFF** | `.tiff` |  |

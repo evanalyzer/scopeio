@@ -54,6 +54,8 @@ pub enum FormatId {
     Stk,
     /// MetaMorph multi-dimensional acquisition (`.nd` and its TIFF/STK files).
     Nd,
+    /// MRC / CCP4 electron microscopy map or image stack.
+    Mrc,
 }
 
 /// Identification of the reader that produced the data, for
