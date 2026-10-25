@@ -247,11 +247,39 @@ impl<'a> Sink<'a> {
     fn put_native(&mut self, y: usize, x: usize, src: &[u8]) {
         let n = self.src_type.bytes();
         let px = self.pixel_bytes();
-        for (i, pixel) in src.chunks_exact(px).enumerate() {
-            for (k, &s) in self.map.iter().enumerate() {
-                let at = self.index(y, x + i, k) * n;
-                let from = s as usize * n;
-                self.out[at..at + n].copy_from_slice(&pixel[from..from + n]);
+        let count = src.len() / px;
+        if count == 0 {
+            return;
+        }
+        match self.layout {
+            // Each output channel is a contiguous row of its plane.
+            Layout::Chw => {
+                for (k, &s) in self.map.iter().enumerate() {
+                    let start = self.index(y, x, k) * n;
+                    let from = s as usize * n;
+                    let dst = &mut self.out[start..start + count * n];
+                    if n == 1 {
+                        for (d, p) in dst.iter_mut().zip(src[from..].iter().step_by(px)) {
+                            *d = *p;
+                        }
+                    } else {
+                        for (d, p) in dst.chunks_exact_mut(n).zip(src.chunks_exact(px)) {
+                            d.copy_from_slice(&p[from..from + n]);
+                        }
+                    }
+                }
+            }
+            // Pixels at a fixed stride, the selected samples of each.
+            Layout::Hwc => {
+                let stride = self.out_channels * n;
+                let start = self.index(y, x, 0) * n;
+                let dst = &mut self.out[start..start + (count - 1) * stride + self.map.len() * n];
+                for (i, p) in src.chunks_exact(px).enumerate() {
+                    for (k, &s) in self.map.iter().enumerate() {
+                        let (at, from) = (i * stride + k * n, s as usize * n);
+                        dst[at..at + n].copy_from_slice(&p[from..from + n]);
+                    }
+                }
             }
         }
     }

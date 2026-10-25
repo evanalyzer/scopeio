@@ -60,3 +60,48 @@ fn shifted_normalization_maps_signed_range_to_unit() {
         assert!((0.0..=1.0).contains(v));
     }
 }
+
+use scopeio::{ChannelSelect, Layout, OutputSpec};
+
+/// Reads all of `file` with `channels` in `layout`; also returns the
+/// number of pixels.
+fn rgb_read(file: &str, channels: ChannelSelect, layout: Layout) -> (scopeio::Result<Vec<u8>>, usize) {
+    let r = scopeio::open(&root().join("tests/data").join(file)).unwrap();
+    let l = &r.series_meta(0).unwrap().levels[0];
+    let n = (l.size_x * l.size_y) as usize;
+    let mut req = RegionRequest::new(0, 0, Region::new(0, 0, l.size_x, l.size_y));
+    req.channels = channels;
+    req.output = OutputSpec { layout, ..Default::default() };
+    (r.read_region(&req).and_then(|b| b.into_vec()), n)
+}
+
+#[test]
+fn samples_select_planes_from_one_read() {
+    let (hwc, n) = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Channel(0), Layout::Hwc);
+    let hwc = hwc.unwrap();
+    // Blue then red, planar.
+    let chw = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Samples { channel: 0, samples: vec![2, 0] }, Layout::Chw).0.unwrap();
+    assert_eq!(chw.len(), 2 * n);
+    for i in 0..n {
+        assert_eq!((chw[i], chw[n + i]), (hwc[3 * i + 2], hwc[3 * i]), "pixel {i}");
+    }
+    // Interleaved, and the same as single Sample reads.
+    let two = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Samples { channel: 0, samples: vec![1, 2] }, Layout::Hwc).0.unwrap();
+    let green = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Sample { channel: 0, sample: 1 }, Layout::Hwc).0.unwrap();
+    for i in 0..n {
+        assert_eq!((two[2 * i], two[2 * i + 1]), (green[i], hwc[3 * i + 2]));
+    }
+}
+
+#[test]
+fn samples_of_gray_and_invalid_selections() {
+    let gray = rgb_read("tiff/u4_be.tif", ChannelSelect::Samples { channel: 0, samples: vec![0] }, Layout::Chw).0.unwrap();
+    let plain = rgb_read("tiff/u4_be.tif", ChannelSelect::Channel(0), Layout::Chw).0.unwrap();
+    assert_eq!(gray, plain);
+    for samples in [vec![], vec![0, 1, 2, 0, 1], vec![3]] {
+        let bad = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Samples { channel: 0, samples }, Layout::Chw).0;
+        assert!(matches!(bad, Err(scopeio::Error::OutOfRange(_))));
+    }
+    let bad = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Samples { channel: 1, samples: vec![0] }, Layout::Chw).0;
+    assert!(matches!(bad, Err(scopeio::Error::OutOfRange(_))));
+}

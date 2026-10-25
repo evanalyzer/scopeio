@@ -210,7 +210,7 @@ impl Plan<'_> {
     fn channels(&self) -> impl Iterator<Item = (u32, SampleMap)> + '_ {
         let list: &[u32] = match self.select {
             ChannelSelect::Channel(c) => std::slice::from_ref(c),
-            ChannelSelect::Sample { channel, .. } => std::slice::from_ref(channel),
+            ChannelSelect::Sample { channel, .. } | ChannelSelect::Samples { channel, .. } => std::slice::from_ref(channel),
             ChannelSelect::Channels(list) => list,
         };
         list.iter().map(|&c| (c, self.map))
@@ -251,6 +251,20 @@ fn plan<'r>(meta: &SeriesMeta, select: &'r ChannelSelect, spec: &OutputSpec) -> 
                 return Err(Error::OutOfRange(format!("sample {sample} of {spp}")));
             }
             (SampleMap { samples: [*sample, 0, 0, 0], len: 1 }, 1)
+        }
+        ChannelSelect::Samples { channel, samples } => {
+            check(*channel)?;
+            if samples.is_empty() || samples.len() > 4 {
+                return Err(Error::OutOfRange(format!("{} samples selected, 1 to 4 allowed", samples.len())));
+            }
+            let mut map = SampleMap { samples: [0; 4], len: samples.len() as u8 };
+            for (i, &s) in samples.iter().enumerate() {
+                if s >= spp {
+                    return Err(Error::OutOfRange(format!("sample {s} of {spp}")));
+                }
+                map.samples[i] = s;
+            }
+            (map, 1)
         }
         ChannelSelect::Channels(list) if list.is_empty() => {
             return Err(Error::OutOfRange("empty channel list".into()));

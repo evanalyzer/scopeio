@@ -14,6 +14,7 @@ use crate::Region;
 
 /// Channels and samples a read returns.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ChannelSelect {
     /// One channel as stored: gray, or a colour image with all its samples.
     Channel(u32),
@@ -24,6 +25,12 @@ pub enum ChannelSelect {
     /// tensor [3, H, W] from c = 0, 1, 2. A colour channel contributes all
     /// its samples.
     Channels(Vec<u32>),
+    /// Selected samples of one colour channel, one output channel each, in
+    /// the given order (stored order: 0 red, 1 green, 2 blue, 3 alpha;
+    /// `ColorOrder` does not apply). Each native tile is decoded once, e.g.
+    /// `samples: vec![0, 2]` with `Layout::Chw` gives a [2, H, W] red and
+    /// blue tensor. 1 to 4 samples.
+    Samples { channel: u32, samples: Vec<u8> },
 }
 
 impl Default for ChannelSelect {

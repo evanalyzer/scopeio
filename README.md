@@ -48,8 +48,22 @@ buffer:
 
 Float data is passed through unchanged by the normalizing types. Reading a
 3554 x 2540 u16 plane as `F32SignificantBits` peaks at 41 MiB, against 58 MiB
-for reading it natively and converting afterwards, at equal CPU time
-(`tests/expected/output_bench.md`).
+for reading it natively and converting afterwards, at equal CPU time.
+
+`ChannelSelect::Samples { channel, samples }` returns selected samples of a
+colour channel (stored order: 0 red, 1 green, 2 blue) as separate output
+channels from one decode of each tile, e.g. red and blue as a `[2, H, W]`
+tensor with `Layout::Chw`:
+
+```rust
+req.channels = ChannelSelect::Samples { channel: 0, samples: vec![0, 2] };
+req.output = OutputSpec { layout: Layout::Chw, ..Default::default() };
+```
+
+For a 4096 x 4096 region of an RGB JPEG slide (CMU-1.svs) one `Samples`
+request needs 0.09 s CPU, three `Sample` requests 0.16 s (0.29 s before this
+change); peak RAM is the same (53 MiB, mostly the output). Numbers for all
+options: `tests/expected/output_bench.md`.
 
 ## Performance
 

@@ -15,9 +15,11 @@
 //! - `f32-scaled`: f32 times 1/4095.
 //! - `rgb-3-sample-reads`: three `ChannelSelect::Sample` reads (R, G, B)
 //!   into the planes of one Chw buffer.
+//! - `rgb-samples`: one `ChannelSelect::Samples` read of R, G, B (Chw).
 //! - `rgb-channel-chw`: one `ChannelSelect::Channel` read (Chw).
 //!
-//! Prints a checksum of the output so the reads cannot be optimised away.
+//! Prints a checksum of the output so the reads cannot be optimised away,
+//! and the wall time of the read alone (`@read_s=`) to stderr.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-25
@@ -41,11 +43,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut req = RegionRequest::new(0, 0, Region::new(x, y, w, h));
     req.z = z;
     let plane = (w * h) as usize;
+    let start = std::time::Instant::now();
+    let read_s;
     let sum: f64 = match scenario.as_str() {
-        "native" => reader.read_region(&req)?.into_vec::<u16>()?.iter().map(|&v| v as f64).sum(),
+        "native" => {
+            let v = reader.read_region(&req)?.into_vec::<u16>()?;
+            read_s = start.elapsed().as_secs_f64();
+            v.iter().map(|&v| v as f64).sum()
+        }
         "native-convert" => {
             let native = reader.read_region(&req)?.into_vec::<u16>()?;
             let f: Vec<f32> = native.iter().map(|&v| v as f32 / 4095.0).collect();
+            read_s = start.elapsed().as_secs_f64();
             f.iter().map(|&v| v as f64).sum()
         }
         "f32-normalized" | "f32-significant-bits" | "f32-scaled" => {
@@ -54,7 +63,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "f32-significant-bits" => OutputType::F32SignificantBits,
                 _ => OutputType::F32Scaled { scale: 1.0 / 4095.0, offset: 0.0 },
             };
-            reader.read_region(&req)?.into_vec::<f32>()?.iter().map(|&v| v as f64).sum()
+            let v = reader.read_region(&req)?.into_vec::<f32>()?;
+            read_s = start.elapsed().as_secs_f64();
+            v.iter().map(|&v| v as f64).sum()
         }
         "rgb-3-sample-reads" => {
             req.output = OutputSpec { layout: Layout::Chw, ..Default::default() };
@@ -63,17 +74,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 req.channels = ChannelSelect::Sample { channel: 0, sample: s as u8 };
                 reader.read_region_into(&req, PixelViewMut::contiguous(chunk, w, h, 1, Layout::Chw))?;
             }
+            read_s = start.elapsed().as_secs_f64();
             out.iter().map(|&v| v as f64).sum()
         }
-        "rgb-channel-chw" => {
-            req.channels = ChannelSelect::Channel(0);
+        "rgb-samples" | "rgb-channel-chw" => {
+            req.channels = match scenario.as_str() {
+                "rgb-samples" => ChannelSelect::Samples { channel: 0, samples: vec![0, 1, 2] },
+                _ => ChannelSelect::Channel(0),
+            };
             req.output = OutputSpec { layout: Layout::Chw, ..Default::default() };
             let mut out = vec![0u8; 3 * plane];
             reader.read_region_into(&req, PixelViewMut::contiguous(out.as_mut_slice(), w, h, 3, Layout::Chw))?;
+            read_s = start.elapsed().as_secs_f64();
             out.iter().map(|&v| v as f64).sum()
         }
         s => return Err(format!("unknown scenario {s}").into()),
     };
+    // Wall time of the read (and caller conversion), without the checksum.
+    eprintln!("@read_s={read_s:.6}");
     println!("{scenario}\t{sum}");
     Ok(())
 }
