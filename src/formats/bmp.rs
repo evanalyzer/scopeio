@@ -32,7 +32,7 @@ use crate::{
     Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bmp, "Windows Bitmap", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bmp, "Windows Bitmap", "1").extensions(&["bmp"]);
 
 /// Returns `true` if `header` starts like a Windows bitmap file.
 pub(super) fn matches(header: &[u8]) -> bool {

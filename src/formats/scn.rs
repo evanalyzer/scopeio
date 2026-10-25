@@ -35,7 +35,7 @@ use crate::{
     Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Scn, "Leica SCN", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Scn, "Leica SCN", "1").extensions(&["scn"]);
 
 /// Returns `true` for the XML document of a Leica SCN file.
 pub(super) fn matches(description: &str) -> bool {

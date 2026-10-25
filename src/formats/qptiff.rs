@@ -36,7 +36,7 @@ use crate::{
     AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Qptiff, "Akoya QPTIFF", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Qptiff, "Akoya QPTIFF", "1").extensions(&["qptiff", "tif", "tiff"]);
 
 /// Returns `true` for an Akoya / PerkinElmer QPI image description or
 /// software tag.

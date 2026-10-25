@@ -43,7 +43,7 @@ use crate::{
     Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Dicom, "DICOM", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Dicom, "DICOM", "1").extensions(&["dcm", "dicom"]);
 
 /// Returns `true` if `head` starts like a DICOM Part 10 file.
 pub(super) fn matches(head: &[u8]) -> bool {

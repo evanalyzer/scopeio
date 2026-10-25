@@ -40,7 +40,7 @@ use crate::{
     Position, Region, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Operetta, "PerkinElmer Operetta / Opera Phenix", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Operetta, "PerkinElmer Operetta / Opera Phenix", "1").extensions(&["xml"]).file_names(&["Index.idx.xml", "Index.ref.xml", "Index.xml"]);
 
 /// Largest index file parsed.
 const MAX_INDEX: u64 = 256 << 20;

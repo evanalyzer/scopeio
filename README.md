@@ -65,6 +65,15 @@ request needs 0.09 s CPU, three `Sample` requests 0.16 s (0.29 s before this
 change); peak RAM is the same (53 MiB, mostly the output). Numbers for all
 options: `tests/expected/output_bench.md`.
 
+`supported_formats()` lists each format with its `extensions` (lower case,
+multi-part ones such as `ome.tif` and `nii.gz` included), fixed
+`file_names` (e.g. `Index.idx.xml`) and `opens_folder` (OME-Zarr), so a
+file dialog can be filtered without a list of its own:
+
+```rust
+let ok = scopeio::supported_formats().iter().any(|f| f.matches_name("cells.ome.tif"));
+```
+
 ## Performance
 
 CPU time and peak RAM of scopeio against Bio-Formats 8.5.0, bioformats-rs

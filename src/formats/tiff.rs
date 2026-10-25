@@ -52,18 +52,18 @@ use crate::{
     PlateMeta, Region, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Tiff, "TIFF", "1");
-pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Tiff, "TIFF", "1").extensions(&["tif", "tiff", "tf2", "tf8", "btf"]);
+pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1").extensions(&["ome.tif", "ome.tiff", "ome.tf2", "ome.tf8", "ome.btf", "ome.xml", "companion.ome"]);
 #[cfg(feature = "stk")]
-pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1");
+pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1").extensions(&["stk", "tif", "tiff"]);
 #[cfg(feature = "sis")]
-pub(super) static SIS_FORMAT: FormatInfo = FormatInfo::new(FormatId::Sis, "Olympus SIS TIFF", "1");
+pub(super) static SIS_FORMAT: FormatInfo = FormatInfo::new(FormatId::Sis, "Olympus SIS TIFF", "1").extensions(&["tif", "tiff"]);
 #[cfg(feature = "nef")]
-pub(super) static NEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Nef, "Nikon NEF", "1");
+pub(super) static NEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Nef, "Nikon NEF", "1").extensions(&["nef"]);
 #[cfg(feature = "nikon-tiff")]
-pub(super) static NIKON_FORMAT: FormatInfo = FormatInfo::new(FormatId::NikonTiff, "Nikon NIS-Elements TIFF", "1");
+pub(super) static NIKON_FORMAT: FormatInfo = FormatInfo::new(FormatId::NikonTiff, "Nikon NIS-Elements TIFF", "1").extensions(&["tif", "tiff"]);
 #[cfg(feature = "fluoview")]
-pub(super) static FLUOVIEW_FORMAT: FormatInfo = FormatInfo::new(FormatId::FluoView, "Olympus FluoView TIFF", "1");
+pub(super) static FLUOVIEW_FORMAT: FormatInfo = FormatInfo::new(FormatId::FluoView, "Olympus FluoView TIFF", "1").extensions(&["tif", "tiff"]);
 
 /// Detects TIFF, OME-TIFF and OME-XML companion files.
 pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {

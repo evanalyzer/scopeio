@@ -51,9 +51,9 @@ use crate::{
     PixelType, Plane, PlaneMeta, Position, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lif, "Leica LIF", "1");
-pub(super) static LOF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Lof, "Leica LOF", "1");
-pub(super) static XLEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Xlef, "Leica XLEF/XLIF", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lif, "Leica LIF", "1").extensions(&["lif"]);
+pub(super) static LOF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Lof, "Leica LOF", "1").extensions(&["lof"]);
+pub(super) static XLEF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Xlef, "Leica XLEF/XLIF", "1").extensions(&["xlef", "xlcf", "xlif", "xllf"]);
 
 /// Text of the LIF header of a LOF file.
 const LOF_TEXT: &str = "LMS_Object_File";

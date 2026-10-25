@@ -35,7 +35,7 @@ use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{FormatId, FormatInfo, Error, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrc, "MRC", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrc, "MRC", "1").extensions(EXTENSIONS);
 
 const HEADER_LEN: u64 = 1024;
 /// Stamp of IMOD-written headers at byte 152.

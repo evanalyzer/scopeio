@@ -37,7 +37,7 @@ use crate::{
     PlateMeta, Region, Result, SeriesMeta, WellSample, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeZarr, "OME-Zarr", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeZarr, "OME-Zarr", "1").extensions(&["zarr", "ome.zarr"]).folder();
 
 /// Most dimensions an array may have.
 const MAX_DIMS: usize = 8;

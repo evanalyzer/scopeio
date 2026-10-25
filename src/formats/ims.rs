@@ -46,7 +46,7 @@ use crate::{
     PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result, SeriesMeta, codecs, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ims, "Imaris IMS", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ims, "Imaris IMS", "1").extensions(&["ims"]);
 
 /// Largest decoded chunk, against corrupt chunk sizes.
 const MAX_CHUNK: u64 = 1 << 30;

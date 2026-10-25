@@ -36,7 +36,7 @@ use crate::{
     Position, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::DeltaVision, "DeltaVision", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::DeltaVision, "DeltaVision", "1").extensions(&["dv", "r3d"]);
 
 const HEADER_LEN: u64 = 1024;
 const DV_ID: i16 = -16224;

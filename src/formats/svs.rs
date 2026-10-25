@@ -29,7 +29,7 @@ use crate::{
     AssociatedKind, ChannelMeta, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, PhysicalSize, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Svs, "Aperio SVS", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Svs, "Aperio SVS", "1").extensions(&["svs"]);
 
 /// Returns `true` if the first ImageDescription marks an Aperio slide.
 pub(super) fn matches(description: &str) -> bool {

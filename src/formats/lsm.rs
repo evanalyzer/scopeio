@@ -33,7 +33,7 @@ use crate::{
     AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, PhysicalSize, PlaneMeta, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lsm, "Zeiss LSM", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lsm, "Zeiss LSM", "1").extensions(&["lsm"]);
 
 /// Private tag with the CZ_LSMINFO structure.
 pub(super) const TAG_LSMINFO: u16 = 34412;

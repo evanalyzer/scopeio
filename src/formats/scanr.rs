@@ -40,7 +40,7 @@ use crate::{
     WellSample,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::ScanR, "Olympus scan^R", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::ScanR, "Olympus scan^R", "1").extensions(&["xml", "dat"]).file_names(&["experiment_descriptor.xml", "experiment_descriptor.dat", "AcquisitionLog.dat"]);
 
 const DESCRIPTOR: &str = "experiment_descriptor.xml";
 /// Largest descriptor parsed.

@@ -45,8 +45,8 @@ use crate::{
     Region, Result, SeriesMeta,
 };
 
-pub(super) static OIB_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oib, "Olympus FluoView OIB", "1");
-pub(super) static OIF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oif, "Olympus FluoView OIF", "1");
+pub(super) static OIB_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oib, "Olympus FluoView OIB", "1").extensions(&["oib"]);
+pub(super) static OIF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oif, "Olympus FluoView OIF", "1").extensions(&["oif"]);
 
 /// Largest settings file parsed.
 const MAX_SETTINGS: u64 = 16 << 20;

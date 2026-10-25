@@ -38,7 +38,7 @@ use crate::{
     PixelType, Plane, PlaneMeta, Position, Region, Result, SeriesMeta, codecs, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nd2, "Nikon ND2", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nd2, "Nikon ND2", "1").extensions(&["nd2"]);
 
 const CHUNK_MAGIC: u32 = 0x0ABE_CEDA;
 const FILE_SIGNATURE: &[u8] = b"ND2 FILE SIGNATURE CHUNK NAME01!";

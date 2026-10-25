@@ -49,7 +49,7 @@ use crate::{
     PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrxs, "3DHistech MIRAX", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrxs, "3DHistech MIRAX", "1").extensions(&["mrxs"]);
 
 /// Largest index, ini or associated image read, against corrupt files.
 const MAX_FILE: u64 = 256 << 20;

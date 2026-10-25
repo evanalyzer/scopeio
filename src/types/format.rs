@@ -84,11 +84,52 @@ pub struct FormatInfo {
     pub reader_version: &'static str,
     /// Version of the scopeio crate.
     pub crate_version: &'static str,
+    /// File extensions, lower case without the leading dot; multi-part
+    /// extensions such as `ome.tif` or `nii.gz` included. Extensions shared
+    /// with other formats (`tif`) are listed too: the content decides.
+    pub extensions: &'static [&'static str],
+    /// Fixed file names that identify the format (e.g. `Index.idx.xml`).
+    pub file_names: &'static [&'static str],
+    /// The format is opened as a folder (OME-Zarr), not a file.
+    pub opens_folder: bool,
 }
 
 impl FormatInfo {
     pub(crate) const fn new(id: FormatId, name: &'static str, reader_version: &'static str) -> Self {
-        Self { id, name, reader_version, crate_version: env!("CARGO_PKG_VERSION") }
+        Self {
+            id,
+            name,
+            reader_version,
+            crate_version: env!("CARGO_PKG_VERSION"),
+            extensions: &[],
+            file_names: &[],
+            opens_folder: false,
+        }
+    }
+
+    pub(crate) const fn extensions(mut self, extensions: &'static [&'static str]) -> Self {
+        self.extensions = extensions;
+        self
+    }
+
+    pub(crate) const fn file_names(mut self, names: &'static [&'static str]) -> Self {
+        self.file_names = names;
+        self
+    }
+
+    pub(crate) const fn folder(mut self) -> Self {
+        self.opens_folder = true;
+        self
+    }
+
+    /// Returns `true` if a file or folder named `name` may be of this
+    /// format by its name: a listed extension (case-insensitive) or file
+    /// name. Use it for file-dialog filters; [`probe`](crate::probe) decides
+    /// by content.
+    pub fn matches_name(&self, name: &str) -> bool {
+        let lower = name.to_ascii_lowercase();
+        self.file_names.iter().any(|n| n.eq_ignore_ascii_case(name))
+            || self.extensions.iter().any(|e| lower.len() > e.len() && lower.ends_with(e) && lower.as_bytes()[lower.len() - e.len() - 1] == b'.')
     }
 }
 

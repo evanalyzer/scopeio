@@ -31,7 +31,7 @@ use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, OriginalMeta, Plane, Region, Result, SeriesMeta};
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nd, "MetaMorph ND", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nd, "MetaMorph ND", "1").extensions(&["nd"]);
 
 /// Most files of one acquisition, against corrupt counts.
 const MAX_FILES: usize = 1 << 20;

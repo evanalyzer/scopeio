@@ -54,7 +54,7 @@ use crate::{
     Plane, PlaneMeta, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Czi, "Zeiss CZI", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Czi, "Zeiss CZI", "1").extensions(&["czi"]);
 
 /// Largest associated image decoded, in pixels per side.
 const ASSOCIATED_MAX: u64 = 4096;

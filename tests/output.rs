@@ -105,3 +105,46 @@ fn samples_of_gray_and_invalid_selections() {
     let bad = rgb_read("tiff/rgb8_tiles.tif", ChannelSelect::Samples { channel: 1, samples: vec![0] }, Layout::Chw).0;
     assert!(matches!(bad, Err(scopeio::Error::OutOfRange(_))));
 }
+
+#[test]
+fn every_format_lists_names() {
+    for f in scopeio::supported_formats() {
+        assert!(!f.extensions.is_empty() || !f.file_names.is_empty(), "{} lists no names", f.name);
+        assert!(f.extensions.iter().all(|e| !e.starts_with('.') && e.to_ascii_lowercase() == *e), "{}", f.name);
+    }
+    let by_id = |id| scopeio::supported_formats().iter().find(|f| f.id == id).unwrap();
+    let ome = by_id(scopeio::FormatId::OmeTiff);
+    assert!(ome.matches_name("cells.OME.TIF") && !ome.matches_name("cells.tif") && !ome.matches_name("ome.tif"));
+    assert!(by_id(scopeio::FormatId::Nifti).matches_name("brain.nii.gz"));
+    assert!(!by_id(scopeio::FormatId::Tiff).matches_name("image.xtif"));
+    let operetta = by_id(scopeio::FormatId::Operetta);
+    assert!(operetta.matches_name("index.idx.xml") && !operetta.opens_folder);
+    assert!(by_id(scopeio::FormatId::OmeZarr).opens_folder);
+}
+
+#[test]
+fn sample_files_match_their_format_names() {
+    // Every committed sample that opens is named as its format declares.
+    let mut checked = 0;
+    let mut stack = vec![root().join("tests/data")];
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let path = e.path();
+            let name = e.file_name().to_string_lossy().into_owned();
+            // The opened reader names the flavour (probe says TIFF for STK).
+            let Some(id) = scopeio::open(&path).ok().map(|r| r.format().id) else {
+                if path.is_dir() {
+                    stack.push(path);
+                }
+                continue;
+            };
+            let f = scopeio::supported_formats().iter().find(|f| f.id == id).unwrap();
+            assert!(f.matches_name(&name), "{} detected as {} but not named so", path.display(), f.name);
+            checked += 1;
+            if path.is_dir() && !f.opens_folder {
+                stack.push(path);
+            }
+        }
+    }
+    assert!(checked > 100, "only {checked} samples");
+}

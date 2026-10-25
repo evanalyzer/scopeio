@@ -36,11 +36,11 @@ use crate::{
 };
 
 #[cfg(feature = "png")]
-pub(super) static PNG_FORMAT: FormatInfo = FormatInfo::new(FormatId::Png, "PNG", "1");
+pub(super) static PNG_FORMAT: FormatInfo = FormatInfo::new(FormatId::Png, "PNG", "1").extensions(&["png"]);
 #[cfg(feature = "jpg")]
-pub(super) static JPEG_FORMAT: FormatInfo = FormatInfo::new(FormatId::Jpeg, "JPEG", "1");
+pub(super) static JPEG_FORMAT: FormatInfo = FormatInfo::new(FormatId::Jpeg, "JPEG", "1").extensions(&["jpg", "jpeg"]);
 #[cfg(feature = "jp2")]
-pub(super) static JP2_FORMAT: FormatInfo = FormatInfo::new(FormatId::Jpeg2000, "JPEG 2000", "1");
+pub(super) static JP2_FORMAT: FormatInfo = FormatInfo::new(FormatId::Jpeg2000, "JPEG 2000", "1").extensions(&["jp2", "j2k", "j2c"]);
 
 #[cfg(feature = "png")]
 const PNG_MAGIC: &[u8] = b"\x89PNG\r\n\x1a\n";

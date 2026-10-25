@@ -44,7 +44,7 @@ use crate::{
     Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Oir, "Olympus OIR", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Oir, "Olympus OIR", "1").extensions(&["oir"]);
 
 const MAGIC: &[u8] = b"OLYMPUSRAWFORMAT";
 const FIRST_BLOCK: u64 = 96;

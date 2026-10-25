@@ -37,7 +37,7 @@ use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{Error, FormatId, FormatInfo, OriginalMeta, Plane, PlaneMeta, Position, Region, Result, SeriesMeta};
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Omp2info, "Olympus OMP2INFO", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Omp2info, "Olympus OMP2INFO", "1").extensions(&["omp2info"]);
 
 /// Largest index file parsed.
 const MAX_INDEX: u64 = 64 << 20;

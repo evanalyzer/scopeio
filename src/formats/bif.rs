@@ -57,7 +57,7 @@ use crate::{
     PhysicalSize, Plane, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bif, "Ventana BIF", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bif, "Ventana BIF", "1").extensions(&["bif"]);
 
 /// XMP packet tag.
 const TAG_XMP: u16 = 700;

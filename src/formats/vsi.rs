@@ -40,7 +40,7 @@ use crate::{
     PhysicalSize, Plane, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Vsi, "Olympus VSI", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Vsi, "Olympus VSI", "1").extensions(&["vsi"]);
 
 /// The record tree starts right after the 8-byte TIFF header.
 const TREE_OFFSET: u64 = 8;

@@ -33,7 +33,7 @@ use crate::{
     PlaneMeta, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpis, "Hamamatsu NDPIS", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpis, "Hamamatsu NDPIS", "1").extensions(&["ndpis"]);
 
 const HEADER: &[u8] = b"[NanoZoomer Digital Pathology Image Set]";
 /// Channel name tag of NDPI fluorescence files.

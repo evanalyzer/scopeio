@@ -37,7 +37,7 @@ use crate::{
     PlaneMeta, Region, Result, SeriesMeta, scratch,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Zvi, "Zeiss AxioVision ZVI", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Zvi, "Zeiss AxioVision ZVI", "1").extensions(&["zvi"]);
 
 const IMAGE_MARKER: u32 = 0x1000_2000;
 const IMAGE_HEADER_LEN: u64 = 28;

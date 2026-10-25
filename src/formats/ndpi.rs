@@ -38,7 +38,7 @@ use crate::{
     AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpi, "Hamamatsu NDPI", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpi, "Hamamatsu NDPI", "1").extensions(&["ndpi"]);
 
 /// NDPI file format version tag, present in every NDPI IFD.
 pub(super) const TAG_VERSION: u16 = 65420;

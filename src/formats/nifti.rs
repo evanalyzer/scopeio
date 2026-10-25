@@ -39,7 +39,7 @@ use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nifti, "NIfTI", "1");
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nifti, "NIfTI", "1").extensions(&["nii", "nii.gz", "hdr", "img"]);
 
 const NIFTI1_LEN: usize = 348;
 const NIFTI2_LEN: usize = 540;
