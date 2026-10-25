@@ -215,7 +215,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **NEF (Nikon Electronic Format)** | `.nef, .tif` | ✅ uncompressed raw only |
 | **NIfTI** | `.img, .hdr, .nii, .nii.gz` | ✅ |
 | **Nikon Elements TIFF** | `.tiff` | ✅ |
-| **Nikon EZ-C1 TIFF** | `.tiff` |  |
+| **Nikon EZ-C1 TIFF** | `.tiff` | ❌ not possible (see Format notes) |
 | **Nikon NIS-Elements ND2** | `.nd2` | ✅ |
 | **NRRD (Nearly Raw Raster Data)** | `.nrrd, .nhdr, .raw, .txt` |  |
 | **Olympus CellR/APL** | `.apl, .mtb, .tnb, .tif, .obsep` |  |
@@ -300,6 +300,14 @@ scopeio does not stitch tiles itself. Bio-Formats returns a single mosaic on
 a grid of its own (466 × 462 px pitch for the public sample, 3308 × 2360
 px), which matches neither the nominal grid (461 px) nor the vendor stitch
 (3554 × 2540 px).
+
+**Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
+and no public sample file could be found (searched: OME sample server,
+Zenodo, Figshare). The only implementation is Bio-Formats'
+GPL-licensed reader, which this clean-room project must not consult. Files
+written by the newer NIS-Elements software are read as Nikon NIS-Elements
+TIFF. Support can be added once sample files with a clear licence are
+available.
 
 ## License
 
