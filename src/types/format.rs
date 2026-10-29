@@ -78,6 +78,8 @@ pub enum FormatId {
     Analyze,
     /// Hamamatsu VMS (`.vms` index and JPEG files).
     Vms,
+    /// OME-XML with the pixels inline (`BinData`).
+    OmeXml,
 }
 
 /// Identification of the reader that produced the data, for

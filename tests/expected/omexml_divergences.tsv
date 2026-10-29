@@ -1,0 +1,7 @@
+# Known differences for OME-XML.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/OME-XML/2016-06/minimum-specification.ome.xml	bioformats	-			schema example, not image data: one BinData of 7 bytes ("default") for 8 planes of 4 bytes; scopeio returns its first 4 bytes as plane 0 and zeros for the planes without BinData
+tests/reference/ome/OME-XML/2008-09/multi-pixel-default.ome.xml	bioformats	-			schema 2008-09: the Image names DefaultPixels="Pixels:1:0"; scopeio reads those pixels, the reference readers the first Pixels element
+tests/reference/ome/OME-XML/2008-09/multi-pixel-default.ome.xml	bioformats-rs	-			see above
+tests/reference/ome/OME-XML/2008-09/multi-pixel-aquired.ome.xml	bioformats	-			DefaultPixels="Pixels:1:0" (AcquiredPixels="Pixels:0:0"); scopeio reads the default pixels, the reference readers the first Pixels element
+tests/reference/ome/OME-XML/2008-09/multi-pixel-aquired.ome.xml	bioformats-rs	-			see above

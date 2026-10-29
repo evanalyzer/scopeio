@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+  <Image ID="Image:0" Name="compressed">
+    <Pixels ID="Pixels:0" DimensionOrder="XYZCT" Type="int16" SizeX="7" SizeY="5" SizeZ="3" SizeC="2" SizeT="1" PhysicalSizeX="0.5" PhysicalSizeY="0.5">
+      <Channel ID="Channel:0:0" Name="DAPI" SamplesPerPixel="1"/>
+      <Channel ID="Channel:0:1" Name="GFP" SamplesPerPixel="1"/>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJwBRgC5/wAAAS0CWgOHBLQF4QcO/7MA4AINAzoEZwWUBsH/ZgCTAcAC7QQaBUcGdP8ZAEYBcwKgA80E+gYn/sz/+QEmAlMDgAStBdrXBRa9</BinData>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJwBRgC5//tQ/H39qv7XAAQBMQJe+wP8MP1d/or/twDkAhH6tvvj/RD+Pf9qAJcBxPpp+5b8w/3w/x0ASgF3+hz7Sfx2/aP+0P/9ASqPBikK</BinData>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJwBRgC5//ag9834+von+1T8gf2u9lP3gPit+dr7B/w0/WH2Bvcz+GD5jfq6++f9FPW59ub4E/lA+m37mvzH9Wz2mffG+PP6IPtN/HoqnjNV</BinData>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJwBRgC5/xOIFLUV4hcPGDwZaRqWEzsUaBWVFsIX7xkcGkkS7hQbFUgWdReiGM8Z/BKhE84U+xYoF1UYghmvElQTgRSuFdsXCBg1GWLlpxUA</BinData>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJwBRgC5/w7YEAURMhJfE4wUuRXmDosPuBDlEhITPxRsFZkOPg9rEJgRxRLyFB8VTA3xDx4QSxF4EqUT0hT/DaQO0Q/+ESsSWBOFFLLNZRVL</BinData>
+      <BinData BigEndian="true" Compression="zlib" Length="108">eJzj0uAO5WniXc93R4BT0IzzNjcHjylvEl8//x6Bl5x9XLu5X/CK8jnx5wvM4XTkyuOezXOC9yu/koA/xxcuRW4/nmreFXxXBZgAgFsSmQ==</BinData>
+    </Pixels>
+  </Image>
+  <Image ID="Image:1" Name="plain">
+    <Pixels ID="Pixels:1" DimensionOrder="XYCZT" Type="uint8" SizeX="7" SizeY="5" SizeZ="1" SizeC="1" SizeT="2">
+      <Channel ID="Channel:1:0" SamplesPerPixel="1"/>
+      <BinData BigEndian="false" Compression="none" Length="48">AB8+XXybugcmRWSDosEOLUxriqnIFTRTcpGwzxw7WnmYt9Y=</BinData>
+      <BinData BigEndian="false" Length="0"/>
+    </Pixels>
+  </Image>
+</OME>

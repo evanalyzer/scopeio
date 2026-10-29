@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+  <Image ID="Image:0" Name="bits">
+    <Pixels ID="Pixels:0" DimensionOrder="XYZCT" Type="bit" SizeX="9" SizeY="3" SizeZ="1" SizeC="1" SizeT="1">
+      <Channel ID="Channel:0:0" SamplesPerPixel="1"/>
+      <BinData BigEndian="false" Compression="none" Length="8">lSlKgA==</BinData>
+    </Pixels>
+  </Image>
+</OME>

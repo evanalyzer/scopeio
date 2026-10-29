@@ -158,7 +158,7 @@ fn master_xml(dir: &Path, xml: &str) -> Result<String> {
     }
 }
 
-fn parse(xml: &str) -> Result<Document<'_>> {
+pub(super) fn parse(xml: &str) -> Result<Document<'_>> {
     let options = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
     Document::parse_with_options(xml, options).map_err(|e| Error::Corrupt(format!("OME-XML: {e}")))
 }
@@ -220,10 +220,7 @@ fn build(
             files.by_uuid.insert(uuid.to_string(), 0);
         }
     }
-    let objectives: HashMap<&str, ObjectiveMeta> = descendants(root, "Objective")
-        .filter_map(|o| Some((o.attribute("ID")?, objective(o))))
-        .collect();
-    let rois: HashMap<&str, Roi> = children(root, "ROI").filter_map(|r| Some((r.attribute("ID")?, roi(r)))).collect();
+    let (objectives, rois) = document_maps(root);
 
     let mut series = Vec::new();
     let mut image_ids = HashMap::new();
@@ -240,23 +237,26 @@ fn build(
     Ok((series, plates))
 }
 
-/// Builds the series of one `Image` element.
-fn image_series(
-    image: Node,
-    files: &mut Files,
-    objectives: &HashMap<&str, ObjectiveMeta>,
-    rois: &HashMap<&str, Roi>,
-) -> Result<Series> {
-    // Schema 2008-09 allows several Pixels per Image, selected by DefaultPixels.
+/// Objectives and ROIs of the document by ID, for [`describe`].
+pub(super) fn document_maps<'a>(root: Node<'a, '_>) -> (HashMap<&'a str, ObjectiveMeta>, HashMap<&'a str, Roi>) {
+    let objectives = descendants(root, "Objective").filter_map(|o| Some((o.attribute("ID")?, objective(o)))).collect();
+    let rois = children(root, "ROI").filter_map(|r| Some((r.attribute("ID")?, roi(r)))).collect();
+    (objectives, rois)
+}
+
+/// The `Pixels` element of an `Image` (schema 2008-09 allows several,
+/// selected by `DefaultPixels`).
+pub(super) fn pixels_of<'a, 'i>(image: Node<'a, 'i>) -> Result<Node<'a, 'i>> {
     let default = image.attribute("DefaultPixels");
-    let pixels = children(image, "Pixels")
+    children(image, "Pixels")
         .find(|p| default.is_some_and(|d| p.attribute("ID") == Some(d)))
         .or_else(|| child(image, "Pixels"))
-        .ok_or_else(|| Error::Corrupt("Image without Pixels".into()))?;
-    let size = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).max(1);
-    let (sx, sy, sz, sc, st) = (size("SizeX"), size("SizeY"), size("SizeZ"), size("SizeC"), size("SizeT"));
-    // "PixelType" is the name used by schema 2008-09.
-    let pixel_type = match pixels.attribute("Type").or(pixels.attribute("PixelType")).unwrap_or("uint8") {
+        .ok_or_else(|| Error::Corrupt("Image without Pixels".into()))
+}
+
+/// The pixel type of a `Pixels` element (`PixelType` in schema 2008-09).
+pub(super) fn pixel_type_of(pixels: Node) -> Result<PixelType> {
+    Ok(match pixels.attribute("Type").or(pixels.attribute("PixelType")).unwrap_or("uint8") {
         "int8" => PixelType::I8,
         "uint8" | "bit" => PixelType::U8,
         "int16" => PixelType::I16,
@@ -266,19 +266,100 @@ fn image_series(
         "float" => PixelType::F32,
         "double" => PixelType::F64,
         t => return Err(Error::UnsupportedVariant(format!("OME pixel type {t}"))),
-    };
-    let channel_nodes: Vec<Node> = children(pixels, "Channel").collect();
-    let spp = channel_nodes
-        .first()
+    })
+}
+
+/// Sizes of a `Pixels` element: (x, y, z, c, t), each at least 1, `c`
+/// counting channels (not samples); samples per channel and output samples
+/// (1, 3 or 4).
+pub(super) fn sizes_of(pixels: Node) -> ((u32, u32, u32, u32, u32), u32, u8) {
+    let size = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).max(1);
+    let (sx, sy, sz, sc, st) = (size("SizeX"), size("SizeY"), size("SizeZ"), size("SizeC"), size("SizeT"));
+    let spp = children(pixels, "Channel")
+        .next()
         .and_then(|c| c.attribute("SamplesPerPixel"))
         .and_then(|v| v.parse::<u32>().ok())
         .unwrap_or(1)
         .clamp(1, sc);
-    let size_c = (sc / spp).max(1);
-    let samples_out: u8 = match spp {
+    let samples_out = match spp {
         3 | 4 => spp as u8,
         _ => 1,
     };
+    ((sx, sy, sz, (sc / spp).max(1), st), spp, samples_out)
+}
+
+/// Series metadata and plane metadata of an `Image` whose pixel layout is
+/// known.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn describe(
+    image: Node,
+    pixels: Node,
+    (size_c, sz, st): (u32, u32, u32),
+    pixel_type: PixelType,
+    samples_out: u8,
+    levels: Vec<crate::LevelMeta>,
+    objectives: &HashMap<&str, ObjectiveMeta>,
+    rois: &HashMap<&str, Roi>,
+) -> (SeriesMeta, Vec<PlaneMeta>) {
+    let total = (size_c * sz * st) as usize;
+    let channel_nodes: Vec<Node> = children(pixels, "Channel").collect();
+    let unit = |a: &str| pixels.attribute(format!("{a}Unit").as_str()).unwrap_or("µm");
+    let length = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_nm(v, unit(a)));
+    let channels: Vec<ChannelMeta> = (0..size_c as usize).map(|i| channel_nodes.get(i).map(|&c| channel(c)).unwrap_or_default()).collect();
+    let objective = child(image, "ObjectiveSettings")
+        .and_then(|o| o.attribute("ID"))
+        .and_then(|id| objectives.get(id).cloned());
+    let image_rois = children(image, "ROIRef").filter_map(|r| r.attribute("ID")).filter_map(|id| rois.get(id).cloned()).collect();
+    let stage_position = child(image, "StageLabel").and_then(position);
+    let significant_bits = pixels
+        .attribute("SignificantBits")
+        .and_then(|v| v.parse::<u8>().ok())
+        .filter(|&b| b as usize != pixel_type.bytes() * 8);
+    let meta = SeriesMeta {
+        name: image.attribute("Name").map(String::from),
+        description: child(image, "Description").and_then(|d| d.text()).map(|t| t.trim().to_string()).filter(|t| !t.is_empty()),
+        acquisition_date: child(image, "AcquisitionDate")
+            .or_else(|| child(image, "AcquiredDate"))
+            .and_then(|d| d.text())
+            .map(|t| t.trim().to_string()),
+        size_c,
+        size_z: sz,
+        size_t: st,
+        pixel_type,
+        significant_bits,
+        samples_per_pixel: samples_out,
+        levels,
+        physical_size: PhysicalSize { x_nm: length("PhysicalSizeX"), y_nm: length("PhysicalSizeY"), z_nm: length("PhysicalSizeZ") },
+        time_increment_s: pixels.attribute("TimeIncrement").and_then(|v| v.parse().ok()).and_then(|v| to_s(v, pixels.attribute("TimeIncrementUnit").unwrap_or("s"))),
+        channels,
+        objective,
+        stage_position,
+        rois: image_rois,
+    };
+    let mut plane_meta = vec![PlaneMeta::default(); total];
+    for p in children(pixels, "Plane") {
+        let at = |a: &str| p.attribute(a).and_then(|v| v.parse::<usize>().ok()).unwrap_or(0);
+        let (c, z, t) = (at("TheC"), at("TheZ"), at("TheT"));
+        if c >= size_c as usize || z >= sz as usize || t >= st as usize {
+            continue;
+        }
+        let time = |a: &str| p.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_s(v, p.attribute(format!("{a}Unit").as_str()).unwrap_or("s")));
+        plane_meta[c + size_c as usize * (z + sz as usize * t)] =
+            PlaneMeta { delta_t_s: time("DeltaT"), exposure_s: time("ExposureTime"), position: position(p) };
+    }
+    (meta, plane_meta)
+}
+
+/// Builds the series of one `Image` element.
+fn image_series(
+    image: Node,
+    files: &mut Files,
+    objectives: &HashMap<&str, ObjectiveMeta>,
+    rois: &HashMap<&str, Roi>,
+) -> Result<Series> {
+    let pixels = pixels_of(image)?;
+    let ((sx, sy, sz, size_c, st), spp, samples_out) = sizes_of(pixels);
+    let pixel_type = pixel_type_of(pixels)?;
     let order = pixels.attribute("DimensionOrder").unwrap_or("XYZCT");
     let total = (size_c * sz * st) as usize;
 
@@ -349,56 +430,12 @@ fn image_series(
         .map(|level| mapping.iter().map(|m| m.map(|(file, ifd)| Slot::lazy(file, ifd, level))).collect())
         .collect();
 
-    let unit = |a: &str| pixels.attribute(format!("{a}Unit").as_str()).unwrap_or("µm");
-    let length = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_nm(v, unit(a)));
-    let channels: Vec<ChannelMeta> = (0..size_c as usize).map(|i| channel_nodes.get(i).map(|&c| channel(c)).unwrap_or_default()).collect();
-    let objective = child(image, "ObjectiveSettings")
-        .and_then(|o| o.attribute("ID"))
-        .and_then(|id| objectives.get(id).cloned());
-    let image_rois = children(image, "ROIRef").filter_map(|r| r.attribute("ID")).filter_map(|id| rois.get(id).cloned()).collect();
-    let stage_position = child(image, "StageLabel").and_then(position);
-    let significant_bits = pixels
-        .attribute("SignificantBits")
-        .and_then(|v| v.parse::<u8>().ok())
-        .filter(|&b| b as usize != pixel_type.bytes() * 8);
-
-    let meta = SeriesMeta {
-        name: image.attribute("Name").map(String::from),
-        description: child(image, "Description").and_then(|d| d.text()).map(|t| t.trim().to_string()).filter(|t| !t.is_empty()),
-        acquisition_date: child(image, "AcquisitionDate")
-            .or_else(|| child(image, "AcquiredDate"))
-            .and_then(|d| d.text())
-            .map(|t| t.trim().to_string()),
-        size_c,
-        size_z: sz,
-        size_t: st,
-        pixel_type,
-        significant_bits,
-        samples_per_pixel: samples_out,
-        levels: levels_meta,
-        physical_size: PhysicalSize { x_nm: length("PhysicalSizeX"), y_nm: length("PhysicalSizeY"), z_nm: length("PhysicalSizeZ") },
-        time_increment_s: pixels.attribute("TimeIncrement").and_then(|v| v.parse().ok()).and_then(|v| to_s(v, pixels.attribute("TimeIncrementUnit").unwrap_or("s"))),
-        channels,
-        objective,
-        stage_position,
-        rois: image_rois,
-    };
-    let mut plane_meta = vec![PlaneMeta::default(); total];
-    for p in children(pixels, "Plane") {
-        let at = |a: &str| p.attribute(a).and_then(|v| v.parse::<usize>().ok()).unwrap_or(0);
-        let (c, z, t) = (at("TheC"), at("TheZ"), at("TheT"));
-        if c >= size_c as usize || z >= sz as usize || t >= st as usize {
-            continue;
-        }
-        let time = |a: &str| p.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_s(v, p.attribute(format!("{a}Unit").as_str()).unwrap_or("s")));
-        plane_meta[c + size_c as usize * (z + sz as usize * t)] =
-            PlaneMeta { delta_t_s: time("DeltaT"), exposure_s: time("ExposureTime"), position: position(p) };
-    }
+    let (meta, plane_meta) = describe(image, pixels, (size_c, sz, st), pixel_type, samples_out, levels_meta, objectives, rois);
     Ok(Series { meta, levels, planes, plane_meta, first_ifd: (first_file, first_ifd), original: Vec::new() })
 }
 
 /// Index of plane (z, c, t) in the order given by `DimensionOrder`.
-fn rasterize(order: &str, (z, c, t): (usize, usize, usize), (sz, sc, st): (usize, usize, usize)) -> Option<usize> {
+pub(super) fn rasterize(order: &str, (z, c, t): (usize, usize, usize), (sz, sc, st): (usize, usize, usize)) -> Option<usize> {
     if z >= sz || c >= sc || t >= st {
         return None;
     }
@@ -418,7 +455,7 @@ fn rasterize(order: &str, (z, c, t): (usize, usize, usize), (sz, sc, st): (usize
 }
 
 /// Inverse of [`rasterize`].
-fn unrasterize(order: &str, mut index: usize, (sz, sc, st): (usize, usize, usize)) -> (usize, usize, usize) {
+pub(super) fn unrasterize(order: &str, mut index: usize, (sz, sc, st): (usize, usize, usize)) -> (usize, usize, usize) {
     let (mut z, mut c, mut t) = (0, 0, 0);
     for axis in order.chars().skip(2) {
         match axis {
@@ -515,7 +552,7 @@ fn roi(r: Node) -> Roi {
     Roi { name: r.attribute("Name").map(String::from), shapes }
 }
 
-fn plate(p: Node, image_ids: &HashMap<String, usize>) -> PlateMeta {
+pub(super) fn plate(p: Node, image_ids: &HashMap<String, usize>) -> PlateMeta {
     let num = |n: Node, a: &str| n.attribute(a).and_then(|v| v.parse::<u32>().ok()).unwrap_or(0);
     let mut wells = Vec::new();
     for w in children(p, "Well") {
@@ -568,11 +605,11 @@ fn to_s(v: f64, unit: &str) -> Option<f64> {
     v.is_finite().then_some(v * factor)
 }
 
-fn children<'a, 'i>(n: Node<'a, 'i>, name: &'a str) -> impl Iterator<Item = Node<'a, 'i>> + 'a {
+pub(super) fn children<'a, 'i>(n: Node<'a, 'i>, name: &'a str) -> impl Iterator<Item = Node<'a, 'i>> + 'a {
     n.children().filter(move |c| c.is_element() && c.tag_name().name() == name)
 }
 
-fn child<'a, 'i>(n: Node<'a, 'i>, name: &str) -> Option<Node<'a, 'i>> {
+pub(super) fn child<'a, 'i>(n: Node<'a, 'i>, name: &str) -> Option<Node<'a, 'i>> {
     n.children().find(|c| c.is_element() && c.tag_name().name() == name)
 }
 

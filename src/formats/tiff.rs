@@ -38,6 +38,8 @@ mod sis;
 #[cfg(feature = "stk")]
 mod stk;
 mod ome;
+#[cfg(feature = "omexml")]
+pub(super) mod omexml;
 
 use std::path::Path;
 use std::sync::OnceLock;

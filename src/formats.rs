@@ -98,6 +98,8 @@ static SUPPORTED: &[FormatInfo] = &[
     tiff::FORMAT,
     #[cfg(feature = "tiff")]
     tiff::OME_FORMAT,
+    #[cfg(feature = "omexml")]
+    tiff::omexml::FORMAT,
     #[cfg(feature = "stk")]
     tiff::STK_FORMAT,
     #[cfg(feature = "sis")]
@@ -300,6 +302,11 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if vsi::matches(&head) {
         return Ok(Some(FormatId::Vsi));
     }
+    // Inline-pixel OME-XML before OME-TIFF companion files.
+    #[cfg(feature = "omexml")]
+    if tiff::omexml::matches(path, &head) {
+        return Ok(Some(FormatId::OmeXml));
+    }
     #[cfg(feature = "tiff")]
     if let Some(id) = tiff::probe(path, &head)? {
         return Ok(Some(id));
@@ -350,6 +357,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
         Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk | FormatId::Sis | FormatId::FluoView | FormatId::NikonTiff | FormatId::Nef) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        #[cfg(feature = "omexml")]
+        Some(FormatId::OmeXml) => Ok(Arc::new(Reader(tiff::omexml::OmeXml::open(path)?))),
         #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
         Some(id @ (FormatId::Png | FormatId::Jpeg | FormatId::Jpeg2000)) => Ok(Arc::new(Reader(plain::Plain::open(path, id)?))),
         #[cfg(feature = "stk")]

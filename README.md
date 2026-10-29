@@ -124,6 +124,7 @@ compared, "n/a" means the reader cannot open the format.
 | BigDataViewer XML/HDF5 | 3 | 61.99 s | 31.7 MiB | n/a | 0.8× / 28× | – |
 | Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
 | Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
+| OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -289,7 +290,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Olympus SIS TIFF** | `.tiff` | ✅ |
 | **Olympus/Evident VSI** | `.vsi, .ets` | ✅ |
 | **OME-TIFF** | `.ome.tiff, .ome.tif, .ome.tf2, .ome.tf8, .ome.btf` | ✅ |
-| **OME-XML** | `.ome, .ome.xml` |  |
+| **OME-XML** | `.ome, .ome.xml` | ✅ |
 | **OME-Zarr (NGFF 0.4 / 0.5)** | `.zarr` | ✅ |
 | **OMERO Pyramid** | — |  |
 | **Oxford Instruments** | `.top` |  |
@@ -394,6 +395,14 @@ on its own as Aperio SVS), but its layout is not documented (the Aperio
 data interchange document does not cover it) and no public sample file
 could be found (searched: OME sample server, OpenSlide test data, Zenodo).
 Support can be added once a sample with a clear licence is available.
+
+**OME-XML.** Files with the pixels inline (`BinData`: base64, `none` or
+`zlib` compression, either byte order; type `bit` as 0 / 1 bytes) are
+read as OME-XML; files with `TiffData` are OME-TIFF companions. Empty
+`BinData` elements and metadata-only images read as zeros. With several
+`Pixels` per image (schema 2008-09) scopeio follows `DefaultPixels`; the
+reference readers take the first. Both reference readers fail on the
+synthetic zlib, big-endian and `bit` files.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

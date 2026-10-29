@@ -555,6 +555,19 @@ as black-box command-line tools to produce reference output
   `tests/expected/vms_divergences.tsv`).
 - Synthetic slide written by `tests/scripts/make_vms_samples.py`.
 
+## OME-XML (`src/formats/tiff/omexml.rs`)
+
+- OME 2016-06 schema (`ome_2016-06.xsd`: `BinData` with `Compression`,
+  `BigEndian`, `Length`; `MetadataOnly`) and the OME data model pages
+  (`doc/ome-xml/`); metadata shared with the OME-TIFF reader.
+- OME-XML sample files of the OME sample server (`OME-XML/2016-06`,
+  `OME-XML/2008-09`, written by the OME project): one `BinData` per plane
+  in `DimensionOrder` order, schema 2008-09 `PixelType` and
+  `DefaultPixels`.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/omexml_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_omexml_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

@@ -93,6 +93,7 @@ python3 -I tests/scripts/make_lif_samples.py
 python3 -I tests/scripts/make_svs_samples.py
 python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_vms_samples.py    # needs ImageMagick
+python3 -I tests/scripts/make_omexml_samples.py   # OME-XML with inline pixels
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -234,6 +235,10 @@ $O --append --series 0 --crop 40000,60928,2048,1024 "$V"
 $O --append --repeat 1 --series 0 --crop 101376,75264,1024,1024 "$V"
 $O --append --repeat 1 --series 1 --ours-series assoc:macro "$V"
 BF_MAX_MEM=8g $O --append --repeat 1 --series 2 --ours-series 0/1 --tools bioformats "$V"
+# OME-XML: OME sample files (written by the OME project) and the synthetic files
+python3 -I tests/scripts/fetch_ome.py OME-XML/2016-06/ OME-XML/2008-09/
+python3 -I tests/scripts/oracle.py omexml --repeat 1 tests/reference/ome/OME-XML/2016-06/*.xml tests/reference/ome/OME-XML/2008-09/*.xml
+python3 -I tests/scripts/oracle.py omexml --append --repeat 1 tests/data/omexml/*.xml
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test
