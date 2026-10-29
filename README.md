@@ -125,6 +125,7 @@ compared, "n/a" means the reader cannot open the format.
 | Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
 | Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
 | OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
+| Zeiss Xradia XRM | 3 | 1 ms | 4.4 MiB | 207× / 40× | n/a | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -342,7 +343,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Zeiss AxioVision ZVI** | `.zvi` | ✅ |
 | **Zeiss CZI** | `.czi` | ✅ |
 | **Zeiss LSM 510/710** | `.lsm` | ✅ |
-| **Zeiss XRM** | `.txm, .txrm` |  |
+| **Zeiss XRM** | `.txm, .txrm, .xrm` | ✅ |
 
 ### Format notes
 
@@ -403,6 +404,13 @@ read as OME-XML; files with `TiffData` are OME-TIFF companions. Empty
 `Pixels` per image (schema 2008-09) scopeio follows `DefaultPixels`; the
 reference readers take the first. Both reference readers fail on the
 synthetic zlib, big-endian and `bit` files.
+
+**Zeiss Xradia XRM.** `.txm` (reconstructed volume), `.txrm` (projection
+series) and `.xrm` (single image) return their images as z planes, rows as
+stored; Bio-Formats returns every image flipped vertically (same pixels
+otherwise). Projection angles are in the original metadata, stage
+positions and exposures in the plane metadata. bioformats-rs reads none of
+the test files.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

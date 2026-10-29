@@ -80,6 +80,8 @@ pub enum FormatId {
     Vms,
     /// OME-XML with the pixels inline (`BinData`).
     OmeXml,
+    /// Zeiss Xradia (`.txm`, `.txrm`, `.xrm`).
+    Xrm,
 }
 
 /// Identification of the reader that produced the data, for

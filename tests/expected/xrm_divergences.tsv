@@ -1,0 +1,4 @@
+# Known differences for Zeiss Xradia.
+file	tool	series	tolerance	ignore	reason
+tests/reference/zenodo-4432446/XCT_predeformation_XradiaVersa520.txm	bioformats	-			Bio-Formats returns the rows of each image bottom-up; scopeio returns them as stored (top-down, as dxchange reads them); identical after a vertical flip (checked on projections.txrm)
+tests/data/xrm/projections.txrm	bioformats	-			rows bottom-up in Bio-Formats: its CRC equals the spec-derived pixels flipped vertically

@@ -568,6 +568,20 @@ as black-box command-line tools to produce reference output
   `tests/expected/omexml_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_omexml_samples.py`.
 
+## Zeiss Xradia TXM / TXRM / XRM (`src/formats/xrm.rs`)
+
+- Library of Congress format description fdd000581 (`doc/zeiss-xrm-txrm/`):
+  OLE2 compound file; [MS-CFB] for the container (shared `cfb.rs`).
+- `dxchange` (BSD-3-Clause, UChicago Argonne; read as documentation,
+  notice in THIRD_PARTY_NOTICES.md): `ImageInfo` stream names, data types
+  5 (uint16) and 10 (float32), `ImageData<ceil(n/100)>/Image<n>`.
+- Own analysis of the Xradia Versa 520 reconstruction of Zenodo record
+  4432446 (CC BY 4.0): `PixelSize` in micrometres, 999 slices, per-image
+  arrays of 999 floats.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/xrm_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_xrm_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

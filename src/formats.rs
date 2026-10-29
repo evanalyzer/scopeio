@@ -16,7 +16,7 @@ mod bdv;
 mod bif;
 #[cfg(feature = "bmp")]
 mod bmp;
-#[cfg(any(feature = "oif", feature = "zvi"))]
+#[cfg(any(feature = "oif", feature = "zvi", feature = "xrm"))]
 mod cfb;
 #[cfg(feature = "oif")]
 mod oif;
@@ -76,6 +76,8 @@ mod tiff;
 mod vsi;
 #[cfg(feature = "vms")]
 mod vms;
+#[cfg(feature = "xrm")]
+mod xrm;
 #[cfg(feature = "zarr")]
 mod zarr;
 
@@ -160,6 +162,8 @@ static SUPPORTED: &[FormatInfo] = &[
     dicom::FORMAT,
     #[cfg(feature = "zvi")]
     zvi::FORMAT,
+    #[cfg(feature = "xrm")]
+    xrm::FORMAT,
     #[cfg(feature = "operetta")]
     operetta::FORMAT,
     #[cfg(feature = "dv")]
@@ -248,6 +252,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "operetta")]
     if operetta::matches(path, &head) {
         return Ok(Some(FormatId::Operetta));
+    }
+    #[cfg(feature = "xrm")]
+    if xrm::matches(path, &head) {
+        return Ok(Some(FormatId::Xrm));
     }
     #[cfg(feature = "zvi")]
     if zvi::matches(path, &head) {
@@ -375,6 +383,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::ScanR) => Ok(Arc::new(Reader(scanr::ScanR::open(path)?))),
         #[cfg(feature = "operetta")]
         Some(FormatId::Operetta) => Ok(Arc::new(Reader(operetta::Operetta::open(path)?))),
+        #[cfg(feature = "xrm")]
+        Some(FormatId::Xrm) => Ok(Arc::new(Reader(xrm::Xrm::open(path)?))),
         #[cfg(feature = "zvi")]
         Some(FormatId::Zvi) => Ok(Arc::new(Reader(zvi::Zvi::open(path)?))),
         #[cfg(feature = "dicom")]
