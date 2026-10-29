@@ -42,6 +42,8 @@ mod lif;
 mod slide;
 #[cfg(feature = "lsm")]
 mod lsm;
+#[cfg(feature = "micromanager")]
+mod micromanager;
 #[cfg(feature = "mrc")]
 mod mrc;
 #[cfg(feature = "mrxs")]
@@ -156,6 +158,8 @@ static SUPPORTED: &[FormatInfo] = &[
     nifti::FORMAT,
     #[cfg(feature = "scanr")]
     scanr::FORMAT,
+    #[cfg(feature = "micromanager")]
+    micromanager::FORMAT,
     #[cfg(feature = "png")]
     plain::PNG_FORMAT,
     #[cfg(feature = "jpg")]
@@ -183,6 +187,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "zarr")]
     if let Some(id) = zarr::probe(path) {
         return Ok(Some(id));
+    }
+    #[cfg(feature = "micromanager")]
+    if micromanager::matches_dir(path) {
+        return Ok(Some(FormatId::MicroManager));
     }
     if path.is_dir() {
         return Ok(None);
@@ -213,6 +221,11 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "stk")]
     if nd::matches(path, &head) {
         return Ok(Some(FormatId::Nd));
+    }
+    // Micro-Manager stacks are OME-TIFF files; check them before TIFF.
+    #[cfg(feature = "micromanager")]
+    if micromanager::matches(path, &head) {
+        return Ok(Some(FormatId::MicroManager));
     }
     #[cfg(feature = "scanr")]
     if scanr::matches(path, &head) {
@@ -327,6 +340,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nifti) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]
         Some(FormatId::Mrc) => Ok(Arc::new(Reader(mrc::Mrc::open(path)?))),
+        #[cfg(feature = "micromanager")]
+        Some(FormatId::MicroManager) => Ok(Arc::new(Reader(micromanager::MicroManager::open(path, opts)?))),
         #[cfg(feature = "scanr")]
         Some(FormatId::ScanR) => Ok(Arc::new(Reader(scanr::ScanR::open(path)?))),
         #[cfg(feature = "operetta")]

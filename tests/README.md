@@ -81,6 +81,7 @@ python3 -I tests/scripts/make_nikon_tiff_samples.py # Nikon NIS-Elements TIFF
 python3 -I tests/scripts/make_nef_samples.py      # Nikon NEF
 python3 -I tests/scripts/make_omp2info_samples.py # Olympus OMP2INFO (after make_oir_samples.py)
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
+python3 -I tests/scripts/make_micromanager_samples.py # Micro-Manager stacks, separate files, NDTiff
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -201,6 +202,18 @@ O=Olympus-OIR/gh-4205/zenodo-13680725
 python3 -I tests/scripts/fetch_ome.py $O/matl.omp2info $O/Map_A01.oir $O/Stitch_A01_G001.oir $O/Stitch_A01_G001_00001 \
     $(for i in $(seq -w 1 25); do echo $O/tiling-sample-brain-section_A01_G001_00$i.oir; done)
 python3 -I tests/scripts/oracle.py omp2info --repeat 1 tests/reference/ome/$O/matl.omp2info
+# Micro-Manager: OME samples (CC BY 4.0), NDTiff test datasets (Zenodo 7065552, CC BY 4.0), synthetic files
+M=Micro-Manager; R=tests/reference/ome/$M; T=tests/data/micromanager
+python3 -I tests/scripts/fetch_ome.py $M/1.4.22/thomas/ $M/1.4.23/jens/ $M/1.4.16/serge/Pos0/ $M/1.4.16/serge/Pos1/
+python3 -I tests/scripts/fetch_zenodo.py 7065552 NDTiff_test_data.zip
+(cd tests/reference/zenodo-7065552 && python3 -I -m zipfile -e NDTiff_test_data.zip extracted)
+python3 -I tests/scripts/oracle.py micromanager --repeat 3 $R/1.4.22/thomas/test/test_stack/test_stack_MMStack_Pos0.ome.tif \
+    $R/1.4.22/thomas/test/test2_stack/MMStack_Pos0.ome.tif $R/1.4.22/thomas/test/test_sep/Pos0/metadata.txt \
+    $R/1.4.22/thomas/test/test2_sep/Pos0/metadata.txt $R/1.4.23/jens/fucci_GFP-geminin_RFP-cdt1_2_MMStack_Pos0.ome.tif \
+    $R/1.4.16/serge/Pos0/metadata.txt \
+    tests/reference/zenodo-7065552/extracted/NDTiff_test_data/v3/mm_mda_tcz_15/mm_mda_tcz_15_NDTiffStack.tif
+python3 -I tests/scripts/oracle.py micromanager --append --repeat 1 $T/stack/syn_MMStack_Pos0.ome.tif \
+    $T/sep/Pos0/metadata.txt $T/sep2/Pos0/metadata.txt $T/nd/nd_NDTiffStack.tif
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

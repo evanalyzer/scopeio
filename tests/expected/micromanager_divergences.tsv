@@ -1,0 +1,8 @@
+# Known differences for Micro-Manager.
+file	tool	series	tolerance	reason
+tests/reference/zenodo-7065552/extracted/NDTiff_test_data/v3/mm_mda_tcz_15/mm_mda_tcz_15_NDTiffStack.tif	bioformats	-		NDTiff: Bio-Formats ignores NDTiff.index and reads the file as a plain TIFF (112 pages as time points); scopeio uses the index axes (C 2, Z 7, T 8), same pixels in another plane order
+tests/reference/zenodo-7065552/extracted/NDTiff_test_data/v3/mm_mda_tcz_15/mm_mda_tcz_15_NDTiffStack.tif	bioformats-rs	-		see above
+tests/data/micromanager/nd/nd_NDTiffStack.tif	bioformats	-		NDTiff read as plain TIFF (9 pages, including the overwritten image); scopeio: 2 positions of C 2, Z 2 from the index, spec-derived truth is the reference
+tests/data/micromanager/nd/nd_NDTiffStack.tif	bioformats-rs	-		see above
+tests/data/micromanager/stack/syn_MMStack_Pos0.ome.tif	bioformats	-		stack without OME-XML: Bio-Formats reads only this file as a plain TIFF (4 pages); scopeio follows the index maps of all three files of the acquisition (2 positions, continuation file), spec-derived truth is the reference
+tests/data/micromanager/stack/syn_MMStack_Pos0.ome.tif	bioformats-rs	-		see above

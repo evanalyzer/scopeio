@@ -120,6 +120,7 @@ compared, "n/a" means the reader cannot open the format.
 | Nikon NIS-Elements TIFF | 5 | 5 ms | 12 MiB | 332× / 16× | 4.1× / 2.2× | – |
 | Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
 | Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
+| Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -144,6 +145,9 @@ compared, "n/a" means the reader cannot open the format.
   is not supported.
 - OMP2INFO: scopeio reads the vendor stitch and all 25 tiles; the reference
   readers build their own mosaic instead (see Format notes).
+- Micro-Manager: the reference readers read NDTiff files as plain TIFF
+  (pages as time points) and ignore the index; scopeio's NDTiff output is
+  checked against synthetic files instead.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -248,7 +252,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **MetaMorph Stack (STK)** | `.stk, .nd` | ✅ |
 | **MetaXpress** | — |  |
 | **MIAS (Maia Scientific)** | `.tif` |  |
-| **Micro-Manager** | `.tif, .txt, .xml` |  |
+| **Micro-Manager** (image stacks, separate files, NDTiff) | `.tif, .txt, .index` | ✅ |
 | **Mikroscan TIFF** | `.tif, .tiff` |  |
 | **MINC MRI** | `.mnc` |  |
 | **Minolta MRW** | — |  |
@@ -343,6 +347,16 @@ scopeio does not stitch tiles itself. Bio-Formats returns a single mosaic on
 a grid of its own (466 × 462 px pitch for the public sample, 3308 × 2360
 px), which matches neither the nominal grid (461 px) nor the vendor stitch
 (3554 × 2540 px).
+
+**Micro-Manager.** Any file of a dataset opens the whole acquisition: an
+image stack file (`*_MMStack*.ome.tif`, also a continuation file `_1`,
+`_2`, ... or the `_metadata.txt` companion), the `metadata.txt` or an
+`img_*.tif` of a separate-files acquisition, or an NDTiff folder, its
+`NDTiff.index` or a data file. Each stage position is one series (for
+separate files: each `Pos<n>` folder). In NDTiff, every axis besides
+`channel`, `z` and `time` (e.g. Magellan `row` / `column` tiles) also
+selects the series; tiles are not stitched and the downsampled pyramid
+folders are not read. NDTiff RGB images are not supported yet.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

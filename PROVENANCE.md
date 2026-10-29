@@ -485,6 +485,31 @@ as black-box command-line tools to produce reference output
 - Synthetic acquisition written by `tests/scripts/make_omp2info_samples.py`
   (copies of the synthetic OIR).
 
+## Micro-Manager (`src/formats/micromanager.rs`)
+
+- Micro-Manager file format page (micro-manager.org, `doc/micro-manager/`):
+  image file stack header (index map offset, display settings, comments
+  and summary headers), IFD layout with the MicroManagerMetadata tag
+  51123, index map (channel, slice, frame, position, IFD offset), separate
+  image files with `metadata.txt`.
+- NDTiff specification v1 to v3 (README of micro-manager/NDStorage,
+  BSD-3-Clause, `doc/micro-manager/`): file header, `NDTiff.index` entries
+  (axes JSON, file name, pixel offset, size, pixel type, compression,
+  metadata offset and length), `Full resolution` folder of v2.
+- Own analysis of the public Micro-Manager samples on the OME sample server
+  (`Micro-Manager/`, CC BY 4.0: 1.4.16 separate files, 1.4.22 stacks and
+  separate files in 1.4 and 2.0-beta layout, 1.4.22 two-file stack, 1.4.23
+  aborted stack) and the NDTiff test datasets (Zenodo 7065552, CC BY 4.0):
+  `FrameKey-<t>-<c>-<z>` and `Coords-<file>` / `Metadata-<file>` entries,
+  summary keys (`ChNames`, `ChColors` as Java ARGB, `PixelSize_um`,
+  `z-step_um`, `Interval_ms`, `StartTime` / `Time`,
+  `InitialPositionList` / `StagePositions`), image metadata keys
+  (`ElapsedTime-ms`, `Exposure-ms`, `X/Y/ZPositionUm`, `PixelSizeUm`),
+  NDTiff string and negative axis values.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/micromanager_divergences.tsv`).
+- Synthetic datasets written by `tests/scripts/make_micromanager_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

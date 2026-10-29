@@ -1,0 +1,58 @@
+{
+ "Summary": {
+  "Prefix": "sep",
+  "Channels": 2,
+  "Slices": 1,
+  "Frames": 3,
+  "ChNames": [
+   "BF",
+   "FITC"
+  ],
+  "PixelSize_um": 0.5,
+  "Interval_ms": 2000,
+  "Time": "2026-10-29 08:00:00 +0000",
+  "PositionIndex": 0
+ },
+ "FrameKey-0-0-0": {
+  "FileName": "img_000000000_BF_000.tif",
+  "ElapsedTime-ms": 0,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ },
+ "FrameKey-0-1-0": {
+  "FileName": "img_000000000_FITC_000.tif",
+  "ElapsedTime-ms": 1,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ },
+ "FrameKey-1-0-0": {
+  "FileName": "img_000000001_BF_000.tif",
+  "ElapsedTime-ms": 2000,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ },
+ "FrameKey-1-1-0": {
+  "FileName": "img_000000001_FITC_000.tif",
+  "ElapsedTime-ms": 2001,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ },
+ "FrameKey-2-0-0": {
+  "FileName": "img_000000002_BF_000.tif",
+  "ElapsedTime-ms": 4000,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ },
+ "FrameKey-2-1-0": {
+  "FileName": "img_000000002_FITC_000.tif",
+  "ElapsedTime-ms": 4001,
+  "Exposure-ms": 5,
+  "XPositionUm": 0,
+  "YPositionUm": 0
+ }
+}

@@ -139,7 +139,9 @@ fn sample_files_match_their_format_names() {
                 continue;
             };
             let f = scopeio::supported_formats().iter().find(|f| f.id == id).unwrap();
-            assert!(f.matches_name(&name), "{} detected as {} but not named so", path.display(), f.name);
+            // NDTiff dataset folders have no naming convention.
+            let free_name = path.is_dir() && id == scopeio::FormatId::MicroManager;
+            assert!(free_name || f.matches_name(&name), "{} detected as {} but not named so", path.display(), f.name);
             checked += 1;
             if path.is_dir() && !f.opens_folder {
                 stack.push(path);

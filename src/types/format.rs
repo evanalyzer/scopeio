@@ -70,6 +70,8 @@ pub enum FormatId {
     Nef,
     /// Olympus/Evident multi-area acquisition (`.omp2info` and its OIR files).
     Omp2info,
+    /// Micro-Manager image stacks, separate image files and NDTiff datasets.
+    MicroManager,
 }
 
 /// Identification of the reader that produced the data, for

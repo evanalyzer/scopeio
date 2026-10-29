@@ -1,0 +1,40 @@
+{
+ "Summary": {
+  "Prefix": "",
+  "ChNames": [
+   "Cy5"
+  ],
+  "AxisOrder": [
+   "z",
+   "channel"
+  ],
+  "IntendedDimensions": {
+   "z": 2,
+   "channel": 1,
+   "time": 1,
+   "position": 1
+  }
+ },
+ "Coords-img_channel000_position000_time000000000_z000.tif": {
+  "position": 0,
+  "time": 0,
+  "z": 0,
+  "channel": 0
+ },
+ "Metadata-img_channel000_position000_time000000000_z000.tif": {
+  "PixelSizeUm": 0.1,
+  "ZPositionUm": 0.0,
+  "Exposure-ms": "7.5"
+ },
+ "Coords-img_channel000_position000_time000000000_z001.tif": {
+  "position": 0,
+  "time": 0,
+  "z": 1,
+  "channel": 0
+ },
+ "Metadata-img_channel000_position000_time000000000_z001.tif": {
+  "PixelSizeUm": 0.1,
+  "ZPositionUm": 2.0,
+  "Exposure-ms": "7.5"
+ }
+}
