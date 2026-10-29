@@ -188,7 +188,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Andor Bio-Imaging Division (ABD) TIFF** | `.tif` |  |
 | **Andor SIF** | `.sif` |  |
 | **Animated PNG** | `.png` |  |
-| **Aperio AFI** | `.afi, .svs` |  |
+| **Aperio AFI** | `.afi, .svs` | ❌ not possible yet (see Format notes) |
 | **Aperio SVS TIFF** | `.svs` | ✅ |
 | **Applied Precision CellWorX** | `.htd, .pnl` |  |
 | **AVI (Audio Video Interleave)** | `.avi` |  |
@@ -387,6 +387,13 @@ public CMU-1 slide has 0.228 µm per pixel at 40x, Bio-Formats reports 228
 µm. Bio-Formats' map series of that slide does not match the slide
 (scopeio's map agrees with the block means of level 0). VMU slides (NGR
 files) are not supported.
+
+**Aperio AFI: not supported yet.** An `.afi` file is said to be XML
+listing one Aperio SVS file per fluorescence channel (each SVS file opens
+on its own as Aperio SVS), but its layout is not documented (the Aperio
+data interchange document does not cover it) and no public sample file
+could be found (searched: OME sample server, OpenSlide test data, Zenodo).
+Support can be added once a sample with a clear licence is available.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,
