@@ -1,0 +1,5 @@
+# Known differences for Hamamatsu VMS: JPEG decoded with different IDCT implementations
+# (zune-jpeg vs Bio-Formats) differs by rounding.
+file	tool	series	tolerance	ignore	reason
+tests/reference/openslide/Hamamatsu-vms/CMU-1/CMU-1-40x - 2010-01-12 13.24.05.vms	bioformats	-	0.2	phys_x_nm,phys_y_nm	JPEG IDCT rounding; Bio-Formats reads PhysicalWidth/Height as micrometres (228 um per pixel); they are nanometres (0.228 um per pixel at 40x)
+tests/reference/openslide/Hamamatsu-vms/CMU-1/CMU-1-40x - 2010-01-12 13.24.05.vms	bioformats	2			the map (Bio-Formats series 2, scopeio level 1) differs: scopeio's map matches the block means of level 0 (e.g. 156/111/137 against 158/107/136 for the cell at x 76800, y 9536), Bio-Formats' does not (206/192/180)

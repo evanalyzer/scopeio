@@ -143,7 +143,7 @@ impl Backend for Slide {
         let index = (plane.c + m.size_c * (plane.z + m.size_z * plane.t)) as usize;
         let p = &self.series[series].levels[level][index];
         match &p.restart {
-            Some(r) => r.read(&self.tiff, region, sink),
+            Some(r) => r.read(&self.tiff.file, region, (0, 0), sink),
             None => p.image.read_native(&self.tiff, region, p.samples, sink),
         }
     }

@@ -74,6 +74,8 @@ mod nd2;
 mod tiff;
 #[cfg(feature = "vsi")]
 mod vsi;
+#[cfg(feature = "vms")]
+mod vms;
 #[cfg(feature = "zarr")]
 mod zarr;
 
@@ -128,6 +130,8 @@ static SUPPORTED: &[FormatInfo] = &[
     ndpi::FORMAT,
     #[cfg(feature = "ndpi")]
     ndpis::FORMAT,
+    #[cfg(feature = "vms")]
+    vms::FORMAT,
     #[cfg(feature = "mrxs")]
     mrxs::FORMAT,
     #[cfg(feature = "lsm")]
@@ -263,6 +267,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if ims::matches(path, &head) {
         return Ok(Some(FormatId::Ims));
     }
+    #[cfg(feature = "vms")]
+    if vms::matches(path, &head) {
+        return Ok(Some(FormatId::Vms));
+    }
     #[cfg(feature = "ndpi")]
     if ndpis::matches(&head) {
         return Ok(Some(FormatId::Ndpis));
@@ -384,6 +392,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Mrxs) => Ok(Arc::new(Reader(mrxs::Mrxs::open(path, opts)?))),
         #[cfg(feature = "ndpi")]
         Some(FormatId::Ndpi) => Ok(Arc::new(Reader(ndpi::open(path, opts)?))),
+        #[cfg(feature = "vms")]
+        Some(FormatId::Vms) => Ok(Arc::new(Reader(vms::Vms::open(path)?))),
         #[cfg(feature = "ndpi")]
         Some(FormatId::Ndpis) => Ok(Arc::new(Reader(ndpis::Ndpis::open(path, opts)?))),
         #[cfg(feature = "svs")]

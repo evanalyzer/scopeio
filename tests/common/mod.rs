@@ -310,12 +310,24 @@ fn level_of_last_series(path: &Path, count: usize, series: usize) -> Option<Seri
     decode_level(reader.as_ref(), last, level).ok()
 }
 
+/// `diffs` without those of the `fields` a divergence row ignores: an
+/// `ignore` column lists metadata fields known to differ (e.g. a
+/// reference's wrong unit) while the pixels are still compared.
+fn without_ignored(mut diffs: Vec<String>, fields: Option<&Vec<String>>) -> Vec<String> {
+    if let Some(fields) = fields {
+        diffs.retain(|d| !fields.iter().any(|f| d.split_once(':').is_some_and(|(name, _)| name == f)));
+    }
+    diffs
+}
+
 /// Compares scopeio with all reference rows of a format.
 ///
 /// Reads `tests/expected/<format>.tsv` and `<format>_divergences.tsv`.
 /// A (file, tool) pair listed as divergence without tolerance must differ;
 /// with a tolerance, its block means must agree within it (lossy codecs).
-/// Every other successful reference must match exactly. A (file, `scopeio`)
+/// Every other successful reference must match exactly. An optional
+/// `ignore` column names metadata fields (e.g. `phys_x_nm,phys_y_nm`) not
+/// compared for that (file, tool). A (file, `scopeio`)
 /// entry marks a file scopeio cannot read yet. Missing external sample
 /// files are skipped.
 ///
@@ -351,6 +363,13 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         })
         .collect();
 
+    let ignored: HashMap<(String, String), Vec<String>> = divergence_rows
+        .iter()
+        .filter_map(|d| {
+            let fields = d.get("ignore").filter(|v| !v.is_empty() && *v != "-")?;
+            Some(((d["file"].clone(), d["tool"].clone()), fields.split(',').map(|f| f.trim().to_string()).collect()))
+        })
+        .collect();
     let mut failures = Vec::new();
     let mut decoded: HashMap<String, Result<Lazy, String>> = HashMap::new();
     let mut skipped = 0;
@@ -430,6 +449,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                 }
                 Err(e) => vec![format!("associated {kind:?}: {e}")],
             };
+            let diffs = without_ignored(diffs, ignored.get(&key));
             match (diffs.is_empty(), listed) {
                 (false, false) => failures.push(format!("{} vs {} {kind:?}: {}", r["file"], r["tool"], diffs.join("; "))),
                 (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
@@ -454,6 +474,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                 Ok((s, reader)) => compare_level(s, r, tolerance, downsample(reader.as_ref(), series, level)),
                 Err(e) => vec![format!("crop {crop}: {e}")],
             };
+            let diffs = without_ignored(diffs, ignored.get(&key));
             match (diffs.is_empty(), listed) {
                 (false, false) => failures.push(format!("{} vs {} crop {crop}: {}", r["file"], r["tool"], diffs.join("; "))),
                 (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
@@ -466,6 +487,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                 Ok((s, reader)) => compare_level(s, r, tolerance, downsample(reader.as_ref(), series, level)),
                 Err(e) => vec![format!("level {level}: {e}")],
             };
+            let diffs = without_ignored(diffs, ignored.get(&key));
             match (diffs.is_empty(), listed) {
                 (false, false) => failures.push(format!("{} vs {} level {level}: {}", r["file"], r["tool"], diffs.join("; "))),
                 (true, true) => failures.push(format!("{} vs {}: listed as divergence but matches now", r["file"], r["tool"])),
@@ -493,6 +515,7 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
                 None => vec![format!("series {series} missing, ours has {count}")],
             },
         };
+        let diffs = without_ignored(diffs, ignored.get(&key));
         match (diffs.is_empty(), listed) {
             (false, false) => failures.push(format!("{} vs {}: {}", r["file"], r["tool"], diffs.join("; "))),
             (true, true) => failures.push(format!(

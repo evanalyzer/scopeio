@@ -10,7 +10,7 @@ sample files that are not present locally are skipped.
 |---|---|---|
 | `data/<format>/` | yes | Small synthetic samples written from the format specification, plus `truth.tsv` with the CRC-32 each file must decode to |
 | `expected/<format>.tsv` | yes | Metadata and pixel CRC-32 from both reference readers |
-| `expected/<format>_divergences.tsv` | yes | Known, explained differences from the reference readers |
+| `expected/<format>_divergences.tsv` | yes | Known, explained differences from the reference readers; optional columns: `tolerance` (block means, lossy codecs), `ignore` (metadata fields not compared, e.g. `phys_x_nm,phys_y_nm`) |
 | `expected/<format>_bench.md` | yes | CPU time and peak RAM of scopeio and both reference readers |
 | `scripts/` | yes | Sample generators, `oracle.py`, `measure.rs` |
 | `external/`, `reference/` | no | Larger real-world sample files |
@@ -92,6 +92,7 @@ python3 -I tests/scripts/make_czi_samples.py
 python3 -I tests/scripts/make_lif_samples.py
 python3 -I tests/scripts/make_svs_samples.py
 python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
+python3 -I tests/scripts/make_vms_samples.py    # needs ImageMagick
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -225,6 +226,14 @@ python3 -I tests/scripts/oracle.py bdv --repeat 1 tests/reference/ome/BDV/sample
 python3 -I tests/scripts/oracle.py bdv --append --repeat 1 tests/data/bdv/synthetic.xml
 # Analyze 7.5: synthetic files only
 python3 -I tests/scripts/oracle.py analyze --repeat 3 tests/data/analyze/*.hdr
+# Hamamatsu VMS: OpenSlide test slide (CC0); the map needs a larger Bio-Formats heap
+python3 -I tests/scripts/fetch_openslide.py Hamamatsu-vms/CMU-1.zip
+V="tests/reference/openslide/Hamamatsu-vms/CMU-1/CMU-1-40x - 2010-01-12 13.24.05.vms"; O="python3 -I tests/scripts/oracle.py vms"
+$O --series 0 --crop 60928,30000,1024,1024 "$V"
+$O --append --series 0 --crop 40000,60928,2048,1024 "$V"
+$O --append --repeat 1 --series 0 --crop 101376,75264,1024,1024 "$V"
+$O --append --repeat 1 --series 1 --ours-series assoc:macro "$V"
+BF_MAX_MEM=8g $O --append --repeat 1 --series 2 --ours-series 0/1 --tools bioformats "$V"
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

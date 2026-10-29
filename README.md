@@ -123,6 +123,7 @@ compared, "n/a" means the reader cannot open the format.
 | Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
 | BigDataViewer XML/HDF5 | 3 | 61.99 s | 31.7 MiB | n/a | 0.8× / 28× | – |
 | Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
+| Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -158,6 +159,10 @@ compared, "n/a" means the reader cannot open the format.
   setup scopeio needs about a third of its CPU time.
 - Analyze 7.5: no public image pair with a clear licence was found;
   measured on the synthetic files only (checked against both readers).
+- Hamamatsu VMS: crops of 1-2 megapixels and the 122-megapixel map; the
+  first read of a JPEG file indexes its restart markers (0.3 s for 300 MB).
+  bioformats-rs has no crop or series option and cannot convert the
+  7.8-gigapixel slide whole.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -219,7 +224,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Hamamatsu DCIMG** | — |  |
 | **Hamamatsu HIS** | — |  |
 | **Hamamatsu ndpi** | `.ndpi, .ndpis` | ✅ |
-| **Hamamatsu VMS** | `.vms` |  |
+| **Hamamatsu VMS** | `.vms` | ✅ |
 | **Hitachi S-4800** | `.txt, .tif, .bmp, .jpg` |  |
 | **I2I** | `.i2i` |  |
 | **ICS (Image Cytometry Standard)** | `.ics, .ids` |  |
@@ -374,6 +379,14 @@ tile) is a series of its own, with the time points as T and the mipmap
 levels as pyramid levels. Registrations are not applied, so fused and
 deconvolved setups are separate series too. Partitioned HDF5 and the N5 /
 OME-Zarr loaders are not supported.
+
+**Hamamatsu VMS.** Level 0 is the grid of JPEG files, level 1 the map
+file (when it scales the image by a whole factor); the macro image is an
+associated image. `PhysicalWidth` / `PhysicalHeight` are nanometres: the
+public CMU-1 slide has 0.228 µm per pixel at 40x, Bio-Formats reports 228
+µm. Bio-Formats' map series of that slide does not match the slide
+(scopeio's map agrees with the block means of level 0). VMU slides (NGR
+files) are not supported.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

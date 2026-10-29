@@ -539,6 +539,22 @@ as black-box command-line tools to produce reference output
   `tests/expected/bdv_divergences.tsv`).
 - Synthetic dataset written by `tests/scripts/make_bdv_samples.py`.
 
+## Hamamatsu VMS (`src/formats/vms.rs`, `src/formats/slide/restart.rs`)
+
+- openslide.org Hamamatsu format page (prose, CC BY-SA 4.0,
+  `doc/hamamatsu-ndpi-vms/`): VMS index keys (`NoJpegColumns`,
+  `NoJpegRows`, `ImageFile(z,x,y)`, `MapFile`, `MacroImage`,
+  `PhysicalWidth`/`Height` in nm, `SourceLens`), JPEG files with restart
+  markers, incomplete optimisation file. OpenSlide's C code (LGPL) was not
+  consulted.
+- ITU-T T.81 (JPEG): restart markers and intervals, frame header.
+- Own analysis of the OpenSlide VMS test slide CMU-1 (CC0): grid of four
+  JPEG files of 4096 x 8 px restart intervals, map at 1/8 scale.
+- Checked against Bio-Formats as a black box on three crops (both file
+  boundaries), the macro and the map (see
+  `tests/expected/vms_divergences.tsv`).
+- Synthetic slide written by `tests/scripts/make_vms_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

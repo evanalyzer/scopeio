@@ -76,6 +76,8 @@ pub enum FormatId {
     Bdv,
     /// Mayo Analyze 7.5 (`.hdr` + `.img`).
     Analyze,
+    /// Hamamatsu VMS (`.vms` index and JPEG files).
+    Vms,
 }
 
 /// Identification of the reader that produced the data, for
