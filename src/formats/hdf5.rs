@@ -1,7 +1,7 @@
 //! # hdf5
 //!
-//! A read-only subset of the HDF5 file format, as far as Imaris files need
-//! it: superblocks 0-3, object headers 1 and 2 with continuations, groups
+//! A read-only subset of the HDF5 file format, as far as Imaris and
+//! BigDataViewer files need it: superblocks 0-3, object headers 1 and 2 with continuations, groups
 //! (symbol tables, compact and dense links), attributes (compact and
 //! dense), datasets with contiguous, compact or chunked layout (version 1
 //! B-tree, single chunk) and their filter pipeline. Dense storage is read
@@ -19,10 +19,12 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+use std::collections::HashMap;
 use std::fs::File;
 
 use crate::io::read_exact_at;
-use crate::{Error, Result};
+use crate::pixel::Sink;
+use crate::{Error, Region, Result, codecs, scratch};
 
 /// Raw key and child address of a version 1 B-tree entry.
 type BtreeEntry = (Vec<u8>, u64);
@@ -1047,11 +1049,439 @@ impl FractalHeap {
     }
 }
 
+// --- Volumes ------------------------------------------------------------------
+
+/// Largest decoded chunk, against corrupt chunk sizes.
+const MAX_CHUNK: u64 = 1 << 30;
+
+/// A 2-D or 3-D (z, y, x) dataset prepared for plane reads: storage and
+/// chunk table. Filters: deflate, shuffle, fletcher32, scale-offset
+/// (integers) and the HDF5 LZ4 filter (32004).
+#[derive(Debug)]
+pub(super) struct Volume {
+    pub ds: Dataset,
+    /// Chunks by grid coordinates (z, y, x).
+    chunks: HashMap<[u64; 3], Chunk>,
+    pub chunk: [u64; 3],
+}
+
+impl Volume {
+    /// Resolves the dataset at object header `addr` and its chunk table.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::UnsupportedVariant`] for datasets of other than two
+    /// or three dimensions and [`Error::Corrupt`] for invalid chunking.
+    pub fn open(h: &H5, addr: u64) -> Result<Volume> {
+        let ds = h.dataset(&h.object(addr)?)?;
+        if !(1..=3).contains(&ds.dims.len()) {
+            return Err(Error::UnsupportedVariant(format!("HDF5 data with {} dimensions", ds.dims.len())));
+        }
+        let mut chunks = HashMap::new();
+        let mut chunk = [ds.dims.first().copied().unwrap_or(1), 0, 0];
+        if let Layout::Chunked { dims, index } = &ds.layout {
+            if dims.len() != ds.dims.len() || dims.contains(&0) {
+                return Err(Error::Corrupt("HDF5 chunk dimensions".into()));
+            }
+            chunk = match dims[..] {
+                [z, y, x] => [z, y, x],
+                [y, x] => [1, y, x],
+                [x] => [1, 1, x],
+                _ => unreachable!("1 to 3 dimensions"),
+            };
+            match index {
+                ChunkIndex::BTree(tree) => {
+                    for (off, ch) in h.chunks(*tree, ds.dims.len())? {
+                        let o: Vec<u64> = match off[..] {
+                            [_, _, _] => off,
+                            [y, x] => vec![0, y, x],
+                            [x] => vec![0, 0, x],
+                            _ => continue,
+                        };
+                        chunks.insert([o[0] / chunk[0], o[1] / chunk[1], o[2] / chunk[2]], ch);
+                    }
+                }
+                ChunkIndex::Single { address, size, mask } => {
+                    let full = chunk.iter().try_fold(ds.dtype.size as u64, |a, &d| a.checked_mul(d)).unwrap_or(u64::MAX).min(u32::MAX as u64);
+                    chunks.insert([0, 0, 0], Chunk { address: *address, size: if *size == u64::MAX { full as u32 } else { *size as u32 }, mask: *mask });
+                }
+            }
+        }
+        Ok(Volume { ds, chunks, chunk })
+    }
+
+    /// The whole dataset, row-major, in the stored byte order: for small
+    /// datasets (at most `max` bytes) such as BigDataViewer's resolution
+    /// table.
+    pub fn read_all(&self, h5: &H5, max: u64) -> Result<Vec<u8>> {
+        let e = self.ds.dtype.size as u64;
+        let [dz, dy, dx] = match self.ds.dims[..] {
+            [z, y, x] => [z, y, x],
+            [y, x] => [1, y, x],
+            [x] => [1, 1, x],
+            _ => return Err(Error::UnsupportedVariant(format!("HDF5 data with {} dimensions", self.ds.dims.len()))),
+        };
+        let total = dz.checked_mul(dy).and_then(|v| v.checked_mul(dx)).and_then(|v| v.checked_mul(e)).filter(|&t| t <= max);
+        let total = total.ok_or_else(|| corrupt("dataset too large to read whole"))? as usize;
+        match &self.ds.layout {
+            Layout::Compact(data) => data.get(..total).map(<[u8]>::to_vec).ok_or_else(|| corrupt("compact data truncated")),
+            Layout::Contiguous { address, .. } => h5.read(*address, total as u64),
+            Layout::Chunked { .. } => {
+                let [cz, cy, cx] = self.chunk;
+                let mut out = vec![0u8; total];
+                let mut buf = vec![0u8; (cz * cy * cx * e) as usize];
+                for (&[gz, gy, gx], ch) in &self.chunks {
+                    let n = buf.len();
+                    self.decode_chunk(h5, ch, &mut buf, n)?;
+                    for z in gz * cz..((gz + 1) * cz).min(dz) {
+                        for y in gy * cy..((gy + 1) * cy).min(dy) {
+                            let (x0, x1) = (gx * cx, ((gx + 1) * cx).min(dx));
+                            if x0 >= x1 {
+                                continue;
+                            }
+                            let src = (((z - gz * cz) * cy + y - gy * cy) * cx * e) as usize;
+                            let dst = (((z * dy + y) * dx + x0) * e) as usize;
+                            let n = ((x1 - x0) * e) as usize;
+                            out[dst..dst + n].copy_from_slice(&buf[src..src + n]);
+                        }
+                    }
+                }
+                Ok(out)
+            }
+        }
+    }
+
+    /// Delivers `region` of plane `z` to `sink`, decoding only the chunks
+    /// it touches; missing chunks read as zeros.
+    pub fn read_plane(&self, h5: &H5, z: u64, region: Region, sink: &mut Sink) -> Result<()> {
+        let e = self.ds.dtype.size;
+        let (dz, dy, dx) = match self.ds.dims[..] {
+            [z, y, x] => (z, y, x),
+            [y, x] => (1, y, x),
+            _ => return Err(Error::Corrupt("HDF5 data dimensions".into())),
+        };
+        let (x0, y0, w, h) = (region.x, region.y, region.width as usize, region.height as usize);
+        let swap = self.ds.dtype.big_endian && e > 1;
+        let fix = |d: &mut [u8]| {
+            if swap {
+                d.chunks_exact_mut(e).for_each(<[u8]>::reverse);
+            }
+        };
+        // Pixels outside the stored volume (should not happen) read as 0.
+        if z >= dz || y0 + h as u64 > dy || x0 + w as u64 > dx {
+            for r in 0..h {
+                sink.write_with(r, 0, w, |d| {
+                    d.fill(0);
+                    Ok(())
+                })?;
+            }
+            return Ok(());
+        }
+        match &self.ds.layout {
+            Layout::Contiguous { address, .. } => {
+                let total = dz.checked_mul(dy).and_then(|v| v.checked_mul(dx)).and_then(|v| v.checked_mul(e as u64)).ok_or_else(|| Error::Corrupt("HDF5 data size".into()))?;
+                let base = h5.absolute(*address, total)?;
+                for r in 0..h {
+                    let at = base + ((z * dy + y0 + r as u64) * dx + x0) * e as u64;
+                    sink.write_with(r, 0, w, |d| {
+                        read_exact_at(&h5.file, d, at)?;
+                        fix(d);
+                        Ok(())
+                    })?;
+                }
+                Ok(())
+            }
+            Layout::Compact(data) => {
+                for r in 0..h {
+                    let at = (((z * dy + y0 + r as u64) * dx + x0) * e as u64) as usize;
+                    let src = data.get(at..at + w * e).ok_or_else(|| Error::Corrupt("HDF5 compact data".into()))?;
+                    sink.write_with(r, 0, w, |d| {
+                        d.copy_from_slice(src);
+                        fix(d);
+                        Ok(())
+                    })?;
+                }
+                Ok(())
+            }
+            Layout::Chunked { .. } => {
+                let [cz, cy, cx] = self.chunk;
+                let chunk_len = cz.checked_mul(cy).and_then(|v| v.checked_mul(cx)).and_then(|v| v.checked_mul(e as u64)).unwrap_or(u64::MAX);
+                if chunk_len > MAX_CHUNK {
+                    return Err(Error::Corrupt("HDF5 chunk too large".into()));
+                }
+                let (gz, zz) = (z / cz, z % cz);
+                scratch::with(chunk_len as usize, |buf| {
+                    for gy in y0 / cy..(y0 + h as u64).div_ceil(cy) {
+                        for gx in x0 / cx..(x0 + w as u64).div_ceil(cx) {
+                            // Bytes up to the end of plane `zz` of the chunk.
+                            let need = ((zz + 1) * cy * cx * e as u64) as usize;
+                            let present = match self.chunks.get(&[gz, gy, gx]) {
+                                Some(ch) => {
+                                    self.decode_chunk(h5, ch, buf, need)?;
+                                    true
+                                }
+                                None => false,
+                            };
+                            let (ax0, ax1) = (x0.max(gx * cx), (x0 + w as u64).min((gx + 1) * cx));
+                            let (ay0, ay1) = (y0.max(gy * cy), (y0 + h as u64).min((gy + 1) * cy));
+                            let n = (ax1 - ax0) as usize;
+                            for y in ay0..ay1 {
+                                let at = (((zz * cy + y - gy * cy) * cx + ax0 - gx * cx) * e as u64) as usize;
+                                sink.write_with((y - y0) as usize, (ax0 - x0) as usize, n, |d| {
+                                    if present {
+                                        d.copy_from_slice(&buf[at..at + n * e]);
+                                        fix(d);
+                                    } else {
+                                        d.fill(0);
+                                    }
+                                    Ok(())
+                                })?;
+                            }
+                        }
+                    }
+                    Ok(())
+                })
+            }
+        }
+    }
+
+    /// Decodes the first `need` bytes of a chunk into `out[..need]` (`out`
+    /// has the chunk's full uncompressed size). Unfiltered, deflate-only
+    /// and LZ4-only chunks stop after `need` bytes; other pipelines decode
+    /// the whole chunk.
+    fn decode_chunk(&self, h5: &H5, ch: &Chunk, out: &mut [u8], need: usize) -> Result<()> {
+        let need = need.min(out.len());
+        let at = h5.absolute(ch.address, ch.size as u64)?;
+        // Filters in reverse order, skipping masked ones.
+        let mut active = [0u16; 32];
+        let mut n_active = 0;
+        for (i, _) in self.ds.filters.iter().enumerate().rev() {
+            if ch.mask & (1 << i.min(31)) == 0 && n_active < active.len() {
+                active[n_active] = i as u16;
+                n_active += 1;
+            }
+        }
+        let active = &active[..n_active];
+        if active.is_empty() {
+            // Read only the bytes needed.
+            let n = need.min(ch.size as usize);
+            read_exact_at(&h5.file, &mut out[..n], at)?;
+            out[n..need].fill(0);
+            return Ok(());
+        }
+        let filter = |k: usize| &self.ds.filters[active[k] as usize];
+        scratch::with(ch.size as usize, |raw| {
+            read_exact_at(&h5.file, raw, at)?;
+            if let [_] = active {
+                let n = match filter(0).id {
+                    1 => Some(codecs::deflate(raw, &mut out[..need], true)?),
+                    32004 => Some(lz4_filter(raw, &mut out[..need])?),
+                    _ => None,
+                };
+                if let Some(n) = n {
+                    out[n.min(need)..need].fill(0);
+                    return Ok(());
+                }
+            }
+            // General pipeline: alternate between two scratch buffers.
+            let full = out.len();
+            // Intermediate data may exceed the chunk: scale-offset adds a
+            // 21-byte header (and stores full-precision chunks whole).
+            let room = full + 32;
+            scratch::with(room, |a| {
+                scratch::with(room.max(raw.len()), |b| {
+                    let mut len = raw.len().min(b.len());
+                    b[..len].copy_from_slice(&raw[..len]);
+                    let (mut src, mut dst) = (b, a);
+                    for k in 0..active.len() {
+                        let f = filter(k);
+                        let n = match f.id {
+                            1 => codecs::deflate(&src[..len], &mut dst[..room], true)?,
+                            2 => {
+                                let size = f.client.first().map(|&s| s as usize).unwrap_or(self.ds.dtype.size).max(1);
+                                let n = len.min(full);
+                                unshuffle(&src[..n], &mut dst[..n], size);
+                                n
+                            }
+                            3 => {
+                                let n = len.saturating_sub(4).min(full);
+                                dst[..n].copy_from_slice(&src[..n]);
+                                n
+                            }
+                            // Last filter: decode only the elements needed.
+                            6 => scale_offset(&src[..len], &mut dst[..if k + 1 == active.len() { need } else { full }], &f.client)?,
+                            32004 => lz4_filter(&src[..len], &mut dst[..room])?,
+                            id => return Err(Error::UnsupportedVariant(format!("HDF5 filter {id}"))),
+                        };
+                        len = n;
+                        std::mem::swap(&mut src, &mut dst);
+                    }
+                    let n = len.min(need);
+                    out[..n].copy_from_slice(&src[..n]);
+                    out[n..need].fill(0);
+                    Ok(())
+                })
+            })
+        })
+    }
+}
+
+/// Reverses the HDF5 byte shuffle of elements of `size` bytes.
+fn unshuffle(src: &[u8], out: &mut [u8], size: usize) {
+    let n = src.len() / size;
+    for (i, e) in out.chunks_exact_mut(size).take(n).enumerate() {
+        for (k, b) in e.iter_mut().enumerate() {
+            *b = src[k * n + i];
+        }
+    }
+    let tail = n * size;
+    out[tail..src.len()].copy_from_slice(&src[tail..]);
+}
+
+/// Undoes the HDF5 scale-offset filter (id 6) for integers: a 21-byte
+/// header (`minbits` u32 LE, size of `minval`, `minval` LE), then each
+/// element's offset from `minval` in `minbits` bits, packed most significant
+/// bit first. The all-ones code is the fill value if one is defined. Client
+/// data: scale type, scale factor, element count, class (0 integer), size,
+/// sign, byte order (0 LE), fill value defined, fill value bytes (LE, from
+/// index 8). The lossy floating-point mode is not supported.
+///
+/// Provenance: algorithm as implemented by the HDF5 library
+/// (`H5Zscaleoffset.c`, BSD-3-Clause, see THIRD_PARTY_NOTICES.md).
+fn scale_offset(src: &[u8], out: &mut [u8], client: &[u32]) -> Result<usize> {
+    let param = |i: usize| client.get(i).copied().ok_or_else(|| corrupt("scale-offset parameters"));
+    if param(3)? != 0 {
+        return Err(Error::UnsupportedVariant("HDF5 scale-offset filter for floating point".into()));
+    }
+    let (count, size, big) = (param(2)? as usize, param(4)? as usize, param(6)? == 1);
+    if !(1..=8).contains(&size) || src.len() < 21 {
+        return Err(corrupt("scale-offset data"));
+    }
+    // `out` may be shorter than the chunk: decode the elements it holds.
+    let n = count.checked_mul(size).ok_or_else(|| corrupt("scale-offset element count"))?.min(out.len() / size * size);
+    let minbits = u32::from_le_bytes(src[..4].try_into().expect("4 bytes")) as usize;
+    if minbits > size * 8 {
+        return Err(corrupt("scale-offset bit count"));
+    }
+    let data = &src[21..];
+    if minbits == size * 8 {
+        let n = n.min(data.len());
+        out[..n].copy_from_slice(&data[..n]);
+        return Ok(n);
+    }
+    let minval = src[5..5 + (src[4] as usize).min(8)].iter().rev().fold(0u64, |a, &b| (a << 8) | b as u64);
+    let fill = (param(7)? == 1).then(|| client.get(8..10).map_or(0, |f| f[0] as u64 | (f[1] as u64) << 32));
+    let all_ones = if minbits == 0 { 0 } else { u64::MAX >> (64 - minbits) };
+    if (data.len() as u64 * 8) < (n / size) as u64 * minbits as u64 {
+        return Err(corrupt("scale-offset data truncated"));
+    }
+    let mut bit = 0usize;
+    for e in out[..n].chunks_exact_mut(size) {
+        // Up to 57 bits from a big-endian 64-bit window; wider codes in two steps.
+        let mut v = 0u64;
+        let mut left = minbits;
+        while left > 0 {
+            let take = left.min(57);
+            let at = bit / 8;
+            let mut w = [0u8; 8];
+            let avail = data.len().saturating_sub(at).min(8);
+            w[..avail].copy_from_slice(&data[at..at + avail]);
+            let window = u64::from_be_bytes(w) << (bit % 8);
+            v = (v << take) | (window >> (64 - take));
+            bit += take;
+            left -= take;
+        }
+        let v = match fill {
+            Some(f) if minbits > 0 && v == all_ones => f,
+            _ => v.wrapping_add(minval),
+        };
+        let bytes = v.to_le_bytes();
+        e.copy_from_slice(&bytes[..size]);
+        if big {
+            e.reverse();
+        }
+    }
+    Ok(n)
+}
+
+/// The HDF5 LZ4 filter: big-endian total size (8 bytes) and block size
+/// (4 bytes), then per block a big-endian compressed size and the data,
+/// stored raw when that size equals the block size.
+fn lz4_filter(src: &[u8], out: &mut [u8]) -> Result<usize> {
+    let bad = || Error::Corrupt("HDF5 LZ4 data truncated".into());
+    let total = u64::from_be_bytes(src.get(..8).ok_or_else(bad)?.try_into().expect("8 bytes")) as usize;
+    let block = u32::from_be_bytes(src.get(8..12).ok_or_else(bad)?.try_into().expect("4 bytes")) as usize;
+    if block == 0 {
+        return Err(Error::Corrupt("HDF5 LZ4 sizes".into()));
+    }
+    // Decode only as far as `out` reaches.
+    let total = total.min(out.len());
+    let (mut pos, mut written) = (12, 0);
+    while written < total {
+        let want = block.min(total - written);
+        let size = u32::from_be_bytes(src.get(pos..pos + 4).ok_or_else(bad)?.try_into().expect("4 bytes")) as usize;
+        pos += 4;
+        let data = src.get(pos..pos + size).ok_or_else(bad)?;
+        pos += size;
+        if size == want || size == block {
+            let n = want.min(data.len());
+            out[written..written + n].copy_from_slice(&data[..n]);
+        } else {
+            // The last block wanted may be cut: decode it whole into scratch.
+            let full = block.min(u32::MAX as usize);
+            if want < full && written + want == total {
+                scratch::with(full, |tmp| -> Result<()> {
+                    let n = codecs::lz4(data, tmp)?;
+                    out[written..written + want].copy_from_slice(&tmp[..want.min(n)]);
+                    Ok(())
+                })?;
+            } else {
+                let n = codecs::lz4(data, &mut out[written..written + want])?;
+                if n != want {
+                    return Err(Error::Corrupt("HDF5 LZ4 block size".into()));
+                }
+            }
+        }
+        written += want;
+    }
+    Ok(total)
+}
+
 // --- Tests ------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scale_offset_integers() {
+        // Three u16 values 100, 103, 101 as 2-bit offsets from 100, no fill value.
+        let mut src = vec![2, 0, 0, 0, 8, 100, 0, 0, 0, 0, 0, 0, 0];
+        src.resize(21, 0);
+        src.push(0b0011_0100);
+        let client = [2, 0, 3, 0, 2, 0, 0, 0, 0, 0];
+        let mut out = [0u8; 6];
+        assert_eq!(scale_offset(&src, &mut out, &client).unwrap(), 6);
+        assert_eq!(out, [100, 0, 103, 0, 101, 0]);
+        // The all-ones code is the fill value 7 when one is defined.
+        let client = [2, 0, 3, 0, 2, 0, 0, 1, 7, 0];
+        scale_offset(&src, &mut out, &client).unwrap();
+        assert_eq!(out, [100, 0, 7, 0, 101, 0]);
+    }
+
+    #[test]
+    fn lz4_filter_blocks() {
+        // Total 6, block 4: one LZ4 block of 4 literals, one raw block of 2.
+        let mut src = 6u64.to_be_bytes().to_vec();
+        src.extend_from_slice(&4u32.to_be_bytes());
+        src.extend_from_slice(&5u32.to_be_bytes());
+        src.extend_from_slice(&[0x40, 1, 2, 3, 4]);
+        src.extend_from_slice(&2u32.to_be_bytes());
+        src.extend_from_slice(&[5, 6]);
+        let mut out = [0u8; 6];
+        assert_eq!(lz4_filter(&src, &mut out).unwrap(), 6);
+        assert_eq!(out, [1, 2, 3, 4, 5, 6]);
+    }
 
     #[test]
     fn cursor_bounds_and_datatypes() {

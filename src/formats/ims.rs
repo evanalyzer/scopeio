@@ -11,14 +11,13 @@
 //! array of one-character strings. Lower levels may hold fewer z planes;
 //! every level serves all z planes of level 0, each from its nearest
 //! stored plane. Datasets are resolved on first use; a
-//! plane read decodes only the chunks it touches. Filters: deflate,
-//! shuffle, fletcher32 and the HDF5 LZ4 filter (32004).
+//! plane read decodes only the chunks it touches (see `formats/hdf5.rs`).
 //!
 //! Imaris 3 files (also `.ims`, TIFF based) are not this format.
 //!
 //! Provenance: Imaris file format description (Bitplane, `doc/bitplane-
 //! imaris-ims/`); OpenReadout IMS notes (MIT OR Apache-2.0); HDF5 File
-//! Format Specification (see [`hdf5`]); own analysis of sample files. No
+//! Format Specification (see `formats/hdf5.rs`); own analysis of sample files. No
 //! GPL code or HDF5 library code consulted.
 //!
 //! **Author:** Joachim Danmayr
@@ -29,41 +28,26 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-mod hdf5;
-
-use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use hdf5::{Attribute, Chunk, ChunkIndex, Dataset, H5, Kind, Layout};
+use super::hdf5::{Attribute, H5, Kind, Layout, Volume};
 
 use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
     AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result, SeriesMeta, codecs, scratch,
+    PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ims, "Imaris IMS", "1").extensions(&["ims"]);
-
-/// Largest decoded chunk, against corrupt chunk sizes.
-const MAX_CHUNK: u64 = 1 << 30;
 
 /// Returns `true` for an HDF5 file with the `.ims` extension or an
 /// `ImarisDataSet` attribute in its first bytes.
 pub(super) fn matches(path: &Path, head: &[u8]) -> bool {
     H5::matches(head) && (path.extension().is_some_and(|e| e.eq_ignore_ascii_case("ims")) || head.windows(13).any(|w| w == b"ImarisDataSet"))
-}
-
-/// A resolved `Data` dataset: storage and chunk table.
-#[derive(Debug)]
-struct Volume {
-    ds: Dataset,
-    /// Chunks by grid coordinates (z, y, x).
-    chunks: HashMap<[u64; 3], Chunk>,
-    chunk: [u64; 3],
 }
 
 #[derive(Debug)]
@@ -289,162 +273,8 @@ impl Ims {
         let channels = numbered(&h.links(&h.object(tp)?)?, "Channel ");
         let ch = *channels.get(c).ok_or_else(|| Error::Corrupt(format!("IMS channel {c} missing")))?;
         let data = find(&h.links(&h.object(ch)?)?, "Data").ok_or_else(|| Error::Corrupt("IMS channel without Data".into()))?;
-        let ds = h.dataset(&h.object(data)?)?;
-        if ds.dims.len() != 3 && (ds.dims.len() != 2) {
-            return Err(Error::UnsupportedVariant(format!("IMS data with {} dimensions", ds.dims.len())));
-        }
-        let mut chunks = HashMap::new();
-        let mut chunk = [ds.dims.first().copied().unwrap_or(1), 0, 0];
-        if let Layout::Chunked { dims, index } = &ds.layout {
-            if dims.len() != ds.dims.len() || dims.contains(&0) {
-                return Err(Error::Corrupt("IMS chunk dimensions".into()));
-            }
-            chunk = if dims.len() == 3 { [dims[0], dims[1], dims[2]] } else { [1, dims[0], dims[1]] };
-            match index {
-                ChunkIndex::BTree(tree) => {
-                    for (off, ch) in h.chunks(*tree, ds.dims.len())? {
-                        let o: Vec<u64> = if off.len() == 3 { off } else { vec![0, off[0], off[1]] };
-                        chunks.insert([o[0] / chunk[0], o[1] / chunk[1], o[2] / chunk[2]], ch);
-                    }
-                }
-                ChunkIndex::Single { address, size, mask } => {
-                    let full = chunk.iter().try_fold(ds.dtype.size as u64, |a, &d| a.checked_mul(d)).unwrap_or(u64::MAX).min(u32::MAX as u64);
-                    chunks.insert([0, 0, 0], Chunk { address: *address, size: if *size == u64::MAX { full as u32 } else { *size as u32 }, mask: *mask });
-                }
-            }
-        }
-        Ok(Volume { ds, chunks, chunk })
+        Volume::open(h, data)
     }
-
-    /// Decodes the first `need` bytes of a chunk into `out[..need]` (`out`
-    /// has the chunk's full uncompressed size). Unfiltered, deflate-only
-    /// and LZ4-only chunks stop after `need` bytes; other pipelines decode
-    /// the whole chunk.
-    fn decode_chunk(&self, v: &Volume, ch: &Chunk, out: &mut [u8], need: usize) -> Result<()> {
-        let need = need.min(out.len());
-        let at = self.h5.absolute(ch.address, ch.size as u64)?;
-        // Filters in reverse order, skipping masked ones.
-        let mut active = [0u16; 32];
-        let mut n_active = 0;
-        for (i, _) in v.ds.filters.iter().enumerate().rev() {
-            if ch.mask & (1 << i.min(31)) == 0 && n_active < active.len() {
-                active[n_active] = i as u16;
-                n_active += 1;
-            }
-        }
-        let active = &active[..n_active];
-        if active.is_empty() {
-            // Read only the bytes needed.
-            let n = need.min(ch.size as usize);
-            read_exact_at(&self.h5.file, &mut out[..n], at)?;
-            out[n..need].fill(0);
-            return Ok(());
-        }
-        let filter = |k: usize| &v.ds.filters[active[k] as usize];
-        scratch::with(ch.size as usize, |raw| {
-            read_exact_at(&self.h5.file, raw, at)?;
-            if let [_] = active {
-                let n = match filter(0).id {
-                    1 => Some(codecs::deflate(raw, &mut out[..need], true)?),
-                    32004 => Some(lz4_filter(raw, &mut out[..need])?),
-                    _ => None,
-                };
-                if let Some(n) = n {
-                    out[n.min(need)..need].fill(0);
-                    return Ok(());
-                }
-            }
-            // General pipeline: alternate between two scratch buffers.
-            let full = out.len();
-            scratch::with(full, |a| {
-                scratch::with(full.max(raw.len()), |b| {
-                    let mut len = raw.len().min(b.len());
-                    b[..len].copy_from_slice(&raw[..len]);
-                    let (mut src, mut dst) = (b, a);
-                    for k in 0..active.len() {
-                        let f = filter(k);
-                        let n = match f.id {
-                            1 => codecs::deflate(&src[..len], &mut dst[..full], true)?,
-                            2 => {
-                                let size = f.client.first().map(|&s| s as usize).unwrap_or(v.ds.dtype.size).max(1);
-                                let n = len.min(full);
-                                unshuffle(&src[..n], &mut dst[..n], size);
-                                n
-                            }
-                            3 => {
-                                let n = len.saturating_sub(4).min(full);
-                                dst[..n].copy_from_slice(&src[..n]);
-                                n
-                            }
-                            32004 => lz4_filter(&src[..len], &mut dst[..full])?,
-                            id => return Err(Error::UnsupportedVariant(format!("HDF5 filter {id}"))),
-                        };
-                        len = n;
-                        std::mem::swap(&mut src, &mut dst);
-                    }
-                    let n = len.min(need);
-                    out[..n].copy_from_slice(&src[..n]);
-                    out[n..need].fill(0);
-                    Ok(())
-                })
-            })
-        })
-    }
-}
-
-/// Reverses the HDF5 byte shuffle of elements of `size` bytes.
-fn unshuffle(src: &[u8], out: &mut [u8], size: usize) {
-    let n = src.len() / size;
-    for (i, e) in out.chunks_exact_mut(size).take(n).enumerate() {
-        for (k, b) in e.iter_mut().enumerate() {
-            *b = src[k * n + i];
-        }
-    }
-    let tail = n * size;
-    out[tail..src.len()].copy_from_slice(&src[tail..]);
-}
-
-/// The HDF5 LZ4 filter: big-endian total size (8 bytes) and block size
-/// (4 bytes), then per block a big-endian compressed size and the data,
-/// stored raw when that size equals the block size.
-fn lz4_filter(src: &[u8], out: &mut [u8]) -> Result<usize> {
-    let bad = || Error::Corrupt("HDF5 LZ4 data truncated".into());
-    let total = u64::from_be_bytes(src.get(..8).ok_or_else(bad)?.try_into().expect("8 bytes")) as usize;
-    let block = u32::from_be_bytes(src.get(8..12).ok_or_else(bad)?.try_into().expect("4 bytes")) as usize;
-    if block == 0 {
-        return Err(Error::Corrupt("HDF5 LZ4 sizes".into()));
-    }
-    // Decode only as far as `out` reaches.
-    let total = total.min(out.len());
-    let (mut pos, mut written) = (12, 0);
-    while written < total {
-        let want = block.min(total - written);
-        let size = u32::from_be_bytes(src.get(pos..pos + 4).ok_or_else(bad)?.try_into().expect("4 bytes")) as usize;
-        pos += 4;
-        let data = src.get(pos..pos + size).ok_or_else(bad)?;
-        pos += size;
-        if size == want || size == block {
-            let n = want.min(data.len());
-            out[written..written + n].copy_from_slice(&data[..n]);
-        } else {
-            // The last block wanted may be cut: decode it whole into scratch.
-            let full = block.min(u32::MAX as usize);
-            if want < full && written + want == total {
-                scratch::with(full, |tmp| -> Result<()> {
-                    let n = codecs::lz4(data, tmp)?;
-                    out[written..written + want].copy_from_slice(&tmp[..want.min(n)]);
-                    Ok(())
-                })?;
-            } else {
-                let n = codecs::lz4(data, &mut out[written..written + want])?;
-                if n != want {
-                    return Err(Error::Corrupt("HDF5 LZ4 block size".into()));
-                }
-            }
-        }
-        written += want;
-    }
-    Ok(total)
 }
 
 impl Backend for Ims {
@@ -509,98 +339,10 @@ impl Backend for Ims {
 
     fn read_native(&self, _series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
         let v = self.volume(level, plane.t as usize, plane.c as usize)?;
-        let e = v.ds.dtype.size;
-        let (dz, dy, dx) = match v.ds.dims[..] {
-            [z, y, x] => (z, y, x),
-            [y, x] => (1, y, x),
-            _ => return Err(Error::Corrupt("IMS data dimensions".into())),
-        };
         // Levels may hold fewer z planes than level 0: nearest plane.
         let (z_level, z_base) = (self.levels[level].size[0].max(1), self.levels[0].size[0].max(1));
         let z = (plane.z as u64 * z_level / z_base).min(z_level - 1);
-        let (x0, y0, w, h) = (region.x, region.y, region.width as usize, region.height as usize);
-        let swap = v.ds.dtype.big_endian && e > 1;
-        let fix = |d: &mut [u8]| {
-            if swap {
-                d.chunks_exact_mut(e).for_each(<[u8]>::reverse);
-            }
-        };
-        // Pixels outside the stored volume (should not happen) read as 0.
-        if z >= dz || y0 + h as u64 > dy || x0 + w as u64 > dx {
-            for r in 0..h {
-                sink.write_with(r, 0, w, |d| {
-                    d.fill(0);
-                    Ok(())
-                })?;
-            }
-            return Ok(());
-        }
-        match &v.ds.layout {
-            Layout::Contiguous { address, .. } => {
-                let total = dz.checked_mul(dy).and_then(|v| v.checked_mul(dx)).and_then(|v| v.checked_mul(e as u64)).ok_or_else(|| Error::Corrupt("IMS data size".into()))?;
-                let base = self.h5.absolute(*address, total)?;
-                for r in 0..h {
-                    let at = base + ((z * dy + y0 + r as u64) * dx + x0) * e as u64;
-                    sink.write_with(r, 0, w, |d| {
-                        read_exact_at(&self.h5.file, d, at)?;
-                        fix(d);
-                        Ok(())
-                    })?;
-                }
-                Ok(())
-            }
-            Layout::Compact(data) => {
-                for r in 0..h {
-                    let at = (((z * dy + y0 + r as u64) * dx + x0) * e as u64) as usize;
-                    let src = data.get(at..at + w * e).ok_or_else(|| Error::Corrupt("IMS compact data".into()))?;
-                    sink.write_with(r, 0, w, |d| {
-                        d.copy_from_slice(src);
-                        fix(d);
-                        Ok(())
-                    })?;
-                }
-                Ok(())
-            }
-            Layout::Chunked { .. } => {
-                let [cz, cy, cx] = v.chunk;
-                let chunk_len = cz.checked_mul(cy).and_then(|v| v.checked_mul(cx)).and_then(|v| v.checked_mul(e as u64)).unwrap_or(u64::MAX);
-                if chunk_len > MAX_CHUNK {
-                    return Err(Error::Corrupt("IMS chunk too large".into()));
-                }
-                let (gz, zz) = (z / cz, z % cz);
-                scratch::with(chunk_len as usize, |buf| {
-                    for gy in y0 / cy..(y0 + h as u64).div_ceil(cy) {
-                        for gx in x0 / cx..(x0 + w as u64).div_ceil(cx) {
-                            // Bytes up to the end of plane `zz` of the chunk.
-                            let need = ((zz + 1) * cy * cx * e as u64) as usize;
-                            let present = match v.chunks.get(&[gz, gy, gx]) {
-                                Some(ch) => {
-                                    self.decode_chunk(v, ch, buf, need)?;
-                                    true
-                                }
-                                None => false,
-                            };
-                            let (ax0, ax1) = (x0.max(gx * cx), (x0 + w as u64).min((gx + 1) * cx));
-                            let (ay0, ay1) = (y0.max(gy * cy), (y0 + h as u64).min((gy + 1) * cy));
-                            let n = (ax1 - ax0) as usize;
-                            for y in ay0..ay1 {
-                                let at = (((zz * cy + y - gy * cy) * cx + ax0 - gx * cx) * e as u64) as usize;
-                                sink.write_with((y - y0) as usize, (ax0 - x0) as usize, n, |d| {
-                                    if present {
-                                        d.copy_from_slice(&buf[at..at + n * e]);
-                                        fix(d);
-                                    } else {
-                                        d.fill(0);
-                                    }
-                                    Ok(())
-                                })?;
-                            }
-                        }
-                    }
-                    Ok(())
-                })
-            }
-        }
+        v.read_plane(&self.h5, z, region, sink)
     }
 }
 
@@ -609,20 +351,6 @@ impl Backend for Ims {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn lz4_filter_blocks() {
-        // Total 6, block 4: one LZ4 block of 4 literals, one raw block of 2.
-        let mut src = 6u64.to_be_bytes().to_vec();
-        src.extend_from_slice(&4u32.to_be_bytes());
-        src.extend_from_slice(&5u32.to_be_bytes());
-        src.extend_from_slice(&[0x40, 1, 2, 3, 4]);
-        src.extend_from_slice(&2u32.to_be_bytes());
-        src.extend_from_slice(&[5, 6]);
-        let mut out = [0u8; 6];
-        assert_eq!(lz4_filter(&src, &mut out).unwrap(), 6);
-        assert_eq!(out, [1, 2, 3, 4, 5, 6]);
-    }
 
     #[test]
     fn dates_and_units() {

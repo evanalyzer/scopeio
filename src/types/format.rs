@@ -72,6 +72,8 @@ pub enum FormatId {
     Omp2info,
     /// Micro-Manager image stacks, separate image files and NDTiff datasets.
     MicroManager,
+    /// BigDataViewer XML/HDF5 (`.xml` + `.h5`).
+    Bdv,
 }
 
 /// Identification of the reader that produced the data, for

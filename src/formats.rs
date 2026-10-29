@@ -10,6 +10,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "bdv")]
+mod bdv;
 #[cfg(feature = "bif")]
 mod bif;
 #[cfg(feature = "bmp")]
@@ -34,6 +36,8 @@ mod czi;
 mod dicom;
 #[cfg(feature = "dv")]
 mod dv;
+#[cfg(any(feature = "ims", feature = "bdv"))]
+mod hdf5;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "lif")]
@@ -136,6 +140,8 @@ static SUPPORTED: &[FormatInfo] = &[
     bif::FORMAT,
     #[cfg(feature = "ims")]
     ims::FORMAT,
+    #[cfg(feature = "bdv")]
+    bdv::FORMAT,
     #[cfg(feature = "oif")]
     oif::OIB_FORMAT,
     #[cfg(feature = "oif")]
@@ -247,6 +253,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if oif::matches_oif(path, &head) {
         return Ok(Some(FormatId::Oif));
     }
+    #[cfg(feature = "bdv")]
+    if bdv::matches(path, &head) {
+        return Ok(Some(FormatId::Bdv));
+    }
     #[cfg(feature = "ims")]
     if ims::matches(path, &head) {
         return Ok(Some(FormatId::Ims));
@@ -356,6 +366,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Oir) => Ok(Arc::new(Reader(oir::Oir::open(path)?))),
         #[cfg(feature = "oif")]
         Some(id @ (FormatId::Oib | FormatId::Oif)) => Ok(Arc::new(Reader(oif::Oif::open(path, id)?))),
+        #[cfg(feature = "bdv")]
+        Some(FormatId::Bdv) => Ok(Arc::new(Reader(bdv::Bdv::open(path)?))),
         #[cfg(feature = "ims")]
         Some(FormatId::Ims) => Ok(Arc::new(Reader(ims::Ims::open(path, opts)?))),
         #[cfg(feature = "bif")]

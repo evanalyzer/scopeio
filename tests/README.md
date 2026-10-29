@@ -82,6 +82,7 @@ python3 -I tests/scripts/make_nef_samples.py      # Nikon NEF
 python3 -I tests/scripts/make_omp2info_samples.py # Olympus OMP2INFO (after make_oir_samples.py)
 python3 -I tests/scripts/make_operetta_samples.py # PerkinElmer Operetta (Harmony export)
 python3 -I tests/scripts/make_micromanager_samples.py # Micro-Manager stacks, separate files, NDTiff
+python3 -I tests/scripts/make_bdv_samples.py     # BigDataViewer XML/HDF5 (uses the writer of make_ims_samples.py)
 python3 -I tests/scripts/make_tiff_samples.py
 python3 -I tests/scripts/make_zarr_samples.py
 python3 -I tests/scripts/make_vsi_samples.py
@@ -214,6 +215,10 @@ python3 -I tests/scripts/oracle.py micromanager --repeat 3 $R/1.4.22/thomas/test
     tests/reference/zenodo-7065552/extracted/NDTiff_test_data/v3/mm_mda_tcz_15/mm_mda_tcz_15_NDTiffStack.tif
 python3 -I tests/scripts/oracle.py micromanager --append --repeat 1 $T/stack/syn_MMStack_Pos0.ome.tif \
     $T/sep/Pos0/metadata.txt $T/sep2/Pos0/metadata.txt $T/nd/nd_NDTiffStack.tif
+# BigDataViewer: OME BDV samples (public domain) and the synthetic dataset
+python3 -I tests/scripts/fetch_ome.py BDV/samples/
+python3 -I tests/scripts/oracle.py bdv --repeat 1 tests/reference/ome/BDV/samples/drosophila.xml tests/reference/ome/BDV/samples/HisYFP-SPIM.xml
+python3 -I tests/scripts/oracle.py bdv --append --repeat 1 tests/data/bdv/synthetic.xml
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

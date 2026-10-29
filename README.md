@@ -121,6 +121,7 @@ compared, "n/a" means the reader cannot open the format.
 | Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
 | Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
 | Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
+| BigDataViewer XML/HDF5 | 3 | 61.99 s | 31.7 MiB | n/a | 0.8× / 28× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -148,6 +149,9 @@ compared, "n/a" means the reader cannot open the format.
 - Micro-Manager: the reference readers read NDTiff files as plain TIFF
   (pages as time points) and ignore the index; scopeio's NDTiff output is
   checked against synthetic files instead.
+- BigDataViewer: Bio-Formats fails on both public samples; bioformats-rs
+  converts only the first setup (scopeio: all 2 and 9 setups), so per
+  setup scopeio needs about a third of its CPU time.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -179,7 +183,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **AVI (Audio Video Interleave)** | `.avi` |  |
 | **Axon Raw Format** | `.arf` |  |
 | **BD Pathway** | `.exp, .tif` |  |
-| **BDV** | `.xml, .h5` |  |
+| **BDV** | `.xml, .h5` | ✅ |
 | **Becker & Hickl SPC FIFO** | `.spc` |  |
 | **Becker & Hickl SPCImage** | `.sdt` |  |
 | **Bio-Rad Gel** | `.1sc` |  |
@@ -357,6 +361,13 @@ separate files: each `Pos<n>` folder). In NDTiff, every axis besides
 `channel`, `z` and `time` (e.g. Magellan `row` / `column` tiles) also
 selects the series; tiles are not stitched and the downsampled pyramid
 folders are not read. NDTiff RGB images are not supported yet.
+
+**BigDataViewer.** Setups that differ only in their `channel` attribute
+form one series; every other attribute combination (angle, illumination,
+tile) is a series of its own, with the time points as T and the mipmap
+levels as pyramid levels. Registrations are not applied, so fused and
+deconvolved setups are separate series too. Partitioned HDF5 and the N5 /
+OME-Zarr loaders are not supported.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

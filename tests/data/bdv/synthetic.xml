@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SpimData version="0.2">
+  <BasePath type="relative">.</BasePath>
+  <SequenceDescription>
+    <ImageLoader format="bdv.hdf5">
+      <hdf5 type="relative">synthetic.h5</hdf5>
+    </ImageLoader>
+    <ViewSetups>
+      <ViewSetup>
+        <id>0</id>
+        <name>setup 0</name>
+        <size>9 7 4</size>
+        <voxelSize>
+          <unit>um</unit>
+          <size>0.5 0.5 2.0</size>
+        </voxelSize>
+        <attributes>
+          <illumination>0</illumination>
+          <channel>0</channel>
+          <angle>0</angle>
+        </attributes>
+      </ViewSetup>
+      <ViewSetup>
+        <id>1</id>
+        <name>setup 1</name>
+        <size>9 7 4</size>
+        <voxelSize>
+          <unit>um</unit>
+          <size>0.5 0.5 2.0</size>
+        </voxelSize>
+        <attributes>
+          <illumination>0</illumination>
+          <channel>1</channel>
+          <angle>0</angle>
+        </attributes>
+      </ViewSetup>
+      <ViewSetup>
+        <id>2</id>
+        <name>setup 2</name>
+        <size>9 7 4</size>
+        <voxelSize>
+          <unit>um</unit>
+          <size>0.5 0.5 2.0</size>
+        </voxelSize>
+        <attributes>
+          <illumination>0</illumination>
+          <channel>0</channel>
+          <angle>1</angle>
+        </attributes>
+      </ViewSetup>
+      <ViewSetup>
+        <id>3</id>
+        <name>setup 3</name>
+        <size>9 7 4</size>
+        <voxelSize>
+          <unit>um</unit>
+          <size>0.5 0.5 2.0</size>
+        </voxelSize>
+        <attributes>
+          <illumination>0</illumination>
+          <channel>1</channel>
+          <angle>1</angle>
+        </attributes>
+      </ViewSetup>
+      <Attributes name="channel">
+        <Channel><id>0</id><name>DAPI</name></Channel>
+        <Channel><id>1</id><name>GFP</name></Channel>
+      </Attributes>
+      <Attributes name="angle">
+        <Angle><id>0</id><name>0</name></Angle>
+        <Angle><id>1</id><name>90</name></Angle>
+      </Attributes>
+    </ViewSetups>
+    <Timepoints type="list">
+      <integerpattern>0, 2</integerpattern>
+    </Timepoints>
+    <MissingViews>
+      <MissingView timepoint="2" setup="3" />
+    </MissingViews>
+  </SequenceDescription>
+</SpimData>

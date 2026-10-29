@@ -1,0 +1,4 @@
+# Known differences for BigDataViewer.
+file	tool	series	tolerance	reason
+tests/reference/ome/BDV/samples/HisYFP-SPIM.xml	bioformats-rs	-		bioformats-rs mis-decodes the partial chunks at the right edge (x >= 1376 of 1388): there scopeio's level 0 agrees with the independently stored level 1 (2 x 2 means) as closely as inside the image (mean error 0.002), bioformats-rs' does not (0.016)
+tests/reference/ome/BDV/samples/drosophila.xml	bioformats-rs	-		bioformats-rs mis-decodes the partial chunks at the bottom edge (y >= 1056 of 1060), see HisYFP-SPIM.xml, and returns 0 for stored int16 values below 0, which BigDataViewer uses for unsigned values above 32767 (scopeio: U16, e.g. 46019)

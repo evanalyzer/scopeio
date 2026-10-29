@@ -236,10 +236,10 @@ as black-box command-line tools to produce reference output
 - Synthetic samples written from that model by
   `tests/scripts/make_bif_samples.py`.
 
-## Imaris IMS (`src/formats/ims.rs`, `src/formats/ims/hdf5.rs`)
+## Imaris IMS (`src/formats/ims.rs`, `src/formats/hdf5.rs`)
 
 - HDF5 File Format Specification version 3 (The HDF Group) in `doc/hdf5/`:
-  the read-only subset in `ims/hdf5.rs` (superblocks, object headers,
+  the read-only subset in `hdf5.rs` (superblocks, object headers,
   groups, attributes, layouts, version 1/2 B-trees, fractal heaps, filter
   pipeline). Own implementation instead of a crate: the pure-Rust readers
   checked (hdf5-reader, hdf5-pure, rust-hdf5) bring their own I/O, caches
@@ -509,6 +509,28 @@ as black-box command-line tools to produce reference output
 - Checked against Bio-Formats and bioformats-rs as black boxes (see
   `tests/expected/micromanager_divergences.tsv`).
 - Synthetic datasets written by `tests/scripts/make_micromanager_samples.py`.
+
+## BigDataViewer XML/HDF5 (`src/formats/bdv.rs`)
+
+- BigDataViewer documentation (ImageJ wiki) and Pietzsch et al., "BigDataViewer:
+  visualization and processing for large image data sets", Nat. Methods
+  2015 (arXiv 1412.0488), in `doc/bdv/`: setups, time points, views,
+  multi-resolution pyramids of chunked volumes, `.xml` + `.h5` pairs.
+- HDF5 File Format Specification version 3 (`doc/hdf5/`), shared HDF5
+  reader with the IMS reader.
+- HDF5 scale-offset filter (id 6, integer mode): the algorithm as
+  implemented in `H5Zscaleoffset.c` of the HDF5 library (BSD-3-Clause, read
+  as documentation; notice in THIRD_PARTY_NOTICES.md): 21-byte header with
+  minimum bits and minimum value, values packed most significant bit
+  first, all-ones code as fill value, full precision stored unpacked.
+- Own analysis of the public BDV samples on the OME sample server
+  (`BDV/samples`, public domain; `BDV/idr0038`, `BDV/idr0048` XML files,
+  CC BY 4.0): `t<tp:05>/s<setup:02>/<level>/cells` (z, y, x) int16 volumes
+  holding unsigned values, `s<setup:02>/resolutions` and `subdivisions`,
+  `ViewSetup` attributes and `Attributes` entity names, `MissingViews`.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/bdv_divergences.tsv`).
+- Synthetic dataset written by `tests/scripts/make_bdv_samples.py`.
 
 ## Blosc (`src/codecs/blosc.rs`)
 
