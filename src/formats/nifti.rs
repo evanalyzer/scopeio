@@ -3,6 +3,7 @@
 //! NIfTI-1 and NIfTI-2 reader: single files (`.nii`, magic `n+1` / `n+2`),
 //! header and image pairs (`.hdr` + `.img`, magic `ni1` / `ni2`) and
 //! gzip-compressed single files (`.nii.gz`, needs the `deflate` feature).
+//! Also reads Mayo Analyze 7.5 pairs, whose 348-byte header NIfTI-1 extends.
 //!
 //! The header (348 bytes for NIfTI-1, 540 for NIfTI-2; byte order from
 //! `sizeof_hdr`) gives the dimensions (`dim[1..7]`: x, y, z, t, then vector
@@ -15,11 +16,20 @@
 //! the original metadata. Compressed files are decompressed into memory
 //! on the first read.
 //!
+//! Analyze 7.5 (`.hdr` + `.img`, no magic): a header of 348 bytes with
+//! `dim`, `datatype` and `pixdim` where NIfTI-1 has them, recognised by
+//! `sizeof_hdr`, plausible dimensions and a known data type. The voxels
+//! start at `vox_offset` in the `.img` file; the spatial unit is the
+//! `vox_units` text (none if empty or unknown); the SPM scale factor
+//! (`funused1`) is in the original metadata. Voxels are returned as stored
+//! (`orient` is not applied).
+//!
 //! Provenance: NIfTI-1 data format specification (`nifti1.h`, NIfTI Data
 //! Format Working Group, public domain) and the NIfTI-2 header definition
-//! (`nifti2.h`, public domain) in `doc/nifti/`; official NIfTI test data
-//! (public domain); checked against Bio-Formats as a black box. No GPL code
-//! consulted.
+//! (`nifti2.h`, public domain) in `doc/nifti/`; Mayo Analyze 7.5 format
+//! document and G. Wideman's Analyze field compilation in `doc/analyze/`;
+//! official NIfTI test data (public domain); checked against Bio-Formats as
+//! a black box. No GPL code consulted.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-25
@@ -40,6 +50,7 @@ use crate::reader::Backend;
 use crate::{Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nifti, "NIfTI", "1").extensions(&["nii", "nii.gz", "hdr", "img"]);
+pub(super) static ANALYZE_FORMAT: FormatInfo = FormatInfo::new(FormatId::Analyze, "Analyze 7.5", "1").extensions(&["hdr", "img"]);
 
 const NIFTI1_LEN: usize = 348;
 const NIFTI2_LEN: usize = 540;
@@ -52,6 +63,7 @@ struct Header {
     little: bool,
     /// `true` for a single file (`n+1` / `n+2`).
     single: bool,
+    /// 1 or 2 for NIfTI, 0 for Analyze 7.5.
     version: u8,
     datatype: i16,
     dim: [i64; 8],
@@ -60,6 +72,8 @@ struct Header {
     scl_slope: f64,
     scl_inter: f64,
     xyzt_units: u8,
+    /// Analyze 7.5: nanometres per `vox_units`.
+    vox_unit_nm: Option<f64>,
     descrip: String,
     intent_name: String,
     intent_code: i32,
@@ -73,8 +87,9 @@ fn text(b: &[u8]) -> String {
 }
 
 impl Header {
-    /// Parses a NIfTI-1 or NIfTI-2 header; `None` if `h` is none.
-    fn parse(h: &[u8]) -> Option<Header> {
+    /// Parses a NIfTI-1 or NIfTI-2 header, or with `analyze` also an
+    /// Analyze 7.5 header; `None` if `h` is none.
+    fn parse(h: &[u8], analyze: bool) -> Option<Header> {
         if h.len() < NIFTI1_LEN {
             return None;
         }
@@ -85,6 +100,7 @@ impl Header {
         let (little, version) = [true, false].into_iter().find_map(|l| match size(l) {
             348 if matches!(&h[344..348], b"n+1\0" | b"ni1\0") => Some((l, 1)),
             540 if h.len() >= NIFTI2_LEN && matches!(&h[4..8], b"n+2\0" | b"ni2\0") => Some((l, 2)),
+            348 if analyze => Some((l, 0)),
             _ => None,
         })?;
         let i16_at = |o: usize| {
@@ -101,6 +117,40 @@ impl Header {
         };
         let f32_at = |o: usize| f32::from_bits(i32_at(o) as u32) as f64;
         let f64_at = |o: usize| f64::from_bits(i64_at(o) as u64);
+        if version == 0 {
+            // Analyze has no magic: require sane dimensions and a known type.
+            let ndim = i16_at(40);
+            if !(1..=7).contains(&ndim) || (1..=ndim as usize).any(|i| i16_at(40 + 2 * i) < 1) || !matches!(i16_at(70), 2 | 4 | 8 | 16 | 64 | 128) {
+                return None;
+            }
+            let unit = text(&h[56..60]);
+            return Some(Header {
+                little,
+                single: false,
+                version,
+                datatype: i16_at(70),
+                dim: std::array::from_fn(|i| i16_at(40 + 2 * i) as i64),
+                pixdim: std::array::from_fn(|i| f32_at(76 + 4 * i)),
+                // A negative offset applies to every image; the first is at its magnitude.
+                vox_offset: f32_at(108).abs().min(u32::MAX as f64) as u64,
+                scl_slope: f32_at(112),
+                scl_inter: 0.0,
+                xyzt_units: 0,
+                vox_unit_nm: match unit.to_ascii_lowercase().as_str() {
+                    "mm" => Some(1e6),
+                    "um" | "µm" | "micron" => Some(1e3),
+                    "nm" => Some(1.0),
+                    "cm" => Some(1e7),
+                    "m" => Some(1e9),
+                    _ => None,
+                },
+                descrip: text(&h[148..228]),
+                intent_name: String::new(),
+                intent_code: 0,
+                qform_code: 0,
+                sform_code: 0,
+            });
+        }
         Some(if version == 1 {
             Header {
                 little,
@@ -113,6 +163,7 @@ impl Header {
                 scl_slope: f32_at(112),
                 scl_inter: f32_at(116),
                 xyzt_units: h[123],
+                vox_unit_nm: None,
                 descrip: text(&h[148..228]),
                 intent_name: text(&h[328..344]),
                 intent_code: i16_at(68) as i32,
@@ -131,6 +182,7 @@ impl Header {
                 scl_slope: f64_at(176),
                 scl_inter: f64_at(184),
                 xyzt_units: i32_at(500) as u8,
+                vox_unit_nm: None,
                 descrip: text(&h[240..320]),
                 intent_name: text(&h[508..524]),
                 intent_code: i32_at(504),
@@ -163,9 +215,16 @@ fn header_bytes(path: &Path, head: &[u8]) -> Option<Vec<u8>> {
     Some(h)
 }
 
-/// Returns `true` for a NIfTI file, header or image file of a pair.
-pub(super) fn matches(path: &Path, head: &[u8]) -> bool {
-    header_bytes(path, head).and_then(|h| Header::parse(&h)).is_some()
+/// Analyze headers are accepted for `.hdr` and `.img` files only.
+fn is_pair_name(path: &Path) -> bool {
+    let name = lower_name(path);
+    name.ends_with(".hdr") || name.ends_with(".img")
+}
+
+/// Detects a NIfTI file or Analyze 7.5 pair (header or image file).
+pub(super) fn probe(path: &Path, head: &[u8]) -> Option<FormatId> {
+    let h = Header::parse(&header_bytes(path, head)?, is_pair_name(path))?;
+    Some(if h.version == 0 { FormatId::Analyze } else { FormatId::Nifti })
 }
 
 /// Where the voxels are.
@@ -186,6 +245,7 @@ pub(super) struct Nifti {
     plane_bytes: u64,
     metas: [SeriesMeta; 1],
     original: OriginalMeta,
+    format: &'static FormatInfo,
 }
 
 impl Nifti {
@@ -201,7 +261,7 @@ impl Nifti {
         head.truncate(n);
         let gz = head.starts_with(&[0x1F, 0x8B]);
         let raw = header_bytes(path, &head).ok_or_else(|| Error::Corrupt("unreadable NIfTI header".into()))?;
-        let h = Header::parse(&raw).ok_or_else(|| Error::Corrupt("not a NIfTI header".into()))?;
+        let h = Header::parse(&raw, is_pair_name(path)).ok_or_else(|| Error::Corrupt("not a NIfTI header".into()))?;
         let (pixel_type, samples, bytes) = match h.datatype {
             2 => (PixelType::U8, 1, 1),
             4 => (PixelType::I16, 1, 2),
@@ -235,7 +295,7 @@ impl Nifti {
         } else {
             let file = if h.single { path.to_path_buf() } else { path.with_extension("img") };
             let file = File::open(&file)?;
-            let offset = if h.single { h.vox_offset } else { 0 };
+            let offset = if h.single || h.version == 0 { h.vox_offset } else { 0 };
             if offset.saturating_add(total) > file.metadata()?.len() {
                 return Err(Error::Corrupt("NIfTI file shorter than its voxels".into()));
             }
@@ -254,6 +314,7 @@ impl Nifti {
             24 => Some(1e-6),
             _ => None,
         };
+        let space_nm = space_nm.or(h.vox_unit_nm);
         let spacing = |i: usize| space_nm.map(|u| h.pixdim[i].abs() * u).filter(|v| v.is_finite() && *v > 0.0);
         let meta = SeriesMeta {
             name: path.file_name().map(|n| n.to_string_lossy().into_owned()),
@@ -269,7 +330,7 @@ impl Nifti {
             ..Default::default()
         };
         let mut original = OriginalMeta::default();
-        original.pairs.push(("Version".into(), format!("NIfTI-{}", h.version)));
+        original.pairs.push(("Version".into(), if h.version == 0 { "Analyze 7.5".into() } else { format!("NIfTI-{}", h.version) }));
         original.pairs.push(("Dimensions".into(), h.dim[1..=ndim].iter().map(|d| d.to_string()).collect::<Vec<_>>().join(" x ")));
         original.pairs.push(("Data type".into(), h.datatype.to_string()));
         if h.scl_slope != 0.0 && h.scl_slope.is_finite() {
@@ -284,7 +345,8 @@ impl Nifti {
         if !h.intent_name.is_empty() {
             original.pairs.push(("Intent name".into(), h.intent_name.clone()));
         }
-        Ok(Nifti { data, little: h.little, bytes, plane_bytes, metas: [meta], original })
+        let format = if h.version == 0 { &ANALYZE_FORMAT } else { &FORMAT };
+        Ok(Nifti { data, little: h.little, bytes, plane_bytes, metas: [meta], original, format })
     }
 
     /// Copies `out.len()` voxel bytes at `at` (from the start of the data).
@@ -315,7 +377,7 @@ impl Nifti {
 
 impl Backend for Nifti {
     fn format(&self) -> &'static FormatInfo {
-        &FORMAT
+        self.format
     }
 
     fn series(&self) -> &[SeriesMeta] {
@@ -364,14 +426,26 @@ mod tests {
         let mut h = vec![0u8; NIFTI2_LEN];
         h[..4].copy_from_slice(&348i32.to_be_bytes());
         h[344..348].copy_from_slice(b"n+1\0");
-        let p = Header::parse(&h).unwrap();
+        let p = Header::parse(&h, false).unwrap();
         assert!(!p.little && p.single && p.version == 1);
         let mut h = vec![0u8; NIFTI2_LEN];
         h[..4].copy_from_slice(&540i32.to_le_bytes());
         h[4..8].copy_from_slice(b"ni2\0");
-        let p = Header::parse(&h).unwrap();
+        let p = Header::parse(&h, false).unwrap();
         assert!(p.little && !p.single && p.version == 2);
         h[4] = b'x';
-        assert!(Header::parse(&h).is_none());
+        assert!(Header::parse(&h, false).is_none());
+        // Analyze 7.5: no magic, accepted only for pair names and sane fields.
+        let mut h = vec![0u8; NIFTI1_LEN];
+        h[..4].copy_from_slice(&348i32.to_le_bytes());
+        h[40..44].copy_from_slice(&[2, 0, 3, 0]);
+        h[44..46].copy_from_slice(&[2, 0]);
+        h[56..58].copy_from_slice(b"mm");
+        h[70] = 4;
+        assert!(Header::parse(&h, false).is_none());
+        let p = Header::parse(&h, true).unwrap();
+        assert_eq!((p.version, p.vox_unit_nm), (0, Some(1e6)));
+        h[70] = 3;
+        assert!(Header::parse(&h, true).is_none());
     }
 }

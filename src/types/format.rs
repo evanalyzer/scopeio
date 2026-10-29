@@ -74,6 +74,8 @@ pub enum FormatId {
     MicroManager,
     /// BigDataViewer XML/HDF5 (`.xml` + `.h5`).
     Bdv,
+    /// Mayo Analyze 7.5 (`.hdr` + `.img`).
+    Analyze,
 }
 
 /// Identification of the reader that produced the data, for

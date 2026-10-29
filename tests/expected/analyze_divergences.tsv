@@ -1,0 +1,5 @@
+# Known differences for Analyze 7.5.
+file	tool	series	tolerance	reason
+tests/data/analyze/le_u8_4d.hdr	bioformats	-		vox_units "um": the Analyze 7.5 header gives the spatial unit as text; Bio-Formats assumes millimetres for every file (scopeio: 0.25 um)
+tests/data/analyze/f32.hdr	bioformats	-		empty vox_units: Bio-Formats assumes millimetres, scopeio reports no pixel size
+tests/data/analyze/rgb.hdr	bioformats-rs	-		datatype 128 (RGB) holds unsigned bytes; bioformats-rs reports int8 (same bytes); Bio-Formats does not read RGB Analyze files

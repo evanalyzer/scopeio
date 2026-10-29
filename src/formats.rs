@@ -162,6 +162,8 @@ static SUPPORTED: &[FormatInfo] = &[
     mrc::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
+    #[cfg(feature = "nifti")]
+    nifti::ANALYZE_FORMAT,
     #[cfg(feature = "scanr")]
     scanr::FORMAT,
     #[cfg(feature = "micromanager")]
@@ -299,8 +301,8 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
         return Ok(Some(FormatId::DeltaVision));
     }
     #[cfg(feature = "nifti")]
-    if nifti::matches(path, &head) {
-        return Ok(Some(FormatId::Nifti));
+    if let Some(id) = nifti::probe(path, &head) {
+        return Ok(Some(id));
     }
     #[cfg(feature = "mrc")]
     if mrc::matches(path, &head) {
@@ -347,7 +349,7 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
         #[cfg(feature = "nifti")]
-        Some(FormatId::Nifti) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
+        Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]
         Some(FormatId::Mrc) => Ok(Arc::new(Reader(mrc::Mrc::open(path)?))),
         #[cfg(feature = "micromanager")]

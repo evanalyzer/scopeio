@@ -49,7 +49,7 @@ bdv = ["dep:roxmltree", "deflate", "lz4"]
 micromanager = ["tiff", "dep:serde_json"]
 dv = []
 mrc = []
-# NIfTI; `.nii.gz` needs `deflate`.
+# NIfTI and Analyze 7.5; `.nii.gz` needs `deflate`.
 nifti = []
 stk = ["tiff"]
 # Olympus TIFF flavours.

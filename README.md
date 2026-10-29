@@ -122,6 +122,7 @@ compared, "n/a" means the reader cannot open the format.
 | Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
 | Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
 | BigDataViewer XML/HDF5 | 3 | 61.99 s | 31.7 MiB | n/a | 0.8× / 28× | – |
+| Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -152,6 +153,8 @@ compared, "n/a" means the reader cannot open the format.
 - BigDataViewer: Bio-Formats fails on both public samples; bioformats-rs
   converts only the first setup (scopeio: all 2 and 9 setups), so per
   setup scopeio needs about a third of its CPU time.
+- Analyze 7.5: no public image pair with a clear licence was found;
+  measured on the synthetic files only (checked against both readers).
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -173,7 +176,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Amersham Biosciences Gel** | `.gel` |  |
 | **Amira Mesh** | `.am, .amiramesh, .grey, .hx, .labels` |  |
 | **Amnis FlowSight** | `.cif` |  |
-| **Analyze 7.5** | `.img, .hdr` |  |
+| **Analyze 7.5** | `.img, .hdr` | ✅ |
 | **Andor Bio-Imaging Division (ABD) TIFF** | `.tif` |  |
 | **Andor SIF** | `.sif` |  |
 | **Animated PNG** | `.png` |  |

@@ -76,6 +76,7 @@ python3 -I tests/scripts/make_mrc_samples.py      # MRC
 python3 -I tests/scripts/make_sis_samples.py      # Olympus SIS TIFF
 python3 -I tests/scripts/make_fluoview_samples.py # Olympus FluoView TIFF
 python3 -I tests/scripts/make_nifti_samples.py    # NIfTI
+python3 -I tests/scripts/make_analyze_samples.py  # Analyze 7.5
 python3 -I tests/scripts/make_scanr_samples.py    # Olympus scan^R
 python3 -I tests/scripts/make_nikon_tiff_samples.py # Nikon NIS-Elements TIFF
 python3 -I tests/scripts/make_nef_samples.py      # Nikon NEF
@@ -219,6 +220,8 @@ python3 -I tests/scripts/oracle.py micromanager --append --repeat 1 $T/stack/syn
 python3 -I tests/scripts/fetch_ome.py BDV/samples/
 python3 -I tests/scripts/oracle.py bdv --repeat 1 tests/reference/ome/BDV/samples/drosophila.xml tests/reference/ome/BDV/samples/HisYFP-SPIM.xml
 python3 -I tests/scripts/oracle.py bdv --append --repeat 1 tests/data/bdv/synthetic.xml
+# Analyze 7.5: synthetic files only
+python3 -I tests/scripts/oracle.py analyze --repeat 3 tests/data/analyze/*.hdr
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

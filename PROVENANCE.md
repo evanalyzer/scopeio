@@ -423,6 +423,13 @@ as black-box command-line tools to produce reference output
   gives no spatial unit, reads 5-D files channel-fastest, reports RGB24 as
   int8 and does not read NIfTI-2 (see `tests/expected/nifti_divergences.tsv`).
 - Synthetic samples written by `tests/scripts/make_nifti_samples.py`.
+- Analyze 7.5 (same module): Mayo Clinic "Analyze 7.5 File Format" document
+  and G. Wideman's field compilation (`doc/analyze/`): `sizeof_hdr`,
+  `dim`, `vox_units`, `datatype`, `pixdim`, `vox_offset`, `funused1` (SPM
+  scale), voxel order as NIfTI-1. No public image pair with a clear licence
+  was found; synthetic pairs written by
+  `tests/scripts/make_analyze_samples.py`, checked against Bio-Formats and
+  bioformats-rs as black boxes (see `tests/expected/analyze_divergences.tsv`).
 
 ## Olympus scan^R (`src/formats/scanr.rs`)
 
