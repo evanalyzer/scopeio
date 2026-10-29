@@ -149,7 +149,10 @@ compared, "n/a" means the reader cannot open the format.
   readers build their own mosaic instead (see Format notes).
 - Micro-Manager: the reference readers read NDTiff files as plain TIFF
   (pages as time points) and ignore the index; scopeio's NDTiff output is
-  checked against synthetic files instead.
+  checked against synthetic files instead. On the 4.6 GB two-file stack
+  of the OME samples (8820 planes) Bio-Formats fails on OME-XML naming
+  files that do not exist and bioformats-rs exceeds 8 GiB of RAM; scopeio
+  reads it from the index maps in 2.6 s CPU and 5.1 MiB.
 - BigDataViewer: Bio-Formats fails on both public samples; bioformats-rs
   converts only the first setup (scopeio: all 2 and 9 setups), so per
   setup scopeio needs about a third of its CPU time.

@@ -44,3 +44,6 @@ Generated 2026-10-29 by `tests/scripts/oracle.py`.
 | tests/data/micromanager/nd/nd_NDTiffStack.tif | 2 KiB | scopeio | ok | 0.001 | 0.002 | 4.4 |
 | tests/data/micromanager/nd/nd_NDTiffStack.tif | 2 KiB | bioformats | ok | 1.353 | 0.639 | 120.3 |
 | tests/data/micromanager/nd/nd_NDTiffStack.tif | 2 KiB | bioformats-rs | ok | 0.003 | 0.004 | 10.5 |
+| tests/reference/ome/Micro-Manager/1.4.22/sebastien/Test_Dataset_MultiPosition_Stack_1_MMStack_Pos0.ome.tif | 4195853 KiB | scopeio | ok | 2.649 | 5.607 | 5.1 |
+| tests/reference/ome/Micro-Manager/1.4.22/sebastien/Test_Dataset_MultiPosition_Stack_1_MMStack_Pos0.ome.tif | 4195853 KiB | bioformats | error: loci.formats.FormatException: Missing file Test_Datas | 8.765 | 2.932 | 720.4 |
+| tests/reference/ome/Micro-Manager/1.4.22/sebastien/Test_Dataset_MultiPosition_Stack_1_MMStack_Pos0.ome.tif | 4195853 KiB | bioformats-rs | error: killed: exceeded the RSS limit of 8192 MiB | 4401.228 | 4464.471 | 8202.8 |
