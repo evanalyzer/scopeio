@@ -1,0 +1,9 @@
+NRRD0004
+type: float
+dimension: 2
+sizes: 7 5
+endian: big
+encoding: hex
+line skip: 2
+byte skip: 3
+data file: ./hex.txt

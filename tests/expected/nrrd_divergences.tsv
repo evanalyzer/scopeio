@@ -1,0 +1,6 @@
+# Known differences for NRRD.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/NRRD/gordon/gk2-rcc-mask.nhdr	bioformats		0.01	phys_x_nm,phys_y_nm	spacings are in mm (units field); Bio-Formats ignores the unit (1000 nm) and drops x for the NaN spacing of the channel axis
+tests/data/nrrd/scalar.nrrd	bioformats				kinds: space space space marks a scalar volume (7 x 5 x 3); the reference readers ignore kinds and read the fastest axis as 7 channels
+tests/data/nrrd/scalar.nrrd	bioformats-rs				kinds: space space space marks a scalar volume (7 x 5 x 3); the reference readers ignore kinds and read the fastest axis as 7 channels
+tests/data/nrrd/hex.nhdr	bioformats				Bio-Formats returns zeros for hex encoding; scopeio returns the samples the generator wrote (truth.tsv)

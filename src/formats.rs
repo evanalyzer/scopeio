@@ -42,12 +42,16 @@ mod dv;
 mod hdf5;
 #[cfg(feature = "ics")]
 mod ics;
+#[cfg(any(feature = "ics", feature = "nrrd"))]
+mod strided;
 #[cfg(feature = "flex")]
 mod flex;
 #[cfg(feature = "cv7000")]
 mod cv7000;
 #[cfg(feature = "metaxpress")]
 mod metaxpress;
+#[cfg(feature = "nrrd")]
+mod nrrd;
 #[cfg(feature = "gatan")]
 mod gatan;
 #[cfg(feature = "ims")]
@@ -202,6 +206,8 @@ static SUPPORTED: &[FormatInfo] = &[
     cv7000::FORMAT,
     #[cfg(feature = "metaxpress")]
     metaxpress::FORMAT,
+    #[cfg(feature = "nrrd")]
+    nrrd::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -383,6 +389,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if obf::matches(&head) {
         return Ok(Some(FormatId::Obf));
     }
+    #[cfg(feature = "nrrd")]
+    if nrrd::matches(&head) {
+        return Ok(Some(FormatId::Nrrd));
+    }
     #[cfg(feature = "ics")]
     if ics::matches(path, &head) {
         return Ok(Some(FormatId::Ics));
@@ -451,6 +461,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Obf) => Ok(Arc::new(Reader(obf::Obf::open(path)?))),
         #[cfg(feature = "ics")]
         Some(FormatId::Ics) => Ok(Arc::new(Reader(ics::Ics::open(path)?))),
+        #[cfg(feature = "nrrd")]
+        Some(FormatId::Nrrd) => Ok(Arc::new(Reader(nrrd::Nrrd::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

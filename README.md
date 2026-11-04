@@ -134,6 +134,7 @@ compared, "n/a" means the reader cannot open the format.
 | Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
 | Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
 | MetaXpress | 6 | 10 ms | 7.5 MiB | 174× / 28× | 0.8× / 2.9× | – |
+| NRRD | 10 | 4 ms | 4.6 MiB | 192× / 44× | 10.0× / 7.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -295,7 +296,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Nikon Elements TIFF** | `.tiff` | ✅ |
 | **Nikon EZ-C1 TIFF** | `.tiff` | ❌ not possible (see Format notes) |
 | **Nikon NIS-Elements ND2** | `.nd2` | ✅ |
-| **NRRD (Nearly Raw Raster Data)** | `.nrrd, .nhdr, .raw, .txt` |  |
+| **NRRD (Nearly Raw Raster Data)** | `.nrrd, .nhdr, .raw, .txt` | ✅ |
 | **Olympus CellR/APL** | `.apl, .mtb, .tnb, .tif, .obsep` |  |
 | **Olympus FluoView FV1000** | `.oib, .oif` | ✅ |
 | **Olympus FluoView TIFF** | `.tif` | ✅ |
@@ -482,6 +483,15 @@ folders (`ZStep_0` projections are skipped). Images are placed by their
 file names (`<plate>_<well>_s<site>_w<wave>`), so a missing image reads as
 zeros without shifting the others (Bio-Formats shifts the later planes).
 Pixel size from the MetaMorph calibration of the TIFF files.
+
+**NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
+file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).
+Axis roles follow `kinds` (space / domain axes are x, y, z, `time` the
+time points, others channels); without kinds a `none` space direction or
+a NaN spacing marks a channel axis. The reference readers always read the
+fastest axis as channels, so scalar volumes with `kinds` differ. Not
+supported: bzip2, several data files (`LIST`, format strings), block and
+64-bit integer samples.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

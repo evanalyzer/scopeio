@@ -98,6 +98,8 @@ pub enum FormatId {
     Cv7000,
     /// Molecular Devices MetaXpress (`.HTD` and TIFF files).
     MetaXpress,
+    /// NRRD (`.nrrd`, `.nhdr`).
+    Nrrd,
 }
 
 /// Identification of the reader that produced the data, for

@@ -1,0 +1,9 @@
+NRRD0004
+type: uint
+dimension: 2
+sizes: 7 5
+endian: big
+encoding: raw
+byte skip: -1
+data file: tail.bin
+

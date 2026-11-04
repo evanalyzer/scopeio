@@ -37,14 +37,14 @@
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
 
+use super::strided::{Data, Strided};
 use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
     ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane,
-    Region, Result, SeriesMeta, scratch,
+    Region, Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ics, "ICS (Image Cytometry Standard)", "1").extensions(&["ics", "ids", "ids.gz"]);
@@ -111,13 +111,6 @@ fn parse_header(raw: &[u8]) -> (Vec<Vec<String>>, Option<usize>) {
     (lines, None)
 }
 
-/// Where the samples are.
-#[derive(Debug)]
-enum Data {
-    File { file: File, offset: u64 },
-    Gzip { path: PathBuf, offset: u64, len: u64, data: OnceLock<std::result::Result<Vec<u8>, String>> },
-}
-
 /// Axis roles of the stored dimensions (after `bits`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Role {
@@ -131,19 +124,7 @@ enum Role {
 /// ICS image.
 #[derive(Debug)]
 pub(super) struct Ics {
-    data: Data,
-    /// Element strides of x, y and z; of the channel and time dimensions
-    /// (fastest first) with their sizes.
-    sx: u64,
-    sy: u64,
-    sz: u64,
-    c_axes: Vec<(u64, u64)>,
-    t_axes: Vec<(u64, u64)>,
-    bytes: usize,
-    little: bool,
-    /// `cartesian` coordinates: rows stored from the bottom.
-    flip_y: bool,
-    total: u64,
+    samples: Strided,
     metas: Vec<SeriesMeta>,
     original: OriginalMeta,
 }
@@ -257,13 +238,9 @@ impl Ics {
             if total > MAX_DECOMPRESSED {
                 return Err(Error::UnsupportedVariant("compressed ICS data above 4 GiB".into()));
             }
-            Data::Gzip { path: data_path, offset, len: total, data: OnceLock::new() }
+            Data::gzip(&data_path, offset, 0, total, "ICS")
         } else {
-            let file = File::open(&data_path)?;
-            if offset.saturating_add(total) > file.metadata()?.len() {
-                return Err(Error::Corrupt("ICS data shorter than its layout".into()));
-            }
-            Data::File { file, offset }
+            Data::file(&data_path, offset, total, "ICS")?
         };
 
         // Sensor parameters: values per channel.
@@ -296,33 +273,8 @@ impl Ics {
         };
         let original = OriginalMeta { pairs: lines.iter().filter(|l| l.len() >= 2).map(|l| (l[..2.min(l.len())].join(" "), l[2..].join(" "))).collect(), documents: Vec::new() };
         let flip_y = get("layout", "coordinates").and_then(|v| v.first()).is_some_and(|c| c.eq_ignore_ascii_case("cartesian"));
-        Ok(Ics { data, sx, sy, sz, c_axes, t_axes, bytes, little, flip_y, total, metas: vec![meta], original })
-    }
-
-    /// Copies `out.len()` bytes at `at` (from the start of the samples).
-    fn read_at(&self, out: &mut [u8], at: u64) -> Result<()> {
-        match &self.data {
-            Data::File { file, offset } => read_exact_at(file, out, offset + at),
-            Data::Gzip { path, offset, len, data } => {
-                let data = data.get_or_init(|| {
-                    let load = || -> Result<Vec<u8>> {
-                        let src = std::fs::read(path)?;
-                        let src = src.get(*offset as usize..).ok_or_else(|| Error::Corrupt("ICS data offset beyond the file".into()))?;
-                        let mut out = vec![0u8; *len as usize];
-                        let n = crate::codecs::gzip(src, &mut out)?;
-                        if n < out.len() {
-                            return Err(Error::Corrupt("compressed ICS data shorter than its layout".into()));
-                        }
-                        Ok(out)
-                    };
-                    load().map_err(|e| e.to_string())
-                });
-                let data = data.as_ref().map_err(|e| Error::Corrupt(e.clone()))?;
-                let start = at as usize;
-                out.copy_from_slice(data.get(start..start + out.len()).ok_or_else(|| Error::Corrupt("ICS read beyond its data".into()))?);
-                Ok(())
-            }
-        }
+        let samples = Strided { data, sx, sy, sz, c_axes, t_axes, bytes, little, flip_y, height: ny, total, what: "ICS" };
+        Ok(Ics { samples, metas: vec![meta], original })
     }
 }
 
@@ -347,16 +299,6 @@ fn time_s(v: f64, unit: &str) -> Option<f64> {
     })
 }
 
-/// Element offset of index `i` decomposed over `axes` (fastest first).
-fn axes_offset(axes: &[(u64, u64)], mut i: u64) -> u64 {
-    let mut at = 0;
-    for &(stride, size) in axes {
-        at += (i % size) * stride;
-        i /= size;
-    }
-    at
-}
-
 impl Backend for Ics {
     fn format(&self) -> &'static FormatInfo {
         &FORMAT
@@ -371,38 +313,7 @@ impl Backend for Ics {
     }
 
     fn read_native(&self, _series: usize, _level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {
-        let e = self.bytes as u64;
-        let base = plane.z as u64 * self.sz + axes_offset(&self.c_axes, plane.c as u64) + axes_offset(&self.t_axes, plane.t as u64);
-        let w = region.width as usize;
-        // A row spans `(w - 1) * sx + 1` elements; with sx > 1 every sx-th is kept.
-        let span = ((w as u64 - 1) * self.sx + 1) * e;
-        let swap = self.bytes > 1 && self.little != cfg!(target_endian = "little");
-        scratch::with(span as usize, |row| {
-            for r in 0..region.height as usize {
-                let y = region.y + r as u64;
-                let y = if self.flip_y { self.metas[0].levels[0].size_y - 1 - y } else { y };
-                let at = (base + y * self.sy + region.x * self.sx) * e;
-                if at + span > self.total {
-                    return Err(Error::Corrupt("ICS read beyond its data".into()));
-                }
-                self.read_at(row, at)?;
-                sink.write_with(r, 0, w, |d| {
-                    if self.sx == 1 {
-                        d.copy_from_slice(row);
-                    } else {
-                        for (k, out) in d.chunks_exact_mut(self.bytes).enumerate() {
-                            let s = k * (self.sx as usize) * self.bytes;
-                            out.copy_from_slice(&row[s..s + self.bytes]);
-                        }
-                    }
-                    if swap {
-                        d.chunks_exact_mut(self.bytes).for_each(<[u8]>::reverse);
-                    }
-                    Ok(())
-                })?;
-            }
-            Ok(())
-        })
+        self.samples.read_plane(plane, region, sink)
     }
 }
 
@@ -418,14 +329,5 @@ mod tests {
         let (lines, end) = parse_header(raw);
         assert_eq!(lines[1], ["layout", "order", "bits", "x", "y"]);
         assert_eq!(end, Some(raw.len() - 2));
-    }
-
-    #[test]
-    fn decomposes_axes() {
-        // Two channel axes of sizes 2 and 3 with strides 1 and 10.
-        let axes = [(1, 2), (10, 3)];
-        assert_eq!(axes_offset(&axes, 0), 0);
-        assert_eq!(axes_offset(&axes, 1), 1);
-        assert_eq!(axes_offset(&axes, 3), 11);
     }
 }

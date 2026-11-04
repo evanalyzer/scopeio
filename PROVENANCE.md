@@ -698,6 +698,19 @@ as black-box command-line tools to produce reference output
   plane where they differed (see `tests/expected/metaxpress_divergences.tsv`).
 - Synthetic plate written by `tests/scripts/make_metaxpress_samples.py`.
 
+## NRRD (`src/formats/nrrd.rs`, `src/formats/strided.rs`)
+
+- Teem NRRD file format definition (G. Kindlmann, `doc/nrrd/`, archived
+  copy of teem.sourceforge.net/nrrd/format.html): header fields, encodings,
+  detached headers, line / byte skip, kinds, space directions.
+- Own analysis of the NRRD samples on the OME sample server
+  (`NRRD/glencoe`, `NRRD/gordon`, CC BY 4.0).
+- Checked against Bio-Formats and bioformats-rs as black boxes, including
+  synthetic headers probing their axis mapping (see
+  `tests/expected/nrrd_divergences.tsv`).
+- Strided sample reading shared with ICS (own code).
+- Synthetic files written by `tests/scripts/make_nrrd_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
