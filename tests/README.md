@@ -99,6 +99,7 @@ python3 -I tests/scripts/make_ics_samples.py      # ICS 1.0 / 2.0
 python3 -I tests/scripts/make_obf_samples.py      # Imspector OBF
 python3 -I tests/scripts/make_incell_samples.py   # IN Cell Analyzer (uses make_micromanager_samples.py)
 python3 -I tests/scripts/make_sdt_samples.py      # Becker & Hickl SDT
+python3 -I tests/scripts/make_gatan_samples.py    # Gatan DM3 / DM4
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -266,6 +267,10 @@ S=tests/reference/ome/SDT/gh-4198/FocalCheck_A1_20x_8xzoom_800nm.sdt; python3 -I
 BF_MAX_MEM=8g python3 -I tests/scripts/oracle.py sdt --repeat 1 --series 0 --crop 200,200,64,64 $S
 BF_MAX_MEM=8g python3 -I tests/scripts/oracle.py sdt --append --repeat 1 --series 1 --crop 300,100,64,64 $S
 python3 -I tests/scripts/oracle.py sdt --append --repeat 1 tests/data/sdt/image.sdt tests/data/sdt/decay.sdt
+# Gatan DM4: OME samples (CC BY 4.0) and the synthetic files
+G=Gatan/imagesc-36590; python3 -I tests/scripts/fetch_ome.py $G/SmallMontage0000.dm4 $G/SmallMontage0001.dm4 $G/SmallMontage0002.dm4 $G/191041a_ctl_M2_3VBSED_0045.dm4
+python3 -I tests/scripts/oracle.py gatan --repeat 3 tests/reference/ome/$G/SmallMontage000[0-2].dm4
+python3 -I tests/scripts/oracle.py gatan --append --repeat 1 tests/reference/ome/$G/191041a_ctl_M2_3VBSED_0045.dm4 tests/data/gatan/stack.dm3 tests/data/gatan/rgba.dm4
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

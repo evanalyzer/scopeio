@@ -90,6 +90,8 @@ pub enum FormatId {
     InCell,
     /// Becker & Hickl SPCM data (`.sdt`).
     Sdt,
+    /// Gatan DigitalMicrograph (`.dm3`, `.dm4`).
+    Gatan,
 }
 
 /// Identification of the reader that produced the data, for

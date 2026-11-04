@@ -1,0 +1,5 @@
+# Known differences for Gatan DigitalMicrograph.
+file	tool	series	tolerance	ignore	reason
+tests/data/gatan/stack.dm3	bioformats	-			Bio-Formats returns only the last ImageList image (the spectrum image, its eV axis as z); scopeio returns both images as series, the energy axis as channels (same samples: Bio-Formats' CRC equals scopeio's series 1 read plane by plane); bioformats-rs returns only the first image, the z stack, which matches scopeio series 0
+tests/data/gatan/rgba.dm4	bioformats	-			both reference readers skip the RGBA image and return the uint16 sequence as z planes; scopeio returns the RGBA image as series 0 and the sequence (Meta Data.IsSequence) as time points in series 1
+tests/data/gatan/rgba.dm4	bioformats-rs	-			see above

@@ -641,6 +641,20 @@ as black-box command-line tools to produce reference output
   `tests/expected/sdt_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_sdt_samples.py`.
 
+## Gatan DigitalMicrograph (`src/formats/gatan.rs`)
+
+- C. Boothroyd's DM2/DM3/DM4 format description and G. Jefferis' DM3
+  notes (`doc/gatan-dm/`, reverse-engineered descriptions): header, tag
+  groups and data tags, info words, struct and array tags.
+- OpenReadout DM notes (MIT OR Apache-2.0, `doc/gatan-dm/`): DM4 widths
+  and tag lengths, data type table, RGBA byte order, thumbnails, axis
+  rules.
+- Own analysis of the DM4 samples on the OME sample server
+  (`Gatan/imagesc-36590`, CC BY 4.0).
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/gatan_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_gatan_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

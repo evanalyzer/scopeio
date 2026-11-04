@@ -130,6 +130,7 @@ compared, "n/a" means the reader cannot open the format.
 | Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
 | IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
 | Becker & Hickl SDT | 4 | 495 ms | 1033 MiB | 30× / 0.5× | 3.5× / 2.8× | – |
+| Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -229,7 +230,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **FEI** | `.img` |  |
 | **FEI TIFF** | `.tiff` |  |
 | **FITS (Flexible Image Transport System)** | `.fits` |  |
-| **Gatan Digital Micrograph** | `.dm3, .dm4` |  |
+| **Gatan Digital Micrograph** | `.dm3, .dm4` | ✅ |
 | **Gatan Digital Micrograph 2** | `.dm2` |  |
 | **GIF (Graphics Interchange Format)** | `.gif` |  |
 | **Hamamatsu Aquacosmos NAF** | `.naf` |  |
@@ -448,6 +449,13 @@ with the TCSPC time bins as T (time increment = bin width), as Bio-Formats
 reports them; Bio-Formats adds a second, empty channel per block.
 ZIP-compressed blocks are held decompressed in memory after the first
 read; LZ4-compressed blocks are not supported yet.
+
+**Gatan DigitalMicrograph.** DM3 and DM4: every `ImageList` image except
+the thumbnails is a series (the reference readers return one image per
+file). A third dimension is channels for an energy axis (spectrum images),
+z planes for a length axis, else time points (`Meta Data.IsSequence`).
+RGBA images keep their four samples. Not supported: complex, packed
+complex and RGB (type 8) data, and DM5 (HDF5) files.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

@@ -42,6 +42,8 @@ mod dv;
 mod hdf5;
 #[cfg(feature = "ics")]
 mod ics;
+#[cfg(feature = "gatan")]
+mod gatan;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "incell")]
@@ -186,6 +188,8 @@ static SUPPORTED: &[FormatInfo] = &[
     obf::FORMAT,
     #[cfg(feature = "sdt")]
     sdt::FORMAT,
+    #[cfg(feature = "gatan")]
+    gatan::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -343,6 +347,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "gatan")]
+    if gatan::matches(path, &head) {
+        return Ok(Some(FormatId::Gatan));
+    }
     #[cfg(feature = "sdt")]
     if sdt::matches(path, &head) {
         return Ok(Some(FormatId::Sdt));
@@ -405,6 +413,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "gatan")]
+        Some(FormatId::Gatan) => Ok(Arc::new(Reader(gatan::Gatan::open(path)?))),
         #[cfg(feature = "sdt")]
         Some(FormatId::Sdt) => Ok(Arc::new(Reader(sdt::Sdt::open(path)?))),
         #[cfg(feature = "obf")]
