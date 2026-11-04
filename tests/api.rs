@@ -16,8 +16,8 @@ mod common;
 use std::sync::Arc;
 
 use scopeio::{
-    ChannelSelect, ColorOrder, Error, ImageBuf, ImageReader, Layout, OutputSpec, OutputType, PixelBuf, PixelViewMut,
-    Region, RegionRequest, TileRequest,
+    ChannelSelect, ColorOrder, Error, ImageBuf, ImageReader, Layout, OutputSpec, OutputType, PixelBuf, PixelViewMut, Region, RegionRequest,
+    TileRequest,
 };
 
 use common::root;
@@ -55,12 +55,7 @@ fn at(img: &ImageBuf, y: usize, x: usize, c: usize) -> f64 {
 
 #[test]
 fn storage_variants_give_identical_buffers() {
-    let names = [
-        "same_rgb16_le_chunky.tif",
-        "same_rgb16_be_planar.tif",
-        "same_rgb16_le_tiles_deflate_pred.tif",
-        "same_rgb16_be_bigtiff_lzw.tif",
-    ];
+    let names = ["same_rgb16_le_chunky.tif", "same_rgb16_be_planar.tif", "same_rgb16_le_tiles_deflate_pred.tif", "same_rgb16_be_bigtiff_lzw.tif"];
     for layout in [Layout::Hwc, Layout::Chw] {
         let spec = OutputSpec { layout, ..Default::default() };
         let reference = read(open(&format!("tests/data/tiff/{}", names[0])).as_ref(), ChannelSelect::Channel(0), spec);

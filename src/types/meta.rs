@@ -113,9 +113,7 @@ impl SeriesMeta {
     ///
     /// Returns [`Error::OutOfRange`] if the level does not exist.
     pub fn level(&self, level: usize) -> Result<&LevelMeta> {
-        self.levels
-            .get(level)
-            .ok_or_else(|| Error::OutOfRange(format!("level {level} of {}", self.levels.len())))
+        self.levels.get(level).ok_or_else(|| Error::OutOfRange(format!("level {level} of {}", self.levels.len())))
     }
 }
 

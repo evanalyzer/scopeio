@@ -34,8 +34,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize,
-    PixelType, Plane, PlaneMeta, Position, Region, Result, SeriesMeta, codecs, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
+    Position, Region, Result, SeriesMeta, codecs, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Nd2, "Nikon ND2", "1").extensions(&["nd2"]);
@@ -115,7 +115,8 @@ impl Nd2 {
             pixel_type: PixelType::U8,
             frame_times: Vec::new(),
         };
-        let attrs = nd2.metadata(&["ImageAttributesLV!", "ImageAttributes!"])?.ok_or_else(|| Error::Corrupt("ND2 without image attributes".into()))?;
+        let attrs =
+            nd2.metadata(&["ImageAttributesLV!", "ImageAttributes!"])?.ok_or_else(|| Error::Corrupt("ND2 without image attributes".into()))?;
         let a = attrs.get("SLxImageAttributes").unwrap_or(&attrs);
         let int = |k: &str| a.int(k).unwrap_or(0);
         nd2.width = int("uiWidth") as u32;
@@ -227,11 +228,7 @@ impl Nd2 {
             channel_samples.push((first, n));
             first += n;
             let color = p.int("uiColor").map(|c| [c as u8, (c >> 8) as u8, (c >> 16) as u8, 255]);
-            channels.push(ChannelMeta {
-                name: p.text("sDescription").or_else(|| p.text("sOpticalConfigName")),
-                color,
-                ..Default::default()
-            });
+            channels.push(ChannelMeta { name: p.text("sDescription").or_else(|| p.text("sOpticalConfigName")), color, ..Default::default() });
         }
         if first != self.components {
             channel_samples = (0..self.components).map(|c| (c, 1)).collect();
@@ -420,9 +417,11 @@ fn validity(v: Option<&Value>) -> Vec<bool> {
 fn fit_loops(loops: &mut Vec<Loop>, frames: u64) {
     let inner: u64 = loops.iter().skip(1).map(|l| l.count).product();
     if let Some(first) = loops.first_mut()
-        && first.count * inner > frames && inner > 0 {
-            first.count = frames.div_ceil(inner).max(1);
-        }
+        && first.count * inner > frames
+        && inner > 0
+    {
+        first.count = frames.div_ceil(inner).max(1);
+    }
     loops.retain(|l| l.count > 0);
 }
 
@@ -477,10 +476,8 @@ impl Backend for Nd2 {
         if frame >= self.frames {
             return Err(Error::Corrupt(format!("ND2 frame {frame} missing ({} stored)", self.frames)));
         }
-        let (&(offset, _), name) = (
-            self.chunks.get(&format!("ImageDataSeq|{frame}!")).ok_or_else(|| Error::Corrupt(format!("ND2 frame {frame} missing")))?,
-            frame,
-        );
+        let (&(offset, _), name) =
+            (self.chunks.get(&format!("ImageDataSeq|{frame}!")).ok_or_else(|| Error::Corrupt(format!("ND2 frame {frame} missing")))?, frame);
         let _ = name;
         let (start, data_len) = chunk_payload(&self.file, self.len, offset)?;
         // The frame starts with an f64 time stamp.

@@ -27,10 +27,7 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::scratch;
-use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region,
-    Result, SeriesMeta,
-};
+use crate::{ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bmp, "Windows Bitmap", "1").extensions(&["bmp"]);
 
@@ -209,9 +206,7 @@ impl Bmp {
         } else {
             let needed = stride as u64 * height as u64;
             if data_offset + needed > file_len {
-                return Err(Error::Corrupt(format!(
-                    "pixel data needs {needed} bytes at offset {data_offset}, file has {file_len}"
-                )));
+                return Err(Error::Corrupt(format!("pixel data needs {needed} bytes at offset {data_offset}, file has {file_len}")));
             }
             needed
         };
@@ -229,25 +224,12 @@ impl Bmp {
             pixel_type: PixelType::U8,
             samples_per_pixel,
             levels: vec![LevelMeta { size_x: width as u64, size_y: height as u64, tile: None, downsample: 1.0 }],
-            physical_size: PhysicalSize {
-                x_nm: nm_per_pixel(h.x_ppm),
-                y_nm: nm_per_pixel(h.y_ppm),
-                z_nm: None,
-            },
+            physical_size: PhysicalSize { x_nm: nm_per_pixel(h.x_ppm), y_nm: nm_per_pixel(h.y_ppm), z_nm: None },
             channels: vec![ChannelMeta::default()],
             ..Default::default()
         };
 
-        Ok(Self {
-            file,
-            series: [meta],
-            pixels,
-            data_offset,
-            data_len,
-            stride,
-            top_down,
-            rle,
-        })
+        Ok(Self { file, series: [meta], pixels, data_offset, data_len, stride, top_down, rle })
     }
 
     /// Converts one stored row into output samples.
@@ -289,11 +271,7 @@ impl Bmp {
                 let n = *bytes as usize;
                 let src = &src[x * n..];
                 for (out, px) in dst.chunks_exact_mut(masks.len()).zip(src.chunks_exact(n)) {
-                    let pixel = if n == 2 {
-                        u16::from_le_bytes([px[0], px[1]]) as u32
-                    } else {
-                        u32::from_le_bytes([px[0], px[1], px[2], px[3]])
-                    };
+                    let pixel = if n == 2 { u16::from_le_bytes([px[0], px[1]]) as u32 } else { u32::from_le_bytes([px[0], px[1], px[2], px[3]]) };
                     for (o, m) in out.iter_mut().zip(masks) {
                         *o = m.sample(pixel);
                     }
@@ -425,14 +403,7 @@ fn parse_header(b: &[u8]) -> Result<Header> {
 ///
 /// At most `room` entries are read if the table would otherwise overlap
 /// the pixel data.
-fn read_palette(
-    file: &File,
-    offset: u64,
-    entry: usize,
-    bits: u16,
-    used: u32,
-    room: u64,
-) -> Result<Lut> {
+fn read_palette(file: &File, offset: u64, entry: usize, bits: u16, used: u32, room: u64) -> Result<Lut> {
     let max = 1usize << bits;
     let count = if used == 0 || used as usize > max { max } else { used as usize };
     let count = if room > 0 { count.min(room as usize) } else { count };

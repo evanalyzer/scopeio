@@ -44,7 +44,10 @@ fn meta(name: &str) -> scopeio::SeriesMeta {
 #[test]
 fn metadata() {
     let id = |name: &str| scopeio::open(&sample(name)).unwrap().format().id;
-    assert_eq!((id("rgb8.png"), id("rgb8.jpg"), id("rgb8.jp2"), id("gray16.j2k")), (FormatId::Png, FormatId::Jpeg, FormatId::Jpeg2000, FormatId::Jpeg2000));
+    assert_eq!(
+        (id("rgb8.png"), id("rgb8.jpg"), id("rgb8.jp2"), id("gray16.j2k")),
+        (FormatId::Png, FormatId::Jpeg, FormatId::Jpeg2000, FormatId::Jpeg2000)
+    );
     let m = meta("rgb8.png");
     // pHYs of 40000 pixels per centimetre.
     assert_eq!((m.samples_per_pixel, m.size_c, m.physical_size.x_nm), (3, 1, Some(250.0)));

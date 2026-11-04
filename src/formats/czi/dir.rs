@@ -96,7 +96,11 @@ pub(super) fn file_header(file: &File, span: Span) -> Result<FileHeader> {
     let p = &b[32..];
     Ok(FileHeader {
         primary_guid: p[16..32].try_into().expect("16 bytes"),
-        file_part: u32_at(p, 48), directory: u64_at(p, 52), metadata: u64_at(p, 60), attachments: u64_at(p, 72) })
+        file_part: u32_at(p, 48),
+        directory: u64_at(p, 52),
+        metadata: u64_at(p, 60),
+        attachments: u64_at(p, 72),
+    })
 }
 
 /// Dimension of a directory entry that is not X, Y, Z, C, T, S or M.
@@ -227,11 +231,7 @@ pub(super) fn attachments(file: &File, span: Span, at: u64) -> Result<Vec<Attach
     let data = span.segment(file, at, b"ZISRAWATTDIR")?;
     let count = data.get(..4).map(|b| u32_at(b, 0) as usize).unwrap_or(0);
     let list = data.get(256..).unwrap_or_default();
-    Ok(list
-        .chunks_exact(128)
-        .take(count)
-        .filter_map(attachment_entry)
-        .collect())
+    Ok(list.chunks_exact(128).take(count).filter_map(attachment_entry).collect())
 }
 
 /// Position and length of an attachment's payload.

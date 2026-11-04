@@ -38,8 +38,8 @@ use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta,
-    PlateMeta, Position, Region, Result, SeriesMeta, WellSample,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta, PlateMeta, Position, Region,
+    Result, SeriesMeta, WellSample,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Flex, "Opera Flex", "1").extensions(&["flex"]);
@@ -49,7 +49,9 @@ const TAG_FLEX_XML: u16 = 65200;
 
 /// Returns `true` for a TIFF file with the Flex XML tag.
 pub(super) fn matches(path: &Path, head: &[u8]) -> bool {
-    TiffFile::matches(head) && path.extension().is_some_and(|e| e.eq_ignore_ascii_case("flex")) && TiffFile::open_first(path).is_ok_and(|t| t.ifds[0].has(TAG_FLEX_XML))
+    TiffFile::matches(head)
+        && path.extension().is_some_and(|e| e.eq_ignore_ascii_case("flex"))
+        && TiffFile::open_first(path).is_ok_and(|t| t.ifds[0].has(TAG_FLEX_XML))
 }
 
 fn child<'a, 'i>(n: Node<'a, 'i>, name: &str) -> Option<Node<'a, 'i>> {
@@ -105,7 +107,12 @@ impl Flex {
     pub fn open(path: &Path) -> Result<Self> {
         let dir = path.parent().unwrap_or(Path::new("."));
         let mut paths: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
-            .map(|r| r.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("flex")) && p.is_file()).collect())
+            .map(|r| {
+                r.filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("flex")) && p.is_file())
+                    .collect()
+            })
             .unwrap_or_default();
         if !paths.iter().any(|p| p == path) {
             paths.push(path.to_path_buf());
@@ -120,7 +127,14 @@ impl Flex {
             }
         }
         wells.sort_by_key(|(rc, _)| *rc);
-        let mut plate = Flex { files: Vec::new(), pages: Vec::new(), plane_meta: Vec::new(), metas: Vec::new(), plates: Vec::new(), original: OriginalMeta::default() };
+        let mut plate = Flex {
+            files: Vec::new(),
+            pages: Vec::new(),
+            plane_meta: Vec::new(),
+            metas: Vec::new(),
+            plates: Vec::new(),
+            original: OriginalMeta::default(),
+        };
         let mut samples = Vec::new();
         for (_, w) in wells {
             let base = plate.metas.len();
@@ -195,12 +209,16 @@ impl Flex {
         let img = TiffImage::new(&tiff, first)?;
         let (width, height, pixel_type) = (img.width as u64, img.height as u64, img.pixel_type);
         let first_image = images[0];
-        let objective = text(first_image, "ObjectiveRef").and_then(|id| root.descendants().find(|o| o.tag_name().name() == "Objective" && o.attribute("ID") == Some(id.as_str()))).map(|o| ObjectiveMeta {
-            magnification: num(o, "Magnification").filter(|v| *v > 0.0),
-            numerical_aperture: num(o, "NumAperture").filter(|v| *v > 0.0),
-            ..Default::default()
+        let objective = text(first_image, "ObjectiveRef")
+            .and_then(|id| root.descendants().find(|o| o.tag_name().name() == "Objective" && o.attribute("ID") == Some(id.as_str())))
+            .map(|o| ObjectiveMeta {
+                magnification: num(o, "Magnification").filter(|v| *v > 0.0),
+                numerical_aperture: num(o, "NumAperture").filter(|v| *v > 0.0),
+                ..Default::default()
+            });
+        let (row, col) = child(well, "WellCoordinate").map_or((1, 1), |w| {
+            (w.attribute("Row").and_then(|v| v.parse().ok()).unwrap_or(1u32), w.attribute("Col").and_then(|v| v.parse().ok()).unwrap_or(1u32))
         });
-        let (row, col) = child(well, "WellCoordinate").map_or((1, 1), |w| (w.attribute("Row").and_then(|v| v.parse().ok()).unwrap_or(1u32), w.attribute("Col").and_then(|v| v.parse().ok()).unwrap_or(1u32)));
         let well_name = format!("{}{:02}", (b'A' + (row.saturating_sub(1) % 26) as u8) as char, col);
         let mut pages = Vec::new();
         let mut plane_meta = Vec::new();
@@ -214,12 +232,18 @@ impl Flex {
                 let c = channels.iter().position(|k| *k == e.channel).expect("listed channel");
                 let z = planes.binary_search(&e.plane).expect("listed plane");
                 p[c + size_c * z] = Some(e.page);
-                pm[c + size_c * z] = e.meta.clone();
+                pm[c + size_c * z] = e.meta;
                 ch_meta[c].exposure_s = ch_meta[c].exposure_s.or(e.meta.exposure_s);
                 ch_meta[c].name = Some(format!("{} {}", e.channel.1, e.channel.0).trim().to_string()).filter(|s| !s.is_empty());
             }
             let first = entries.iter().find(|e| e.field == f);
-            wells.push(WellSample { row: row.saturating_sub(1), col: col.saturating_sub(1), field: metas.len() as u32, series: metas.len(), position: first.and_then(|e| e.meta.position) });
+            wells.push(WellSample {
+                row: row.saturating_sub(1),
+                col: col.saturating_sub(1),
+                field: metas.len() as u32,
+                series: metas.len(),
+                position: first.and_then(|e| e.meta.position),
+            });
             metas.push(SeriesMeta {
                 name: Some(format!("well {well_name} field {f}")),
                 acquisition_date: descendant(root, "StartTime").and_then(|n| n.text()).map(|t| t.trim().to_string()),
@@ -229,7 +253,11 @@ impl Flex {
                 pixel_type,
                 samples_per_pixel: 1,
                 levels: vec![LevelMeta { size_x: width, size_y: height, tile: None, downsample: 1.0 }],
-                physical_size: PhysicalSize { x_nm: metres_nm(first_image, "ImageResolutionX"), y_nm: metres_nm(first_image, "ImageResolutionY"), z_nm: None },
+                physical_size: PhysicalSize {
+                    x_nm: metres_nm(first_image, "ImageResolutionX"),
+                    y_nm: metres_nm(first_image, "ImageResolutionY"),
+                    z_nm: None,
+                },
                 channels: ch_meta,
                 objective: objective.clone(),
                 stage_position: first.and_then(|e| e.meta.position),

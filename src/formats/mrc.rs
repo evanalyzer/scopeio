@@ -33,7 +33,7 @@ use std::path::Path;
 use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{FormatId, FormatInfo, Error, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
+use crate::{Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrc, "MRC", "1").extensions(EXTENSIONS);
 

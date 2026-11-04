@@ -225,9 +225,16 @@ pub(super) fn number(v: &[u8], t: Datatype) -> f64 {
 pub(super) enum Layout {
     Compact(Vec<u8>),
     /// Address and allocated size (`u64::MAX` if not recorded).
-    Contiguous { address: u64, #[allow(dead_code)] size: u64 },
+    Contiguous {
+        address: u64,
+        #[allow(dead_code)]
+        size: u64,
+    },
     /// Chunk dimensions (without the element size) and the index.
-    Chunked { dims: Vec<u64>, index: ChunkIndex },
+    Chunked {
+        dims: Vec<u64>,
+        index: ChunkIndex,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -984,7 +991,11 @@ impl FractalHeap {
             }
             2 => {
                 // Tiny: the data follows in the ID.
-                let (len, start) = if self.id_len <= 18 { ((flags & 0x0F) as usize + 1, 1) } else { ((((flags & 0x0F) as usize) << 8 | *id.get(1).unwrap_or(&0) as usize) + 1, 2) };
+                let (len, start) = if self.id_len <= 18 {
+                    ((flags & 0x0F) as usize + 1, 1)
+                } else {
+                    ((((flags & 0x0F) as usize) << 8 | *id.get(1).unwrap_or(&0) as usize) + 1, 2)
+                };
                 id.get(start..start + len).map(<[u8]>::to_vec).ok_or_else(|| corrupt("tiny heap object"))
             }
             _ => Err(Error::UnsupportedVariant("HDF5 huge heap objects".into())),
@@ -1103,7 +1114,10 @@ impl Volume {
                 }
                 ChunkIndex::Single { address, size, mask } => {
                     let full = chunk.iter().try_fold(ds.dtype.size as u64, |a, &d| a.checked_mul(d)).unwrap_or(u64::MAX).min(u32::MAX as u64);
-                    chunks.insert([0, 0, 0], Chunk { address: *address, size: if *size == u64::MAX { full as u32 } else { *size as u32 }, mask: *mask });
+                    chunks.insert(
+                        [0, 0, 0],
+                        Chunk { address: *address, size: if *size == u64::MAX { full as u32 } else { *size as u32 }, mask: *mask },
+                    );
                 }
             }
         }
@@ -1179,7 +1193,11 @@ impl Volume {
         }
         match &self.ds.layout {
             Layout::Contiguous { address, .. } => {
-                let total = dz.checked_mul(dy).and_then(|v| v.checked_mul(dx)).and_then(|v| v.checked_mul(e as u64)).ok_or_else(|| Error::Corrupt("HDF5 data size".into()))?;
+                let total = dz
+                    .checked_mul(dy)
+                    .and_then(|v| v.checked_mul(dx))
+                    .and_then(|v| v.checked_mul(e as u64))
+                    .ok_or_else(|| Error::Corrupt("HDF5 data size".into()))?;
                 let base = h5.absolute(*address, total)?;
                 for r in 0..h {
                     let at = base + ((z * dy + y0 + r as u64) * dx + x0) * e as u64;

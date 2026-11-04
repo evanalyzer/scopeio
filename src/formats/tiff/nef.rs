@@ -62,12 +62,15 @@ pub(super) fn series(tiff: &TiffFile) -> Result<Vec<Series>> {
     let repeat = tiff.uints(&raw, CFA_REPEAT)?.unwrap_or_default();
     let pattern = tiff.uints(&raw, CFA_PATTERN)?.unwrap_or_default();
     if repeat.len() == 2 && repeat[0] * repeat[1] == pattern.len() as u64 && !pattern.is_empty() {
-        let letters: String = pattern.iter().map(|&c| match c {
-            0 => 'R',
-            1 => 'G',
-            2 => 'B',
-            _ => '?',
-        }).collect();
+        let letters: String = pattern
+            .iter()
+            .map(|&c| match c {
+                0 => 'R',
+                1 => 'G',
+                2 => 'B',
+                _ => '?',
+            })
+            .collect();
         s.original.push(("CFA pattern".into(), format!("{letters} ({} x {})", repeat[0], repeat[1])));
         s.meta.channels[0].name = Some(format!("CFA {letters}"));
     }

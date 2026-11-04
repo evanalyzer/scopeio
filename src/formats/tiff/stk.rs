@@ -94,7 +94,10 @@ fn uic1_calibration(tiff: &TiffFile) -> Option<(Option<f64>, f64, f64)> {
                 if let Ok(l) = tiff.read_bytes(value, 4) {
                     let len = (u32_le(&l) as usize).min(256);
                     // Ends at the first NUL; bytes after it are padding.
-                    units = tiff.read_bytes(value + 4, len).ok().map(|t| String::from_utf8_lossy(t.split(|&b| b == 0).next().unwrap_or_default()).into_owned());
+                    units = tiff
+                        .read_bytes(value + 4, len)
+                        .ok()
+                        .map(|t| String::from_utf8_lossy(t.split(|&b| b == 0).next().unwrap_or_default()).into_owned());
                 }
             }
             _ => {}

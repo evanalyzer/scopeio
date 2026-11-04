@@ -114,7 +114,11 @@ impl Klb {
             return Err(Error::Corrupt("KLB header with zero sizes".into()));
         }
         let grid: [u64; 5] = std::array::from_fn(|i| dims[i].div_ceil(block[i]));
-        let n = grid.iter().try_fold(1u64, |a, &g| a.checked_mul(g)).filter(|&n| n <= MAX_BLOCKS).ok_or_else(|| Error::Corrupt("KLB with too many blocks".into()))?;
+        let n = grid
+            .iter()
+            .try_fold(1u64, |a, &g| a.checked_mul(g))
+            .filter(|&n| n <= MAX_BLOCKS)
+            .ok_or_else(|| Error::Corrupt("KLB with too many blocks".into()))?;
         let bytes = pixel_type.bytes();
         let block_bytes = block.iter().product::<u64>().saturating_mul(bytes as u64);
         if block_bytes > MAX_BLOCK_BYTES {
@@ -176,7 +180,8 @@ impl Klb {
         let data = if self.bzip2 {
             let mut out = Vec::with_capacity(want);
             let mut dec = bzip2_rs::DecoderReader::new(src.as_slice());
-            std::io::Read::read_to_end(&mut std::io::Read::take(&mut dec, want as u64), &mut out).map_err(|e| Error::Corrupt(format!("KLB bzip2 block: {e}")))?;
+            std::io::Read::read_to_end(&mut std::io::Read::take(&mut dec, want as u64), &mut out)
+                .map_err(|e| Error::Corrupt(format!("KLB bzip2 block: {e}")))?;
             out
         } else {
             src

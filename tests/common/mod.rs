@@ -30,9 +30,7 @@ pub fn read_tsv(path: &Path) -> Vec<HashMap<String, String>> {
     let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     let mut lines = text.lines().filter(|l| !l.is_empty() && !l.starts_with('#'));
     let header: Vec<String> = lines.next().expect("header line").split('\t').map(String::from).collect();
-    lines
-        .map(|l| header.iter().cloned().zip(l.split('\t').map(String::from)).collect())
-        .collect()
+    lines.map(|l| header.iter().cloned().zip(l.split('\t').map(String::from)).collect()).collect()
 }
 
 /// Pixel data of one series in the layout of the reference ICS output:
@@ -239,12 +237,7 @@ fn compare(ours: &Series, r: &HashMap<String, String>, tolerance: Option<f64>) -
         let channels = ref_channels.max(1);
         let ours_grid = grid(&pixels, &ours.pixel_type, channels, ours.width as usize, ours.height as usize);
         let ref_grid: Vec<f64> = r["grid"].split(',').map(|v| v.parse().unwrap_or(f64::NAN)).collect();
-        let worst = ours_grid
-            .iter()
-            .zip(&ref_grid)
-            .filter(|(a, b)| a.is_finite() && b.is_finite())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0, f64::max);
+        let worst = ours_grid.iter().zip(&ref_grid).filter(|(a, b)| a.is_finite() && b.is_finite()).map(|(a, b)| (a - b).abs()).fold(0.0, f64::max);
         if ours_grid.len() != ref_grid.len() || worst > tol {
             diffs.push(format!("block means differ by up to {worst:.2}, tolerance {tol}"));
         }
@@ -263,9 +256,8 @@ fn compare(ours: &Series, r: &HashMap<String, String>, tolerance: Option<f64>) -
 /// equal the levels of all our series.
 fn flattened_level(path: &Path, total: usize, series: usize) -> Option<(Series, f64)> {
     let reader = scopeio::open(path).ok()?;
-    let flat: Vec<(usize, usize)> = (0..reader.series_count())
-        .flat_map(|s| (0..reader.series_meta(s).map(|m| m.levels.len()).unwrap_or(1)).map(move |l| (s, l)))
-        .collect();
+    let flat: Vec<(usize, usize)> =
+        (0..reader.series_count()).flat_map(|s| (0..reader.series_meta(s).map(|m| m.levels.len()).unwrap_or(1)).map(move |l| (s, l))).collect();
     if flat.len() != total || flat.len() == reader.series_count() {
         return None;
     }
@@ -387,8 +379,8 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         let listed = entry.is_some() && tolerance.is_none();
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
         let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
-        let cropped = r.get("crop").is_some_and(|c| c.as_str() != "-")
-            || r.get("ours_series").is_some_and(|v| v.starts_with("assoc:") || v.contains('/'));
+        let cropped =
+            r.get("crop").is_some_and(|c| c.as_str() != "-") || r.get("ours_series").is_some_and(|v| v.starts_with("assoc:") || v.contains('/'));
         if (r["status"] != "ok" || cropped) && !unsupported {
             if r["status"] != "ok" {
                 continue;
@@ -518,10 +510,8 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         let diffs = without_ignored(diffs, ignored.get(&key));
         match (diffs.is_empty(), listed) {
             (false, false) => failures.push(format!("{} vs {}: {}", r["file"], r["tool"], diffs.join("; "))),
-            (true, true) => failures.push(format!(
-                "{} vs {}: listed as divergence but matches now; remove it from {format}_divergences.tsv",
-                r["file"], r["tool"]
-            )),
+            (true, true) => failures
+                .push(format!("{} vs {}: listed as divergence but matches now; remove it from {format}_divergences.tsv", r["file"], r["tool"])),
             _ => {}
         }
     }

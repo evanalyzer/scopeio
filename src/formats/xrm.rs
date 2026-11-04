@@ -34,8 +34,8 @@ use super::cfb::{self, Cfb};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
-    Position, Region, Result, SeriesMeta, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta, Position, Region, Result,
+    SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Xrm, "Zeiss Xradia XRM", "1").extensions(&["txm", "txrm", "xrm"]);
@@ -74,7 +74,9 @@ impl Xrm {
             (s.size <= 1 << 26).then(|| cfb.read(s).ok()).flatten()
         };
         let u32_of = |name: &str| read(name).filter(|b| b.len() >= 4).map(|b| u32::from_le_bytes(b[..4].try_into().expect("4 bytes")));
-        let f32s = |name: &str| -> Vec<f32> { read(name).map(|b| b.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().expect("4 bytes"))).collect()).unwrap_or_default() };
+        let f32s = |name: &str| -> Vec<f32> {
+            read(name).map(|b| b.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().expect("4 bytes"))).collect()).unwrap_or_default()
+        };
         let (Some(width), Some(height)) = (u32_of("ImageWidth"), u32_of("ImageHeight")) else {
             return Err(Error::Corrupt("Xradia file without image size".into()));
         };

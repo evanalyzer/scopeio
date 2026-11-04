@@ -29,8 +29,8 @@ use super::ifd::TiffFile;
 use super::image::Samples;
 use super::{PlaneRef, Series, Slot, level_meta};
 use crate::{
-    ChannelMeta, Error, Geometry, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, PlaneMeta, PlateMeta,
-    Position, Result, Roi, SeriesMeta, Shape, WellSample,
+    ChannelMeta, Error, Geometry, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, PlaneMeta, PlateMeta, Position, Result, Roi, SeriesMeta,
+    Shape, WellSample,
 };
 
 /// A TIFF file opened on first use.
@@ -84,8 +84,7 @@ pub(super) fn open(path: &Path, tiff: TiffFile, xml: &str) -> std::result::Resul
     let mut files = vec![LazyFile::ready(tiff)];
     // The opened file's own UUID, from its (possibly partial) metadata.
     let own_uuid = parse(xml).ok().and_then(|d| d.root_element().attribute("UUID").map(String::from));
-    let result = master_xml(&dir, xml)
-        .and_then(|master| build(&dir, Some((&name, own_uuid.as_deref())), &master, &mut files));
+    let result = master_xml(&dir, xml).and_then(|master| build(&dir, Some((&name, own_uuid.as_deref())), &master, &mut files));
     match result {
         Ok((series, plates)) => Ok((files, series, plates, Source { dir, companion: None })),
         Err(e) => {
@@ -205,12 +204,7 @@ impl Files<'_> {
 ///
 /// `opened` holds the file name and UUID of the TIFF file that was opened
 /// (file 0), if any.
-fn build(
-    dir: &Path,
-    opened: Option<(&str, Option<&str>)>,
-    xml: &str,
-    list: &mut Vec<LazyFile>,
-) -> Result<(Vec<Series>, Vec<PlateMeta>)> {
+fn build(dir: &Path, opened: Option<(&str, Option<&str>)>, xml: &str, list: &mut Vec<LazyFile>) -> Result<(Vec<Series>, Vec<PlateMeta>)> {
     let doc = parse(xml)?;
     let root = doc.root_element();
     let mut files = Files { dir, by_name: HashMap::new(), by_uuid: HashMap::new(), list };
@@ -275,12 +269,8 @@ pub(super) fn pixel_type_of(pixels: Node) -> Result<PixelType> {
 pub(super) fn sizes_of(pixels: Node) -> ((u32, u32, u32, u32, u32), u32, u8) {
     let size = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).max(1);
     let (sx, sy, sz, sc, st) = (size("SizeX"), size("SizeY"), size("SizeZ"), size("SizeC"), size("SizeT"));
-    let spp = children(pixels, "Channel")
-        .next()
-        .and_then(|c| c.attribute("SamplesPerPixel"))
-        .and_then(|v| v.parse::<u32>().ok())
-        .unwrap_or(1)
-        .clamp(1, sc);
+    let spp =
+        children(pixels, "Channel").next().and_then(|c| c.attribute("SamplesPerPixel")).and_then(|v| v.parse::<u32>().ok()).unwrap_or(1).clamp(1, sc);
     let samples_out = match spp {
         3 | 4 => spp as u8,
         _ => 1,
@@ -306,15 +296,10 @@ pub(super) fn describe(
     let unit = |a: &str| pixels.attribute(format!("{a}Unit").as_str()).unwrap_or("µm");
     let length = |a: &str| pixels.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_nm(v, unit(a)));
     let channels: Vec<ChannelMeta> = (0..size_c as usize).map(|i| channel_nodes.get(i).map(|&c| channel(c)).unwrap_or_default()).collect();
-    let objective = child(image, "ObjectiveSettings")
-        .and_then(|o| o.attribute("ID"))
-        .and_then(|id| objectives.get(id).cloned());
+    let objective = child(image, "ObjectiveSettings").and_then(|o| o.attribute("ID")).and_then(|id| objectives.get(id).cloned());
     let image_rois = children(image, "ROIRef").filter_map(|r| r.attribute("ID")).filter_map(|id| rois.get(id).cloned()).collect();
     let stage_position = child(image, "StageLabel").and_then(position);
-    let significant_bits = pixels
-        .attribute("SignificantBits")
-        .and_then(|v| v.parse::<u8>().ok())
-        .filter(|&b| b as usize != pixel_type.bytes() * 8);
+    let significant_bits = pixels.attribute("SignificantBits").and_then(|v| v.parse::<u8>().ok()).filter(|&b| b as usize != pixel_type.bytes() * 8);
     let meta = SeriesMeta {
         name: image.attribute("Name").map(String::from),
         description: child(image, "Description").and_then(|d| d.text()).map(|t| t.trim().to_string()).filter(|t| !t.is_empty()),
@@ -330,7 +315,10 @@ pub(super) fn describe(
         samples_per_pixel: samples_out,
         levels,
         physical_size: PhysicalSize { x_nm: length("PhysicalSizeX"), y_nm: length("PhysicalSizeY"), z_nm: length("PhysicalSizeZ") },
-        time_increment_s: pixels.attribute("TimeIncrement").and_then(|v| v.parse().ok()).and_then(|v| to_s(v, pixels.attribute("TimeIncrementUnit").unwrap_or("s"))),
+        time_increment_s: pixels
+            .attribute("TimeIncrement")
+            .and_then(|v| v.parse().ok())
+            .and_then(|v| to_s(v, pixels.attribute("TimeIncrementUnit").unwrap_or("s"))),
         channels,
         objective,
         stage_position,
@@ -343,7 +331,9 @@ pub(super) fn describe(
         if c >= size_c as usize || z >= sz as usize || t >= st as usize {
             continue;
         }
-        let time = |a: &str| p.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_s(v, p.attribute(format!("{a}Unit").as_str()).unwrap_or("s")));
+        let time = |a: &str| {
+            p.attribute(a).and_then(|v| v.parse::<f64>().ok()).and_then(|v| to_s(v, p.attribute(format!("{a}Unit").as_str()).unwrap_or("s")))
+        };
         plane_meta[c + size_c as usize * (z + sz as usize * t)] =
             PlaneMeta { delta_t_s: time("DeltaT"), exposure_s: time("ExposureTime"), position: position(p) };
     }
@@ -351,12 +341,7 @@ pub(super) fn describe(
 }
 
 /// Builds the series of one `Image` element.
-fn image_series(
-    image: Node,
-    files: &mut Files,
-    objectives: &HashMap<&str, ObjectiveMeta>,
-    rois: &HashMap<&str, Roi>,
-) -> Result<Series> {
+fn image_series(image: Node, files: &mut Files, objectives: &HashMap<&str, ObjectiveMeta>, rois: &HashMap<&str, Roi>) -> Result<Series> {
     let pixels = pixels_of(image)?;
     let ((sx, sy, sz, size_c, st), spp, samples_out) = sizes_of(pixels);
     let pixel_type = pixel_type_of(pixels)?;
@@ -383,12 +368,8 @@ fn image_series(
             mapping[c + size_c as usize * (z + sz as usize * t)] = Some((file, ifd + k));
         }
     }
-    let (first_file, first_ifd) = mapping
-        .iter()
-        .flatten()
-        .copied()
-        .next()
-        .ok_or_else(|| Error::Corrupt("OME-XML maps no plane to a TIFF IFD".into()))?;
+    let (first_file, first_ifd) =
+        mapping.iter().flatten().copied().next().ok_or_else(|| Error::Corrupt("OME-XML maps no plane to a TIFF IFD".into()))?;
 
     // Validate the layout with the first plane and find its sub-resolutions.
     let tiff = files.list[first_file].get()?;
@@ -396,16 +377,11 @@ fn image_series(
     let first = super::image::TiffImage::new(tiff, ifd)?;
     // Some files declare a signed type in OME-XML for unsigned TIFF data (or the
     // reverse); the TIFF sample format describes the stored bytes, so it wins.
-    let type_ok = first.pixel_type == pixel_type
-        || first.pixel_type.bytes() == pixel_type.bytes() && !matches!(pixel_type, PixelType::F32 | PixelType::F64);
+    let type_ok =
+        first.pixel_type == pixel_type || first.pixel_type.bytes() == pixel_type.bytes() && !matches!(pixel_type, PixelType::F32 | PixelType::F64);
     let ome_type = pixel_type;
     let pixel_type = first.pixel_type;
-    if first.width != sx
-        || first.height != sy
-        || !type_ok
-        || first.samples_out != samples_out
-        || first.channels() != 1 && spp == 1
-    {
+    if first.width != sx || first.height != sy || !type_ok || first.samples_out != samples_out || first.channels() != 1 && spp == 1 {
         return Err(Error::Corrupt(format!(
             "OME-XML ({sx}x{sy} {ome_type:?} {samples_out} samples) does not match TIFF ({}x{} {:?} {} samples)",
             first.width, first.height, first.pixel_type, first.samples_out
@@ -414,10 +390,7 @@ fn image_series(
     let mut levels_meta = vec![level_meta(&first, sx)];
     for sub in tiff.sub_ifds(ifd).unwrap_or_default() {
         match super::image::TiffImage::new(tiff, &sub) {
-            Ok(img)
-                if (img.width as u64) < levels_meta.last().map_or(0, |l| l.size_x)
-                    && img.pixel_type.bytes() == pixel_type.bytes() =>
-            {
+            Ok(img) if (img.width as u64) < levels_meta.last().map_or(0, |l| l.size_x) && img.pixel_type.bytes() == pixel_type.bytes() => {
                 levels_meta.push(level_meta(&img, sx));
             }
             _ => break,
@@ -426,9 +399,7 @@ fn image_series(
 
     let samples = if samples_out == 1 { Samples::One(0) } else { Samples::All };
     let planes = (0..total).map(|p| mapping[p].map(|_| PlaneRef { page: p, samples })).collect();
-    let levels = (0..levels_meta.len())
-        .map(|level| mapping.iter().map(|m| m.map(|(file, ifd)| Slot::lazy(file, ifd, level))).collect())
-        .collect();
+    let levels = (0..levels_meta.len()).map(|level| mapping.iter().map(|m| m.map(|(file, ifd)| Slot::lazy(file, ifd, level))).collect()).collect();
 
     let (meta, plane_meta) = describe(image, pixels, (size_c, sz, st), pixel_type, samples_out, levels_meta, objectives, rois);
     Ok(Series { meta, levels, planes, plane_meta, first_ifd: (first_file, first_ifd), original: Vec::new() })
@@ -560,13 +531,7 @@ pub(super) fn plate(p: Node, image_ids: &HashMap<String, usize>) -> PlateMeta {
             let Some(series) = child(ws, "ImageRef").and_then(|r| r.attribute("ID")).and_then(|id| image_ids.get(id)) else {
                 continue;
             };
-            wells.push(WellSample {
-                row: num(w, "Row"),
-                col: num(w, "Column"),
-                field: field as u32,
-                series: *series,
-                position: position(ws),
-            });
+            wells.push(WellSample { row: num(w, "Row"), col: num(w, "Column"), field: field as u32, series: *series, position: position(ws) });
         }
     }
     PlateMeta { name: p.attribute("Name").map(String::from), rows: num(p, "Rows"), cols: num(p, "Columns"), wells }

@@ -43,7 +43,10 @@ fn synthetic_metadata() {
     let m = r.series_meta(3).unwrap();
     assert_eq!((m.size_c, m.size_z, m.size_t, m.name.as_deref()), (2, 2, 1, Some("well C04 field 2")));
     assert_eq!((m.physical_size.x_nm, m.physical_size.z_nm), (Some(325.0), Some(1500.0)));
-    assert_eq!((m.channels[1].name.as_deref(), m.channels[1].emission_wavelength_nm, m.channels[1].exposure_s), (Some("FITC_511"), Some(511.0), Some(0.2)));
+    assert_eq!(
+        (m.channels[1].name.as_deref(), m.channels[1].emission_wavelength_nm, m.channels[1].exposure_s),
+        (Some("FITC_511"), Some(511.0), Some(0.2))
+    );
     let plate = &r.plates()[0];
     assert_eq!((plate.rows, plate.cols, plate.wells.len()), (8, 12, 4));
     assert_eq!((plate.wells[2].row, plate.wells[2].col, plate.wells[2].field), (2, 3, 0));

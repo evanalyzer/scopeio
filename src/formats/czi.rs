@@ -50,8 +50,8 @@ use dir::{Attachment, Entry, Span};
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType,
-    Plane, PlaneMeta, Region, Result, SeriesMeta, scratch,
+    AssociatedKind, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result,
+    SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Czi, "Zeiss CZI", "1").extensions(&["czi"]);
@@ -188,8 +188,7 @@ impl Czi {
         let mut attachments =
             if header.attachments != 0 { dir::attachments(&file, span, header.attachments).unwrap_or_default() } else { Vec::new() };
         let mut parts = vec![Part { file_part: 0, file, span }];
-        let wanted: BTreeSet<u32> =
-            entries.iter().map(|e| e.file_part).chain(attachments.iter().map(|a| a.file_part)).filter(|&k| k != 0).collect();
+        let wanted: BTreeSet<u32> = entries.iter().map(|e| e.file_part).chain(attachments.iter().map(|a| a.file_part)).filter(|&k| k != 0).collect();
         if let Some(path) = path {
             parts.extend(wanted.into_iter().take(MAX_PARTS).filter_map(|k| find_part(path, k, &header.primary_guid)));
         }
@@ -259,9 +258,10 @@ impl Czi {
 
     /// File part `k`.
     fn part(&self, k: u32) -> Result<&Part> {
-        self.parts.iter().find(|p| p.file_part == k).ok_or_else(|| {
-            Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, format!("CZI file part {k} not found next to the master")))
-        })
+        self.parts
+            .iter()
+            .find(|p| p.file_part == k)
+            .ok_or_else(|| Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, format!("CZI file part {k} not found next to the master"))))
     }
 
     /// Blocks of `plane` at `level` of `series`, in directory order.
@@ -503,10 +503,7 @@ fn build_index(entries: &[Entry], xml: &meta::XmlMeta) -> Result<Index> {
             })
             .collect();
         let mut name = xml.scenes.get(s).cloned().or_else(|| (scene_count > 1).then(|| format!("Scene #{s}")));
-        let extras: Vec<String> = (0..5)
-            .filter(|&d| varying[d])
-            .map(|d| format!("{}={}", dir::EXTRA_DIMS[d] as char, extra[d]))
-            .collect();
+        let extras: Vec<String> = (0..5).filter(|&d| varying[d]).map(|d| format!("{}={}", dir::EXTRA_DIMS[d] as char, extra[d])).collect();
         if !extras.is_empty() {
             let suffix = extras.join(" ");
             name = Some(match name {

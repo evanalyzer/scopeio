@@ -128,15 +128,7 @@ pub struct FormatInfo {
 
 impl FormatInfo {
     pub(crate) const fn new(id: FormatId, name: &'static str, reader_version: &'static str) -> Self {
-        Self {
-            id,
-            name,
-            reader_version,
-            crate_version: env!("CARGO_PKG_VERSION"),
-            extensions: &[],
-            file_names: &[],
-            opens_folder: false,
-        }
+        Self { id, name, reader_version, crate_version: env!("CARGO_PKG_VERSION"), extensions: &[], file_names: &[], opens_folder: false }
     }
 
     pub(crate) const fn extensions(mut self, extensions: &'static [&'static str]) -> Self {

@@ -60,9 +60,9 @@ pub(crate) mod tag {
 /// Sizes in bytes of the TIFF field types, indexed by type number.
 fn type_size(typ: u16) -> Option<u64> {
     Some(match typ {
-        1 | 2 | 6 | 7 => 1,  // BYTE, ASCII, SBYTE, UNDEFINED
-        3 | 8 => 2,          // SHORT, SSHORT
-        4 | 9 | 11 | 13 => 4, // LONG, SLONG, FLOAT, IFD
+        1 | 2 | 6 | 7 => 1,              // BYTE, ASCII, SBYTE, UNDEFINED
+        3 | 8 => 2,                      // SHORT, SSHORT
+        4 | 9 | 11 | 13 => 4,            // LONG, SLONG, FLOAT, IFD
         5 | 10 | 12 | 16 | 17 | 18 => 8, // RATIONAL, SRATIONAL, DOUBLE, LONG8, SLONG8, IFD8
         _ => return None,
     })
@@ -115,8 +115,7 @@ pub(crate) struct TiffFile {
 impl TiffFile {
     /// Returns `true` if `head` starts with a TIFF or BigTIFF header.
     pub fn matches(head: &[u8]) -> bool {
-        head.len() >= 4
-            && matches!(&head[..4], [b'I', b'I', 42, 0] | [b'M', b'M', 0, 42] | [b'I', b'I', 43, 0] | [b'M', b'M', 0, 43])
+        head.len() >= 4 && matches!(&head[..4], [b'I', b'I', 42, 0] | [b'M', b'M', 0, 42] | [b'I', b'I', 43, 0] | [b'M', b'M', 0, 43])
     }
 
     pub fn open(path: &Path) -> Result<Self> {
@@ -226,11 +225,7 @@ impl TiffFile {
             .enumerate()
             .map(|(i, e)| {
                 let mut value = [0u8; 8];
-                let (count, v) = if self.big {
-                    (self.u64(&e[4..]), &e[12..20])
-                } else {
-                    (self.u32(&e[4..]) as u64, &e[8..12])
-                };
+                let (count, v) = if self.big { (self.u64(&e[4..]), &e[12..20]) } else { (self.u32(&e[4..]) as u64, &e[8..12]) };
                 value[..v.len()].copy_from_slice(v);
                 if self.ndpi {
                     value[4..8].copy_from_slice(&raw[high_at + 4 * i..high_at + 4 * i + 4]);
@@ -320,10 +315,7 @@ impl TiffFile {
         let raw = self.raw(e)?;
         let v = match e.typ {
             5 => raw.chunks_exact(8).map(|b| self.u32(b) as f64 / self.u32(&b[4..]) as f64).collect(),
-            10 => raw
-                .chunks_exact(8)
-                .map(|b| self.u32(b) as i32 as f64 / self.u32(&b[4..]) as i32 as f64)
-                .collect(),
+            10 => raw.chunks_exact(8).map(|b| self.u32(b) as i32 as f64 / self.u32(&b[4..]) as i32 as f64).collect(),
             11 => raw.chunks_exact(4).map(|b| f32::from_bits(self.u32(b)) as f64).collect(),
             12 => raw.chunks_exact(8).map(|b| f64::from_bits(self.u64(b))).collect(),
             _ => return Ok(self.uints(ifd, tag)?.map(|v| v.into_iter().map(|x| x as f64).collect())),

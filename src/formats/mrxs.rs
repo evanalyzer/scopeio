@@ -45,8 +45,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane,
+    Region, Result, SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Mrxs, "3DHistech MIRAX", "1").extensions(&["mrxs"]);
@@ -484,10 +484,11 @@ impl Mrxs {
         ] {
             let Some(&r) = nonhier.get(name) else { continue };
             if let Some(item) = index.items(index.nonhier_root, r, 5)?.into_iter().next()
-                && item[3] > 0 {
-                    mrxs.associated_kinds.push(kind);
-                    mrxs.associated.push(blob(&item));
-                }
+                && item[3] > 0
+            {
+                mrxs.associated_kinds.push(kind);
+                mrxs.associated.push(blob(&item));
+            }
         }
         mrxs.ini = ini;
         Ok(mrxs)
@@ -563,7 +564,13 @@ impl Backend for Mrxs {
             let mut out = vec![0u8; jpeg_pixels(&src).ok_or_else(|| Error::Corrupt("MRXS associated image is not a JPEG".into()))? * 3];
             let info = decode(&src, None, Color::YcbcrToRgb, &mut out)?;
             out.truncate(info.width * info.height * info.components);
-            Ok(NativeImage { width: info.width as u64, height: info.height as u64, samples_per_pixel: info.components as u8, pixel_type: PixelType::U8, data: out })
+            Ok(NativeImage {
+                width: info.width as u64,
+                height: info.height as u64,
+                samples_per_pixel: info.components as u8,
+                pixel_type: PixelType::U8,
+                data: out,
+            })
         }
         #[cfg(not(feature = "jpeg"))]
         Err(Error::UnsupportedVariant("jpeg compression (enable the `jpeg` feature)".into()))

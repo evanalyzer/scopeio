@@ -42,7 +42,10 @@ fn synthetic_metadata() {
     let o = m.objective.as_ref().unwrap();
     assert_eq!((o.model.as_deref(), o.numerical_aperture), (Some("Plan Apo 20x"), Some(0.75)));
     let p = m.stage_position.unwrap();
-    assert_eq!((p.x_nm.map(|v| v.round()), p.y_nm.map(|v| v.round()), p.z_nm.map(|v| v.round())), (Some(100_000.0), Some(-200_000.0), Some(3_000_000.0)));
+    assert_eq!(
+        (p.x_nm.map(|v| v.round()), p.y_nm.map(|v| v.round()), p.z_nm.map(|v| v.round())),
+        (Some(100_000.0), Some(-200_000.0), Some(3_000_000.0))
+    );
     assert_eq!(m.channels[0].name.as_deref(), Some("DAPI"));
     assert!(m.acquisition_date.as_deref().is_some_and(|d| d.starts_with("2022-11-")));
 }

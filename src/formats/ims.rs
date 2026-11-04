@@ -38,8 +38,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result, SeriesMeta,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane,
+    PlaneMeta, Region, Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ims, "Imaris IMS", "1").extensions(&["ims"]);
@@ -74,10 +74,8 @@ pub(super) struct Ims {
 
 /// Children of a group named `<prefix><number>`, sorted by number.
 fn numbered(links: &[(String, u64)], prefix: &str) -> Vec<u64> {
-    let mut v: Vec<(u64, u64)> = links
-        .iter()
-        .filter_map(|(n, a)| n.strip_prefix(prefix).and_then(|i| i.trim().parse::<u64>().ok()).map(|i| (i, *a)))
-        .collect();
+    let mut v: Vec<(u64, u64)> =
+        links.iter().filter_map(|(n, a)| n.strip_prefix(prefix).and_then(|i| i.trim().parse::<u64>().ok()).map(|i| (i, *a))).collect();
     v.sort_unstable();
     v.into_iter().map(|(_, a)| a).collect()
 }
@@ -157,17 +155,8 @@ impl Ims {
         levels.retain(|l| l.timepoints.len() >= size_t);
         let info = find(&root_links, "DataSetInfo");
         let thumbnail = find(&root_links, "Thumbnail").and_then(|t| h5.object(t).ok()).and_then(|o| h5.links(&o).ok()).and_then(|l| find(&l, "Data"));
-        let mut ims = Ims {
-            h5,
-            levels,
-            size_c,
-            volumes: Vec::new(),
-            metas: Vec::new(),
-            times: Vec::new(),
-            thumbnail,
-            associated_kinds: Vec::new(),
-            info,
-        };
+        let mut ims =
+            Ims { h5, levels, size_c, volumes: Vec::new(), metas: Vec::new(), times: Vec::new(), thumbnail, associated_kinds: Vec::new(), info };
         ims.volumes = (0..ims.levels.len() * size_t * size_c).map(|_| OnceLock::new()).collect();
         // Sizes from the data where the attributes are missing.
         let v0 = ims.volume(0, 0, 0)?;
@@ -206,7 +195,10 @@ impl Ims {
         let levels: Vec<LevelMeta> = (0..self.levels.len())
             .map(|l| {
                 let s = self.levels[l].size;
-                let tile = self.volume(l, 0, 0).ok().and_then(|v| matches!(v.ds.layout, Layout::Chunked { .. }).then(|| (v.chunk[2] as u32, v.chunk[1] as u32)));
+                let tile = self
+                    .volume(l, 0, 0)
+                    .ok()
+                    .and_then(|v| matches!(v.ds.layout, Layout::Chunked { .. }).then(|| (v.chunk[2] as u32, v.chunk[1] as u32)));
                 LevelMeta { size_x: s[2], size_y: s[1], tile, downsample: base[2] as f64 / s[2].max(1) as f64 }
             })
             .collect();

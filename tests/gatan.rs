@@ -42,7 +42,10 @@ fn synthetic_metadata() {
     let r = scopeio::open(&sample("stack.dm3")).unwrap();
     assert_eq!(r.series_count(), 2);
     let m = r.series_meta(0).unwrap();
-    assert_eq!((m.name.as_deref(), m.size_z, m.pixel_type, m.physical_size.x_nm, m.physical_size.z_nm), (Some("z stack"), 3, PixelType::I16, Some(0.5), Some(2.0)));
+    assert_eq!(
+        (m.name.as_deref(), m.size_z, m.pixel_type, m.physical_size.x_nm, m.physical_size.z_nm),
+        (Some("z stack"), 3, PixelType::I16, Some(0.5), Some(2.0))
+    );
     let m = r.series_meta(1).unwrap();
     assert_eq!((m.size_c, m.size_z, m.physical_size.x_nm), (4, 1, Some(1500.0)));
     let r = scopeio::open(&sample("rgba.dm4")).unwrap();

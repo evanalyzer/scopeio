@@ -29,9 +29,7 @@ use super::tiff::ifd::{TiffFile, tag};
 use super::tiff::image::{Samples, TiffImage};
 use super::tiff::{level_meta, original_meta};
 use crate::io::read_exact_at;
-use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, PhysicalSize, PlaneMeta, Result, SeriesMeta,
-};
+use crate::{AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, PhysicalSize, PlaneMeta, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lsm, "Zeiss LSM", "1").extensions(&["lsm"]);
 
@@ -153,7 +151,11 @@ pub(super) fn open(path: &Path, _opts: &OpenOptions) -> Result<Slide> {
     } else {
         (pages, 1)
     };
-    if planes.iter().take((size_z * size_t) as usize).any(|p| p.width != first.width || p.height != first.height || p.pixel_type != first.pixel_type || p.spp != first.spp) {
+    if planes
+        .iter()
+        .take((size_z * size_t) as usize)
+        .any(|p| p.width != first.width || p.height != first.height || p.pixel_type != first.pixel_type || p.spp != first.spp)
+    {
         return Err(Error::UnsupportedVariant("LSM planes with different layouts".into()));
     }
     let mut level = Vec::with_capacity((size_c * size_z * size_t) as usize);

@@ -57,4 +57,3 @@ fn corrupt_files_do_not_panic() {
     common::corrupt_sweep(&sample("stack.klb"), 3);
     common::corrupt_sweep(&sample("plain.klb"), 5);
 }
-

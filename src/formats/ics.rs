@@ -43,8 +43,7 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane,
-    Region, Result, SeriesMeta,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ics, "ICS (Image Cytometry Standard)", "1").extensions(&["ics", "ids", "ids.gz"]);
@@ -67,7 +66,9 @@ fn header_path(path: &Path) -> Option<PathBuf> {
     }
     let base = path.file_name()?.to_string_lossy();
     let cut = base.len() - (name.len() - stem.len()) - 4;
-    stem.ends_with(".ids").then(|| ["ics", "ICS"].iter().map(|e| path.with_file_name(format!("{}.{e}", &base[..cut]))).find(|p| p.is_file())).flatten()
+    stem.ends_with(".ids")
+        .then(|| ["ics", "ICS"].iter().map(|e| path.with_file_name(format!("{}.{e}", &base[..cut]))).find(|p| p.is_file()))
+        .flatten()
 }
 
 fn looks_like_ics(head: &[u8]) -> bool {
@@ -102,7 +103,12 @@ fn parse_header(raw: &[u8]) -> (Vec<Vec<String>>, Option<usize>) {
         if line.trim() == "end" {
             return (lines, Some(next.min(raw.len())));
         }
-        let fields: Vec<String> = line.split(fs as char).flat_map(|f| if fs == b'\t' { vec![f] } else { f.split('\t').collect() }).map(|f| f.trim().to_string()).filter(|f| !f.is_empty()).collect();
+        let fields: Vec<String> = line
+            .split(fs as char)
+            .flat_map(|f| if fs == b'\t' { vec![f] } else { f.split('\t').collect() })
+            .map(|f| f.trim().to_string())
+            .filter(|f| !f.is_empty())
+            .collect();
         if !fields.is_empty() {
             lines.push(fields);
         }
@@ -245,7 +251,11 @@ impl Ics {
 
         // Sensor parameters: values per channel.
         let sensor = |key: &str| -> Vec<f64> {
-            lines.iter().find(|l| l.len() >= 4 && l[0] == "sensor" && l[1] == "s_params" && l[2] == key).map(|l| l[3..].iter().filter_map(|v| v.parse().ok()).collect()).unwrap_or_default()
+            lines
+                .iter()
+                .find(|l| l.len() >= 4 && l[0] == "sensor" && l[1] == "s_params" && l[2] == key)
+                .map(|l| l[3..].iter().filter_map(|v| v.parse().ok()).collect())
+                .unwrap_or_default()
         };
         let (ex, em) = (sensor("LambdaEx"), sensor("LambdaEm"));
         let channels = (0..size_c as usize)
@@ -262,7 +272,10 @@ impl Ics {
             size_z: nz as u32,
             size_t: size_t as u32,
             pixel_type,
-            significant_bits: get("layout", "significant_bits").and_then(|v| v.first()).and_then(|v| v.parse::<u8>().ok()).filter(|&b| (b as usize) < bytes * 8),
+            significant_bits: get("layout", "significant_bits")
+                .and_then(|v| v.first())
+                .and_then(|v| v.parse::<u8>().ok())
+                .filter(|&b| (b as usize) < bytes * 8),
             samples_per_pixel: 1,
             levels: vec![LevelMeta { size_x: nx, size_y: ny, tile: None, downsample: 1.0 }],
             physical_size: PhysicalSize { x_nm: spacing[0], y_nm: spacing[1], z_nm: spacing[2].filter(|_| nz > 1) },
@@ -271,7 +284,10 @@ impl Ics {
             objective: na.map(|na| ObjectiveMeta { numerical_aperture: Some(na), ..Default::default() }),
             ..Default::default()
         };
-        let original = OriginalMeta { pairs: lines.iter().filter(|l| l.len() >= 2).map(|l| (l[..2.min(l.len())].join(" "), l[2..].join(" "))).collect(), documents: Vec::new() };
+        let original = OriginalMeta {
+            pairs: lines.iter().filter(|l| l.len() >= 2).map(|l| (l[..2.min(l.len())].join(" "), l[2..].join(" "))).collect(),
+            documents: Vec::new(),
+        };
         let flip_y = get("layout", "coordinates").and_then(|v| v.first()).is_some_and(|c| c.eq_ignore_ascii_case("cartesian"));
         let samples = Strided { data, sx, sy, sz, c_axes, t_axes, bytes, little, flip_y, height: ny, total, what: "ICS" };
         Ok(Ics { samples, metas: vec![meta], original })
@@ -291,12 +307,14 @@ fn length_nm(v: f64, unit: &str) -> Option<f64> {
 }
 
 fn time_s(v: f64, unit: &str) -> Option<f64> {
-    Some(v * match unit {
-        "seconds" | "second" | "s" | "sec" => 1.0,
-        "milliseconds" | "ms" => 1e-3,
-        "microseconds" | "us" => 1e-6,
-        _ => return None,
-    })
+    Some(
+        v * match unit {
+            "seconds" | "second" | "s" | "sec" => 1.0,
+            "milliseconds" | "ms" => 1e-3,
+            "microseconds" | "us" => 1e-6,
+            _ => return None,
+        },
+    )
 }
 
 impl Backend for Ics {

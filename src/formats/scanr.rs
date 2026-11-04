@@ -35,12 +35,13 @@ use super::tiff::ifd::TiffFile;
 use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, Plane, PlateMeta, Region, Result, SeriesMeta,
-    WellSample,
-};
+use crate::{ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, Plane, PlateMeta, Region, Result, SeriesMeta, WellSample};
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::ScanR, "Olympus scan^R", "1").extensions(&["xml", "dat"]).file_names(&["experiment_descriptor.xml", "experiment_descriptor.dat", "AcquisitionLog.dat"]);
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::ScanR, "Olympus scan^R", "1").extensions(&["xml", "dat"]).file_names(&[
+    "experiment_descriptor.xml",
+    "experiment_descriptor.dat",
+    "AcquisitionLog.dat",
+]);
 
 const DESCRIPTOR: &str = "experiment_descriptor.xml";
 /// Largest descriptor parsed.
@@ -198,10 +199,7 @@ impl ScanR {
         // Plate geometry.
         // The well selection table holds one well number (and a cDNA text)
         // per well of the plate.
-        let wells = values
-            .iter()
-            .filter(|(p, v)| p.iter().any(|s| s.starts_with("well selection table")) && v.parse::<u32>().is_ok())
-            .count();
+        let wells = values.iter().filter(|(p, v)| p.iter().any(|s| s.starts_with("well selection table")) && v.parse::<u32>().is_ok()).count();
         let custom = (num("custom row").unwrap_or(0.0) as u32, num("custom column").unwrap_or(0.0) as u32);
         let (rows, cols) = PLATES
             .iter()

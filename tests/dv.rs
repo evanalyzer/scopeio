@@ -40,8 +40,14 @@ fn synthetic_metadata() {
     let r = scopeio::open(&sample("wzt_be.r3d")).unwrap();
     let m = r.series_meta(0).unwrap().clone();
     assert_eq!((m.size_c, m.size_z, m.size_t, m.pixel_type), (2, 3, 2, PixelType::U16));
-    assert_eq!((m.physical_size.x_nm.map(|v| v.round()), m.physical_size.z_nm.map(|v| v.round()), m.time_increment_s), (Some(100.0), Some(300.0), Some(2.5)));
-    assert_eq!((m.channels[1].name.as_deref(), m.channels[1].emission_wavelength_nm, m.channels[1].excitation_wavelength_nm), (Some("610"), Some(610.0), Some(560.0)));
+    assert_eq!(
+        (m.physical_size.x_nm.map(|v| v.round()), m.physical_size.z_nm.map(|v| v.round()), m.time_increment_s),
+        (Some(100.0), Some(300.0), Some(2.5))
+    );
+    assert_eq!(
+        (m.channels[1].name.as_deref(), m.channels[1].emission_wavelength_nm, m.channels[1].excitation_wavelength_nm),
+        (Some("610"), Some(610.0), Some(560.0))
+    );
     assert_eq!(r.plane_meta(0, Plane::new(1, 2, 1)).unwrap().delta_t_s, Some(2.5));
     let f = scopeio::open(&sample("ztw_le.dv")).unwrap().series_meta(0).unwrap().clone();
     assert_eq!((f.size_z, f.pixel_type), (2, PixelType::F32));

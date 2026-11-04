@@ -200,7 +200,7 @@ fn skip_lines(path: &Path, start: u64, lines: u64) -> Result<u64> {
 /// Text samples (`ascii`) as little-endian elements.
 fn parse_text(text: &[u8], pixel_type: PixelType, count: u64) -> Result<Vec<u8>> {
     // At least one digit and one separator per sample.
-    if count > (text.len() as u64 + 1) / 2 {
+    if count > (text.len() as u64).div_ceil(2) {
         return Err(Error::Corrupt("NRRD text data shorter than its sizes".into()));
     }
     let mut out = Vec::with_capacity((count as usize).saturating_mul(pixel_type.bytes()));
@@ -279,7 +279,10 @@ impl Nrrd {
         let type_name = get("type").ok_or_else(|| Error::Corrupt("NRRD header without type".into()))?;
         let pixel_type = pixel_type(type_name).ok_or_else(|| Error::UnsupportedVariant(format!("NRRD sample type {type_name}")))?;
         let bytes = pixel_type.bytes();
-        let dim: usize = get("dimension").and_then(|v| v.trim().parse().ok()).filter(|&d| (1..=16).contains(&d)).ok_or_else(|| Error::Corrupt("NRRD header without valid dimension".into()))?;
+        let dim: usize = get("dimension")
+            .and_then(|v| v.trim().parse().ok())
+            .filter(|&d| (1..=16).contains(&d))
+            .ok_or_else(|| Error::Corrupt("NRRD header without valid dimension".into()))?;
         let sizes: Vec<u64> = get("sizes").map(|v| v.split_whitespace().filter_map(|s| s.parse().ok()).collect()).unwrap_or_default();
         if sizes.len() != dim || sizes.contains(&0) {
             return Err(Error::Corrupt("NRRD sizes do not match the dimension".into()));
@@ -392,7 +395,8 @@ impl Nrrd {
                 if f.starts_with("LIST") || f.split_whitespace().count() > 1 {
                     return Err(Error::UnsupportedVariant("NRRD with several data files".into()));
                 }
-                let name = Path::new(&f.replace('\\', "/")).components().filter(|c| matches!(c, std::path::Component::Normal(_))).collect::<PathBuf>();
+                let name =
+                    Path::new(&f.replace('\\', "/")).components().filter(|c| matches!(c, std::path::Component::Normal(_))).collect::<PathBuf>();
                 dir.join(name)
             }
         };
@@ -403,7 +407,11 @@ impl Nrrd {
         let data = match encoding.as_str() {
             "raw" => {
                 let file_len = std::fs::metadata(&data_path)?.len();
-                let offset = if byte_skip == -1 { file_len.checked_sub(total).ok_or_else(|| Error::Corrupt("NRRD data shorter than its sizes".into()))? } else { start + byte_skip.max(0) as u64 };
+                let offset = if byte_skip == -1 {
+                    file_len.checked_sub(total).ok_or_else(|| Error::Corrupt("NRRD data shorter than its sizes".into()))?
+                } else {
+                    start + byte_skip.max(0) as u64
+                };
                 Data::file(&data_path, offset, total, "NRRD")?
             }
             "gzip" | "gz" => {

@@ -100,7 +100,8 @@ pub(super) fn apply(s: &mut Series, tiff: &TiffFile) -> Result<()> {
             }
         }
     }
-    for (key, label) in [("wsObjectiveName", "Objective"), ("dObjectiveNA", "Objective NA"), ("dCalibration", "Calibration (um)"), ("dZoom", "Zoom")] {
+    for (key, label) in [("wsObjectiveName", "Objective"), ("dObjectiveNA", "Objective NA"), ("dCalibration", "Calibration (um)"), ("dZoom", "Zoom")]
+    {
         let value = match pic.get(key) {
             Some(Value::Text(t)) if !t.is_empty() => t.clone(),
             Some(Value::Float(f)) => f.to_string(),

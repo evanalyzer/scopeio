@@ -198,7 +198,8 @@ impl Cfb {
                     return Err(Error::Corrupt(format!("compound file mini stream {} ends early", s.path)));
                 }
                 let at = id as u64 * unit;
-                let sector = self.mini_stream.get((at / self.sector) as usize).ok_or_else(|| Error::Corrupt("mini stream sector out of range".into()))?;
+                let sector =
+                    self.mini_stream.get((at / self.sector) as usize).ok_or_else(|| Error::Corrupt("mini stream sector out of range".into()))?;
                 read_exact_at(&self.file, &mut buf, (*sector as u64 + 1) * self.sector + at % self.sector)?;
                 let n = (s.size - out.len() as u64).min(unit) as usize;
                 out.extend_from_slice(&buf[..n]);

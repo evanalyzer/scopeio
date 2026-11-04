@@ -155,6 +155,9 @@ struct Group {
 }
 
 /// BigDataViewer dataset.
+/// A lazily opened volume, or why it failed.
+type VolumeCell = OnceLock<std::result::Result<Option<Volume>, String>>;
+
 #[derive(Debug)]
 pub(super) struct Bdv {
     h5: H5,
@@ -164,7 +167,7 @@ pub(super) struct Bdv {
     groups: Vec<Group>,
     missing: HashSet<(i64, i64)>,
     /// Volumes by (setup, time point index, level).
-    volumes: HashMap<(i64, usize, usize), OnceLock<std::result::Result<Option<Volume>, String>>>,
+    volumes: HashMap<(i64, usize, usize), VolumeCell>,
     /// Size (z, y, x) of each level, by setup.
     level_sizes: HashMap<i64, Vec<[u64; 3]>>,
     metas: Vec<SeriesMeta>,
@@ -221,13 +224,19 @@ impl Bdv {
             let Some(id) = text(s, "id").and_then(|v| v.parse().ok()) else { continue };
             let mut voxel_nm = [None; 3];
             if let Some(vs) = child(s, "voxelSize")
-                && let Some(nm) = unit_nm(&text(vs, "unit").unwrap_or_default()) {
-                    for (i, v) in numbers(&text(vs, "size").unwrap_or_default()).into_iter().take(3).enumerate() {
-                        voxel_nm[i] = Some(v * nm).filter(|v| v.is_finite() && *v > 0.0);
-                    }
+                && let Some(nm) = unit_nm(&text(vs, "unit").unwrap_or_default())
+            {
+                for (i, v) in numbers(&text(vs, "size").unwrap_or_default()).into_iter().take(3).enumerate() {
+                    voxel_nm[i] = Some(v * nm).filter(|v| v.is_finite() && *v > 0.0);
                 }
+            }
             let attributes = child(s, "attributes")
-                .map(|a| a.children().filter(Node::is_element).filter_map(|c| Some((c.tag_name().name().to_string(), c.text()?.trim().parse().ok()?))).collect())
+                .map(|a| {
+                    a.children()
+                        .filter(Node::is_element)
+                        .filter_map(|c| Some((c.tag_name().name().to_string(), c.text()?.trim().parse().ok()?)))
+                        .collect()
+                })
                 .unwrap_or_default();
             setups.push(Setup { id, name: text(s, "name"), voxel_nm, attributes });
         }
@@ -254,7 +263,8 @@ impl Bdv {
         let mut missing = HashSet::new();
         if let Some(m) = child(seq, "MissingViews") {
             for v in children(m, "MissingView") {
-                if let (Some(t), Some(s)) = (v.attribute("timepoint").and_then(|v| v.parse().ok()), v.attribute("setup").and_then(|v| v.parse().ok())) {
+                if let (Some(t), Some(s)) = (v.attribute("timepoint").and_then(|v| v.parse().ok()), v.attribute("setup").and_then(|v| v.parse().ok()))
+                {
                     missing.insert((t, s));
                 }
             }
@@ -280,7 +290,10 @@ impl Bdv {
         let mut factors: HashMap<i64, Vec<f64>> = HashMap::new();
         let mut pixel_type = None;
         for s in &setups {
-            let res = setup_groups.get(&s.id).and_then(|&g| bdv.h5.links(&bdv.h5.object(g).ok()?).ok()).and_then(|l| l.iter().find(|(n, _)| n == "resolutions").map(|(_, a)| *a));
+            let res = setup_groups
+                .get(&s.id)
+                .and_then(|&g| bdv.h5.links(&bdv.h5.object(g).ok()?).ok())
+                .and_then(|l| l.iter().find(|(n, _)| n == "resolutions").map(|(_, a)| *a));
             let f: Vec<f64> = res.and_then(|a| bdv.read_f64s(a)).map(|v| v.chunks_exact(3).map(|c| c[0]).collect()).unwrap_or_else(|| vec![1.0]);
             let mut sizes = Vec::new();
             for level in 0..f.len().max(1) {
@@ -347,19 +360,35 @@ impl Bdv {
                 .enumerate()
                 .map(|(l, &[_, y, x])| {
                     let tile = bdv.volumes_tile(s0.id, l);
-                    LevelMeta { size_x: x, size_y: y, tile, downsample: f.get(l).copied().filter(|v| *v > 0.0).unwrap_or(x0 as f64 / x.max(1) as f64) }
+                    LevelMeta {
+                        size_x: x,
+                        size_y: y,
+                        tile,
+                        downsample: f.get(l).copied().filter(|v| *v > 0.0).unwrap_or(x0 as f64 / x.max(1) as f64),
+                    }
                 })
                 .collect();
             let name = if list.len() == 1 {
                 s0.name.clone().unwrap_or_else(|| format!("setup {}", s0.id))
             } else {
-                let parts: Vec<String> = key.iter().map(|(k, v)| format!("{k} {}", entity_names.get(&(k.clone(), *v)).cloned().unwrap_or_else(|| v.to_string()))).collect();
-                if parts.is_empty() { "setups ".to_string() + &list.iter().map(|s| s.id.to_string()).collect::<Vec<_>>().join(", ") } else { parts.join(", ") }
+                let parts: Vec<String> = key
+                    .iter()
+                    .map(|(k, v)| format!("{k} {}", entity_names.get(&(k.clone(), *v)).cloned().unwrap_or_else(|| v.to_string())))
+                    .collect();
+                if parts.is_empty() {
+                    "setups ".to_string() + &list.iter().map(|s| s.id.to_string()).collect::<Vec<_>>().join(", ")
+                } else {
+                    parts.join(", ")
+                }
             };
             let channels = list
                 .iter()
                 .map(|s| ChannelMeta {
-                    name: s.attributes.get("channel").and_then(|c| entity_names.get(&("channel".to_string(), *c)).cloned()).or_else(|| s.name.clone()),
+                    name: s
+                        .attributes
+                        .get("channel")
+                        .and_then(|c| entity_names.get(&("channel".to_string(), *c)).cloned())
+                        .or_else(|| s.name.clone()),
                     ..Default::default()
                 })
                 .collect();
@@ -399,7 +428,8 @@ impl Bdv {
         }
         let Some(&g) = self.tp_groups.get(&tp) else { return Ok(None) };
         let h = &self.h5;
-        let find = |addr: u64, name: &str| -> Result<Option<u64>> { Ok(h.links(&h.object(addr)?)?.into_iter().find(|(n, _)| n == name).map(|(_, a)| a)) };
+        let find =
+            |addr: u64, name: &str| -> Result<Option<u64>> { Ok(h.links(&h.object(addr)?)?.into_iter().find(|(n, _)| n == name).map(|(_, a)| a)) };
         let Some(s) = find(g, &format!("s{setup:02}"))? else { return Ok(None) };
         let Some(l) = find(s, &level.to_string())? else { return Ok(None) };
         find(l, "cells")

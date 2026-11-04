@@ -209,8 +209,7 @@ pub(super) fn decode_xml(data: &[u8]) -> Result<Value> {
 fn xml_node(n: roxmltree::Node) -> Value {
     let value = n.attribute("value");
     let runtype = n.attribute("runtype").unwrap_or("");
-    let children: Vec<(String, Value)> =
-        n.children().filter(|c| c.is_element()).map(|c| (c.tag_name().name().to_string(), xml_node(c))).collect();
+    let children: Vec<(String, Value)> = n.children().filter(|c| c.is_element()).map(|c| (c.tag_name().name().to_string(), xml_node(c))).collect();
     if !children.is_empty() || value.is_none() {
         return Value::Map(children);
     }

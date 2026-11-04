@@ -41,22 +41,9 @@ fn synthetic_samples_match_spec_truth() {
             }
         };
         let s = &decoded[series];
-        let got = (
-            s.channels.to_string(),
-            s.size_z.to_string(),
-            s.size_t.to_string(),
-            s.pixel_type.clone(),
-            levels.to_string(),
-            crc(&s.pixels),
-        );
-        let want = (
-            t["channels"].clone(),
-            t["size_z"].clone(),
-            t["size_t"].clone(),
-            t["pixel_type"].clone(),
-            t["levels"].clone(),
-            t["crc32"].clone(),
-        );
+        let got = (s.channels.to_string(), s.size_z.to_string(), s.size_t.to_string(), s.pixel_type.clone(), levels.to_string(), crc(&s.pixels));
+        let want =
+            (t["channels"].clone(), t["size_z"].clone(), t["size_t"].clone(), t["pixel_type"].clone(), t["levels"].clone(), t["crc32"].clone());
         if got != want {
             failures.push(format!("{name} series {series}: got {got:?}, want {want:?}"));
         }
@@ -116,9 +103,7 @@ fn imagej_dimensions_and_calibration() {
 #[test]
 fn imagej_rgb_stacks_are_z_stacks() {
     let colours = [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [0, 255, 255], [255, 0, 255]];
-    for (name, z, t) in
-        [("imagej_rgb_stack.tif", 5, 1), ("imagej_rgb_hyperstack.tif", 3, 2), ("imagej_rgb_contiguous.tif", 5, 1)]
-    {
+    for (name, z, t) in [("imagej_rgb_stack.tif", 5, 1), ("imagej_rgb_hyperstack.tif", 3, 2), ("imagej_rgb_contiguous.tif", 5, 1)] {
         let r = scopeio::open(&sample(name)).unwrap();
         let m = r.series_meta(0).unwrap();
         assert_eq!((m.size_c, m.size_z, m.size_t, m.samples_per_pixel), (1, z, t, 3), "{name}");

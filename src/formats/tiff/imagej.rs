@@ -78,15 +78,15 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
     if (gray || colour) && pages == 1 && total > 1 && ij.images as usize == total && s.levels.len() == 1 {
         // Large ImageJ files: one IFD, the other planes follow contiguously.
         if let Some(Slot::Ready(first)) = &s.levels[0][0]
-            && let Some(plane_bytes) = first.image.contiguous_size(tiff)? {
-                let file = first.file;
-                let end = first.image.data_start(tiff)?.saturating_add(plane_bytes.saturating_mul(total as u64));
-                if end <= tiff.len {
-                    let images: Vec<_> =
-                        (1..total as u64).map(|k| Some(Slot::ready(file, first.image.shifted(k * plane_bytes)))).collect();
-                    s.levels[0].extend(images);
-                }
+            && let Some(plane_bytes) = first.image.contiguous_size(tiff)?
+        {
+            let file = first.file;
+            let end = first.image.data_start(tiff)?.saturating_add(plane_bytes.saturating_mul(total as u64));
+            if end <= tiff.len {
+                let images: Vec<_> = (1..total as u64).map(|k| Some(Slot::ready(file, first.image.shifted(k * plane_bytes)))).collect();
+                s.levels[0].extend(images);
             }
+        }
     }
     if gray && s.levels[0].len() == total {
         s.meta.size_c = c;
@@ -103,9 +103,7 @@ pub(super) fn apply(ij: &ImageJ, s: &mut Series, tiff: &TiffFile) -> Result<()> 
     }
     let ifd = &tiff.ifds[0];
     if let Some(nm) = ij.unit.as_deref().and_then(unit_nm) {
-        let res = |t: u16| -> Result<Option<f64>> {
-            Ok(tiff.floats(ifd, t)?.and_then(|v| v.first().copied()).filter(|r| r.is_finite() && *r > 0.0))
-        };
+        let res = |t: u16| -> Result<Option<f64>> { Ok(tiff.floats(ifd, t)?.and_then(|v| v.first().copied()).filter(|r| r.is_finite() && *r > 0.0)) };
         s.meta.physical_size.x_nm = res(tag::X_RESOLUTION)?.map(|r| nm / r);
         s.meta.physical_size.y_nm = res(tag::Y_RESOLUTION)?.map(|r| nm / r);
         s.meta.physical_size.z_nm = ij.spacing.filter(|v| *v > 0.0).map(|v| v * nm);

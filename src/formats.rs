@@ -18,62 +18,62 @@ mod bif;
 mod bmp;
 #[cfg(any(feature = "oif", feature = "zvi", feature = "xrm"))]
 mod cfb;
-#[cfg(feature = "obf")]
-mod obf;
-#[cfg(feature = "oif")]
-mod oif;
-#[cfg(feature = "stk")]
-mod nd;
-#[cfg(feature = "oir")]
-mod oir;
-#[cfg(feature = "omp2info")]
-mod omp2info;
-#[cfg(feature = "operetta")]
-mod operetta;
-#[cfg(feature = "zvi")]
-mod zvi;
+#[cfg(feature = "cv7000")]
+mod cv7000;
 #[cfg(feature = "czi")]
 mod czi;
 #[cfg(feature = "dicom")]
 mod dicom;
 #[cfg(feature = "dv")]
 mod dv;
+#[cfg(feature = "flex")]
+mod flex;
+#[cfg(feature = "gatan")]
+mod gatan;
 #[cfg(any(feature = "ims", feature = "bdv"))]
 mod hdf5;
 #[cfg(feature = "ics")]
 mod ics;
-#[cfg(any(feature = "ics", feature = "nrrd"))]
-mod strided;
-#[cfg(feature = "flex")]
-mod flex;
-#[cfg(feature = "cv7000")]
-mod cv7000;
-#[cfg(feature = "metaxpress")]
-mod metaxpress;
-#[cfg(feature = "nrrd")]
-mod nrrd;
-#[cfg(feature = "klb")]
-mod klb;
-#[cfg(feature = "gatan")]
-mod gatan;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "incell")]
 mod incell;
+#[cfg(feature = "klb")]
+mod klb;
 #[cfg(feature = "lif")]
 mod lif;
-#[cfg(feature = "tiff")]
-mod slide;
 #[cfg(feature = "lsm")]
 mod lsm;
+#[cfg(feature = "metaxpress")]
+mod metaxpress;
 #[cfg(feature = "micromanager")]
 mod micromanager;
 #[cfg(feature = "mrc")]
 mod mrc;
 #[cfg(feature = "mrxs")]
 mod mrxs;
+#[cfg(feature = "stk")]
+mod nd;
+#[cfg(feature = "nd2")]
+mod nd2;
+#[cfg(feature = "ndpi")]
+mod ndpi;
+#[cfg(feature = "ndpi")]
+mod ndpis;
 #[cfg(feature = "nifti")]
 mod nifti;
+#[cfg(feature = "nrrd")]
+mod nrrd;
+#[cfg(feature = "obf")]
+mod obf;
+#[cfg(feature = "oif")]
+mod oif;
+#[cfg(feature = "oir")]
+mod oir;
+#[cfg(feature = "omp2info")]
+mod omp2info;
+#[cfg(feature = "operetta")]
+mod operetta;
 #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
 mod plain;
 #[cfg(feature = "qptiff")]
@@ -84,24 +84,24 @@ mod scanr;
 mod scn;
 #[cfg(feature = "sdt")]
 mod sdt;
-#[cfg(feature = "ndpi")]
-mod ndpi;
-#[cfg(feature = "ndpi")]
-mod ndpis;
+#[cfg(feature = "tiff")]
+mod slide;
+#[cfg(any(feature = "ics", feature = "nrrd"))]
+mod strided;
 #[cfg(feature = "svs")]
 mod svs;
-#[cfg(feature = "nd2")]
-mod nd2;
 #[cfg(feature = "tiff")]
 mod tiff;
-#[cfg(feature = "vsi")]
-mod vsi;
 #[cfg(feature = "vms")]
 mod vms;
+#[cfg(feature = "vsi")]
+mod vsi;
 #[cfg(feature = "xrm")]
 mod xrm;
 #[cfg(feature = "zarr")]
 mod zarr;
+#[cfg(feature = "zvi")]
+mod zvi;
 
 use std::fs::File;
 use std::io::Read;
@@ -446,7 +446,9 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         #[cfg(feature = "bmp")]
         Some(FormatId::Bmp) => Ok(Arc::new(Reader(bmp::Bmp::open(path)?))),
         #[cfg(feature = "tiff")]
-        Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk | FormatId::Sis | FormatId::FluoView | FormatId::NikonTiff | FormatId::Nef) => Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?))),
+        Some(FormatId::Tiff | FormatId::OmeTiff | FormatId::Stk | FormatId::Sis | FormatId::FluoView | FormatId::NikonTiff | FormatId::Nef) => {
+            Ok(Arc::new(Reader(tiff::Tiff::open(path, opts)?)))
+        }
         #[cfg(feature = "omexml")]
         Some(FormatId::OmeXml) => Ok(Arc::new(Reader(tiff::omexml::OmeXml::open(path)?))),
         #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]

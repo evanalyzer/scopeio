@@ -69,7 +69,9 @@ fn corrupt_files_do_not_panic() {
         if let Ok(r) = scopeio::open(&dir.join("synthetic.xml")) {
             // Corrupt sizes can claim huge volumes: decode only small ones.
             let small = (0..r.series_count()).all(|s| {
-                r.series_meta(s).is_ok_and(|m| (m.levels[0].size_x as u128) * (m.levels[0].size_y as u128) * (m.size_c * m.size_z * m.size_t) as u128 * 8 < 64 << 20)
+                r.series_meta(s).is_ok_and(|m| {
+                    (m.levels[0].size_x as u128) * (m.levels[0].size_y as u128) * (m.size_c * m.size_z * m.size_t) as u128 * 8 < 64 << 20
+                })
             });
             if small {
                 let _ = common::decode(r.as_ref());

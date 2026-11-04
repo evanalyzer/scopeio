@@ -33,8 +33,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane,
-    PlateMeta, Region, Result, SeriesMeta, WellSample, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlateMeta, Region, Result,
+    SeriesMeta, WellSample, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeZarr, "OME-Zarr", "1").extensions(&["zarr", "ome.zarr"]).folder();
@@ -48,7 +48,13 @@ const MAX_CHUNK_BYTES: u64 = 1 << 31;
 /// metadata file directly inside it.
 fn store_root(path: &Path) -> Option<PathBuf> {
     let is_meta = |p: &Path| p.file_name().is_some_and(|n| n == ".zattrs" || n == ".zgroup" || n == "zarr.json");
-    let dir = if path.is_dir() { path.to_path_buf() } else if is_meta(path) { path.parent()?.to_path_buf() } else { return None };
+    let dir = if path.is_dir() {
+        path.to_path_buf()
+    } else if is_meta(path) {
+        path.parent()?.to_path_buf()
+    } else {
+        return None;
+    };
     (dir.join(".zattrs").exists() || dir.join(".zgroup").exists() || dir.join("zarr.json").exists()).then_some(dir)
 }
 
@@ -57,9 +63,7 @@ fn store_root(path: &Path) -> Option<PathBuf> {
 pub(super) fn probe(path: &Path) -> Option<FormatId> {
     let root = store_root(path)?;
     let attrs = read_attrs(&root).ok()?;
-    let ome = attrs.get("multiscales").is_some()
-        || attrs.get("plate").is_some()
-        || attrs.get("bioformats2raw.layout").is_some();
+    let ome = attrs.get("multiscales").is_some() || attrs.get("plate").is_some() || attrs.get("bioformats2raw.layout").is_some();
     ome.then_some(FormatId::OmeZarr)
 }
 
@@ -217,21 +221,10 @@ fn open_plate(root: &Path, plate: &Value, images: &mut Vec<Image>) -> Result<Pla
             }
             let attrs = read_attrs(&root.join(&group))?;
             images.push(open_image(root, &group, &attrs)?);
-            wells.push(WellSample {
-                row: row.unwrap_or(0),
-                col: col.unwrap_or(0),
-                field: field as u32,
-                series: images.len() - 1,
-                position: None,
-            });
+            wells.push(WellSample { row: row.unwrap_or(0), col: col.unwrap_or(0), field: field as u32, series: images.len() - 1, position: None });
         }
     }
-    Ok(PlateMeta {
-        name: plate["name"].as_str().map(String::from),
-        rows: rows.len() as u32,
-        cols: cols.len() as u32,
-        wells,
-    })
+    Ok(PlateMeta { name: plate["name"].as_str().map(String::from), rows: rows.len() as u32, cols: cols.len() as u32, wells })
 }
 
 /// Opens the levels of the multiscales image of group `group`.
@@ -255,10 +248,7 @@ fn open_image(root: &Path, group: &Path, attrs: &Value) -> Result<Image> {
 /// `tczyx` of earlier versions.
 fn parse_axes(axes: &Value, ndim: usize) -> Result<Axes> {
     let names: Vec<String> = match axes.as_array() {
-        Some(list) => list
-            .iter()
-            .map(|a| a.as_str().or_else(|| a["name"].as_str()).unwrap_or("").to_ascii_lowercase())
-            .collect(),
+        Some(list) => list.iter().map(|a| a.as_str().or_else(|| a["name"].as_str()).unwrap_or("").to_ascii_lowercase()).collect(),
         None => ["t", "c", "z", "y", "x"][5 - ndim.min(5)..].iter().map(|s| s.to_string()).collect(),
     };
     if names.len() != ndim {
@@ -316,19 +306,22 @@ fn open_v2(dir: &Path, m: &Value) -> Result<Array> {
         Some("/") => '/',
         _ => '.',
     };
-    finish_array(Array {
-        dir: dir.to_path_buf(),
-        ndim: shape.len(),
-        shape: fixed(&shape),
-        chunk: fixed(&chunk),
-        pixel_type,
-        fortran: m["order"].as_str() == Some("F"),
-        fill: fill_value(&m["fill_value"], pixel_type),
-        separator,
-        prefix: None,
-        pipeline: Pipeline { compressor, crc: false, big_endian },
-        shard: None,
-    }, chunk.len())
+    finish_array(
+        Array {
+            dir: dir.to_path_buf(),
+            ndim: shape.len(),
+            shape: fixed(&shape),
+            chunk: fixed(&chunk),
+            pixel_type,
+            fortran: m["order"].as_str() == Some("F"),
+            fill: fill_value(&m["fill_value"], pixel_type),
+            separator,
+            prefix: None,
+            pipeline: Pipeline { compressor, crc: false, big_endian },
+            shard: None,
+        },
+        chunk.len(),
+    )
 }
 
 /// Endianness and pixel type of a Zarr v2 dtype such as `<u2`.
@@ -417,27 +410,26 @@ fn open_v3(dir: &Path, m: &Value) -> Result<Array> {
             }
             let (index, _) = v3_pipeline(&config["index_codecs"])?;
             let per: Vec<u64> = outer.iter().zip(&inner).map(|(o, i)| o / i).collect();
-            let shard = Shard {
-                per_shard: fixed(&per),
-                index_at_end: config["index_location"].as_str() != Some("start"),
-                index_crc: index.crc,
-            };
+            let shard = Shard { per_shard: fixed(&per), index_at_end: config["index_location"].as_str() != Some("start"), index_crc: index.crc };
             (inner, inner_pipeline, Some(shard))
         }
     };
-    finish_array(Array {
-        dir: dir.to_path_buf(),
-        ndim: shape.len(),
-        shape: fixed(&shape),
-        chunk: fixed(&chunk),
-        pixel_type,
-        fortran: false,
-        fill: fill_value(&m["fill_value"], pixel_type),
-        separator,
-        prefix,
-        pipeline,
-        shard,
-    }, chunk.len())
+    finish_array(
+        Array {
+            dir: dir.to_path_buf(),
+            ndim: shape.len(),
+            shape: fixed(&shape),
+            chunk: fixed(&chunk),
+            pixel_type,
+            fortran: false,
+            fill: fill_value(&m["fill_value"], pixel_type),
+            separator,
+            prefix,
+            pipeline,
+            shard,
+        },
+        chunk.len(),
+    )
 }
 
 fn finish_array(a: Array, chunk_dims: usize) -> Result<Array> {

@@ -40,10 +40,7 @@ use super::tiff::image::{Samples, TiffImage};
 use crate::io::Source;
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane,
-    Region, Result, SeriesMeta,
-};
+use crate::{ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, Region, Result, SeriesMeta};
 
 pub(super) static OIB_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oib, "Olympus FluoView OIB", "1").extensions(&["oib"]);
 pub(super) static OIF_FORMAT: FormatInfo = FormatInfo::new(FormatId::Oif, "Olympus FluoView OIF", "1").extensions(&["oif"]);
@@ -103,7 +100,8 @@ impl Settings {
     /// Unquoted text; empty text is `None`.
     fn text(&self, section: &str, key: &str) -> Option<String> {
         let v = self.raw(section, key)?;
-        let v = v.strip_prefix('"').and_then(|v| v.strip_suffix('"')).or_else(|| v.strip_prefix('\'').and_then(|v| v.strip_suffix('\''))).unwrap_or(v);
+        let v =
+            v.strip_prefix('"').and_then(|v| v.strip_suffix('"')).or_else(|| v.strip_prefix('\'').and_then(|v| v.strip_suffix('\''))).unwrap_or(v);
         (!v.is_empty()).then(|| v.to_string())
     }
 
@@ -300,7 +298,9 @@ impl Oif {
             if axes.iter().any(|(c, n)| !matches!(c, 'C' | 'L' | 'Z' | 'T') && *n != 1) {
                 continue;
             }
-            let (Some(c), Some(l), Some(z), Some(t)) = (ord(&cs, axes, 'C'), ord(&ls, axes, 'L'), ord(&zs, axes, 'Z'), ord(&ts, axes, 'T')) else { continue };
+            let (Some(c), Some(l), Some(z), Some(t)) = (ord(&cs, axes, 'C'), ord(&ls, axes, 'L'), ord(&zs, axes, 'Z'), ord(&ts, axes, 'T')) else {
+                continue;
+            };
             let i = c * ls.len() + l + size_c * (z + size_z * t);
             planes[i].get_or_insert_with(|| name.clone());
         }
@@ -353,7 +353,10 @@ impl Oif {
             (o != ObjectiveMeta::default()).then_some(o)
         });
         let date = main.text("Acquisition Parameters Common", "ImageCaputreDate").map(|d| d.replacen(' ', "T", 1));
-        let bits = pty.as_ref().and_then(|p| p.number("Image Parameters", "ValidBitCounts")).or_else(|| main.number("Reference Image Parameter", "ValidBitCounts"));
+        let bits = pty
+            .as_ref()
+            .and_then(|p| p.number("Image Parameters", "ValidBitCounts"))
+            .or_else(|| main.number("Reference Image Parameter", "ValidBitCounts"));
         let meta = SeriesMeta {
             name: main.text("File Info", "DataName"),
             acquisition_date: date,

@@ -45,7 +45,10 @@ fn synthetic_metadata() {
     assert_eq!((m.size_c, m.size_z, m.size_t, m.pixel_type), (2, 3, 2, PixelType::U16));
     assert_eq!((m.physical_size.x_nm, m.physical_size.z_nm, m.time_increment_s), (Some(650.0), Some(2000.0), Some(30.0)));
     assert_eq!(m.channels[1].name.as_deref(), Some("Alexa 488"));
-    assert_eq!((m.channels[0].excitation_wavelength_nm, m.channels[0].emission_wavelength_nm, m.channels[0].exposure_s), (Some(375.0), Some(456.0), Some(0.05)));
+    assert_eq!(
+        (m.channels[0].excitation_wavelength_nm, m.channels[0].emission_wavelength_nm, m.channels[0].exposure_s),
+        (Some(375.0), Some(456.0), Some(0.05))
+    );
     assert_eq!(m.stage_position.unwrap().x_nm, Some(200_000.0));
     assert_eq!(r.plane_meta(0, Plane::new(0, 0, 1)).unwrap().delta_t_s, Some(30.0));
 }

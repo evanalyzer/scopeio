@@ -32,6 +32,9 @@ use crate::{Error, Region, Result, scratch};
 const TAG_MCU_STARTS: u16 = 65426;
 const TAG_MCU_STARTS_HIGH: u16 = 65432;
 
+/// Image size and restart tile size (if any) of a JPEG stream.
+pub(crate) type Geometry = ((u32, u32), Option<(u32, u32)>);
+
 /// A JPEG stream with restart markers, read one restart interval at a time.
 #[derive(Debug)]
 pub(crate) struct RestartJpeg {
@@ -236,7 +239,7 @@ impl RestartJpeg {
     /// # Errors
     ///
     /// Returns [`Error::UnsupportedVariant`] if the header cannot be parsed.
-    pub fn header_info(file: &(impl ReadAt + ?Sized), len: u64) -> Result<((u32, u32), Option<(u32, u32)>)> {
+    pub fn header_info(file: &(impl ReadAt + ?Sized), len: u64) -> Result<Geometry> {
         let mut head = vec![0u8; len.min(1 << 16) as usize];
         read_exact_at(file, &mut head, 0)?;
         let h = parse_header(&head).ok_or_else(|| Error::UnsupportedVariant("JPEG without a baseline or extended sequential frame".into()))?;

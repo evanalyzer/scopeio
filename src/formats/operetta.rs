@@ -36,11 +36,13 @@ use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta,
-    Position, Region, Result, SeriesMeta,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta, Position, Region, Result,
+    SeriesMeta,
 };
 
-pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Operetta, "PerkinElmer Operetta / Opera Phenix", "1").extensions(&["xml"]).file_names(&["Index.idx.xml", "Index.ref.xml", "Index.xml"]);
+pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Operetta, "PerkinElmer Operetta / Opera Phenix", "1")
+    .extensions(&["xml"])
+    .file_names(&["Index.idx.xml", "Index.ref.xml", "Index.xml"]);
 
 /// Largest index file parsed.
 const MAX_INDEX: u64 = 256 << 20;
@@ -211,14 +213,21 @@ impl Operetta {
             let mut planes = vec![None; size_c * size_z * size_t];
             let mut times = vec![None; planes.len()];
             for e in &entries {
-                let (Some(c), Some(z), Some(t)) = (channel_ids.iter().position(|v| *v == e.c), zs.iter().position(|v| *v == e.z), ts.iter().position(|v| *v == e.t)) else { continue };
+                let (Some(c), Some(z), Some(t)) =
+                    (channel_ids.iter().position(|v| *v == e.c), zs.iter().position(|v| *v == e.z), ts.iter().position(|v| *v == e.t))
+                else {
+                    continue;
+                };
                 let i = c + size_c * (z + size_z * t);
                 planes[i].get_or_insert_with(|| e.file.clone());
                 times[i] = e.time_s;
             }
             // z step from the plane positions of the first channel and timepoint.
-            let positions: Vec<f64> = zs.iter().filter_map(|&z| entries.iter().find(|e| e.z == z && e.t == ts[0] && e.c == channel_ids[0]).and_then(|e| e.z_nm)).collect();
-            let z_nm = (positions.len() > 1).then(|| (positions[positions.len() - 1] - positions[0]).abs() / (positions.len() - 1) as f64).filter(|v| *v > 0.0);
+            let positions: Vec<f64> =
+                zs.iter().filter_map(|&z| entries.iter().find(|e| e.z == z && e.t == ts[0] && e.c == channel_ids[0]).and_then(|e| e.z_nm)).collect();
+            let z_nm = (positions.len() > 1)
+                .then(|| (positions[positions.len() - 1] - positions[0]).abs() / (positions.len() - 1) as f64)
+                .filter(|v| *v > 0.0);
             let time_increment_s = (size_t > 1)
                 .then(|| {
                     let at = |t: usize| times.get(size_c * size_z * t).copied().flatten();

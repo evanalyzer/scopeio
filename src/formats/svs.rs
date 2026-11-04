@@ -25,9 +25,7 @@ use super::slide::{PlaneImage, Slide, SlideSeries};
 use super::tiff::ifd::{TiffFile, tag};
 use super::tiff::image::TiffImage;
 use super::tiff::{level_meta, original_meta};
-use crate::{
-    AssociatedKind, ChannelMeta, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, PhysicalSize, Result, SeriesMeta,
-};
+use crate::{AssociatedKind, ChannelMeta, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, PhysicalSize, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Svs, "Aperio SVS", "1").extensions(&["svs"]);
 
@@ -38,12 +36,7 @@ pub(super) fn matches(description: &str) -> bool {
 
 /// `key = value` pairs of an Aperio ImageDescription.
 fn pairs(description: &str) -> Vec<(String, String)> {
-    description
-        .split('|')
-        .skip(1)
-        .filter_map(|kv| kv.split_once('='))
-        .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
-        .collect()
+    description.split('|').skip(1).filter_map(|kv| kv.split_once('=')).map(|(k, v)| (k.trim().to_string(), v.trim().to_string())).collect()
 }
 
 /// ISO 8601 from `Date = MM/DD/YY` and `Time = HH:MM:SS`.

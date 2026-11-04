@@ -32,9 +32,7 @@ use super::slide::{PlaneImage, Slide, SlideSeries};
 use super::tiff::ifd::{TiffFile, tag};
 use super::tiff::image::TiffImage;
 use super::tiff::{level_meta, original_meta, resolution, tiff_date};
-use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta,
-};
+use crate::{AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Qptiff, "Akoya QPTIFF", "1").extensions(&["qptiff", "tif", "tiff"]);
 
@@ -56,13 +54,13 @@ struct Description {
 
 fn parse(xml: &str) -> Description {
     let mut d = Description::default();
-    let Ok(doc) = Document::parse_with_options(xml.trim_end_matches('\0'), roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() }) else {
+    let Ok(doc) = Document::parse_with_options(xml.trim_end_matches('\0'), roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() })
+    else {
         return d;
     };
     let root = doc.root_element();
-    let text = |name: &str| {
-        root.children().find(|c| c.has_tag_name(name)).and_then(|c| c.text()).map(str::trim).filter(|s| !s.is_empty()).map(String::from)
-    };
+    let text =
+        |name: &str| root.children().find(|c| c.has_tag_name(name)).and_then(|c| c.text()).map(str::trim).filter(|s| !s.is_empty()).map(String::from);
     d.image_type = text("ImageType").unwrap_or_default();
     d.name = text("Name");
     d.color = text("Color").and_then(|c| {
@@ -123,10 +121,8 @@ pub(super) fn open(path: &Path, _opts: &OpenOptions) -> Result<Slide> {
         level_metas.push(level_meta(&level[0], first.width));
         levels.push(level.into_iter().map(PlaneImage::whole).collect());
     }
-    let channels: Vec<ChannelMeta> = full
-        .iter()
-        .map(|(_, _, d)| ChannelMeta { name: d.name.clone(), color: d.color, exposure_s: d.exposure_s, ..Default::default() })
-        .collect();
+    let channels: Vec<ChannelMeta> =
+        full.iter().map(|(_, _, d)| ChannelMeta { name: d.name.clone(), color: d.color, exposure_s: d.exposure_s, ..Default::default() }).collect();
     let ifd = &tiff.ifds[first_ifd];
     let objective = full[0].2.objective.clone().map(|o| ObjectiveMeta { model: Some(o), ..Default::default() });
     let meta = SeriesMeta {

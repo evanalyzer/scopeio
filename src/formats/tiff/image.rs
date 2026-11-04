@@ -206,9 +206,7 @@ impl TiffImage {
                     }
                     let sub = tiff.uints(ifd, tag::YCBCR_SUBSAMPLING)?.unwrap_or_else(|| vec![2, 2]);
                     let luma = tiff.floats(ifd, 529)?.unwrap_or_else(|| vec![0.299, 0.587, 0.114]);
-                    let ref_bw = tiff
-                        .floats(ifd, tag::REFERENCE_BLACK_WHITE)?
-                        .unwrap_or_else(|| vec![0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
+                    let ref_bw = tiff.floats(ifd, tag::REFERENCE_BLACK_WHITE)?.unwrap_or_else(|| vec![0.0, 255.0, 128.0, 255.0, 128.0, 255.0]);
                     if sub.len() < 2 || luma.len() < 3 || ref_bw.len() < 6 || !matches!(sub[0], 1 | 2 | 4) || !matches!(sub[1], 1 | 2 | 4) {
                         return Err(Error::Corrupt("invalid YCbCr subsampling tags".into()));
                     }
@@ -235,8 +233,7 @@ impl TiffImage {
                 if map.len() < 3 * n {
                     return Err(Error::Corrupt("TIFF palette image without valid colour map".into()));
                 }
-                let entries: Vec<[u16; 3]> =
-                    (0..n).map(|i| [map[i] as u16, map[n + i] as u16, map[2 * n + i] as u16]).collect();
+                let entries: Vec<[u16; 3]> = (0..n).map(|i| [map[i] as u16, map[n + i] as u16, map[2 * n + i] as u16]).collect();
                 match palette_ramp(&entries) {
                     // The indices are intensities: return them as stored.
                     Some(color) => {
@@ -661,15 +658,7 @@ impl TiffImage {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn decode_jpeg(
-        &self,
-        file: &Source,
-        offset: u64,
-        count: u64,
-        rows: Range<u32>,
-        row_values: usize,
-        out: &mut [u8],
-    ) -> Result<()> {
+    fn decode_jpeg(&self, file: &Source, offset: u64, count: u64, rows: Range<u32>, row_values: usize, out: &mut [u8]) -> Result<()> {
         #[cfg(feature = "jpeg")]
         {
             use codecs::jpeg::{Color, decode};
@@ -801,24 +790,24 @@ impl TiffImage {
         let row_len = row_values * n;
         let out_n = self.stored.bytes();
         scratch::with(row_len, |row| {
-        for (r, dst) in rows.zip(out.chunks_exact_mut(row_values * out_n)) {
-            row.copy_from_slice(&stored[r * row_len..(r + 1) * row_len]);
-            for i in samples..row_len {
-                row[i] = row[i].wrapping_add(row[i - samples]);
-            }
-            for (k, d) in dst.chunks_exact_mut(out_n).enumerate() {
-                // Byte planes hold the most significant byte first.
-                let mut be = [0u8; 8];
-                for (b, v) in be[..n].iter_mut().enumerate() {
-                    *v = row[b * row_values + k];
+            for (r, dst) in rows.zip(out.chunks_exact_mut(row_values * out_n)) {
+                row.copy_from_slice(&stored[r * row_len..(r + 1) * row_len]);
+                for i in samples..row_len {
+                    row[i] = row[i].wrapping_add(row[i - samples]);
                 }
-                match n {
-                    2 => d.copy_from_slice(&f16_to_f32(u16::from_be_bytes([be[0], be[1]])).to_ne_bytes()),
-                    4 => d.copy_from_slice(&f32::from_be_bytes(be[..4].try_into().unwrap()).to_ne_bytes()),
-                    _ => d.copy_from_slice(&f64::from_be_bytes(be).to_ne_bytes()),
+                for (k, d) in dst.chunks_exact_mut(out_n).enumerate() {
+                    // Byte planes hold the most significant byte first.
+                    let mut be = [0u8; 8];
+                    for (b, v) in be[..n].iter_mut().enumerate() {
+                        *v = row[b * row_values + k];
+                    }
+                    match n {
+                        2 => d.copy_from_slice(&f16_to_f32(u16::from_be_bytes([be[0], be[1]])).to_ne_bytes()),
+                        4 => d.copy_from_slice(&f32::from_be_bytes(be[..4].try_into().unwrap()).to_ne_bytes()),
+                        _ => d.copy_from_slice(&f64::from_be_bytes(be).to_ne_bytes()),
+                    }
                 }
             }
-        }
         });
         Ok(())
     }

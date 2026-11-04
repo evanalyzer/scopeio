@@ -73,7 +73,10 @@ enum Value {
     Num(f64),
     Text(String),
     /// An array: file offset and byte length.
-    Array { offset: u64, len: u64 },
+    Array {
+        offset: u64,
+        len: u64,
+    },
     Other,
 }
 
@@ -264,7 +267,9 @@ impl Parser<'_> {
                     // Array of structs: field types at info[5], info[7], ...
                     None if elem == 15 => {
                         let fields = info.get(3).copied().unwrap_or(0);
-                        (0..fields).try_fold(0u64, |a, k| Some(a + type_size(*info.get(5 + 2 * k as usize)?)?)).ok_or_else(|| corrupt("struct array field type"))?
+                        (0..fields)
+                            .try_fold(0u64, |a, k| Some(a + type_size(*info.get(5 + 2 * k as usize)?)?))
+                            .ok_or_else(|| corrupt("struct array field type"))?
                     }
                     None => return Err(corrupt("array element type")),
                 };
@@ -277,7 +282,8 @@ impl Parser<'_> {
                 if elem == 4 && count <= INLINE_ARRAY && !pixels {
                     let little = self.little;
                     let b = self.bytes(len as usize)?;
-                    let units: Vec<u16> = b.chunks_exact(2).map(|c| if little { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
+                    let units: Vec<u16> =
+                        b.chunks_exact(2).map(|c| if little { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
                     match String::from_utf16(&units) {
                         Ok(s) => Value::Text(s.trim_end_matches('\0').to_string()),
                         Err(_) => Value::Array { offset, len },
@@ -298,7 +304,13 @@ fn flatten(node: &Node, prefix: &str, out: &mut Vec<(String, String)>) {
         if out.len() >= MAX_PAIRS {
             return;
         }
-        let key = if name.is_empty() { format!("{prefix}[{i}]") } else if prefix.is_empty() { name.clone() } else { format!("{prefix}.{name}") };
+        let key = if name.is_empty() {
+            format!("{prefix}[{i}]")
+        } else if prefix.is_empty() {
+            name.clone()
+        } else {
+            format!("{prefix}.{name}")
+        };
         match child {
             Node::Group(_) => flatten(child, &key, out),
             Node::Data(Value::Num(v)) => out.push((key, v.to_string())),
@@ -360,7 +372,10 @@ impl Gatan {
         let mut p = Parser { file: &file, len, dm4, little, at: root_at, buf: Vec::new(), buf_at: 0, tags: 0 };
         let root = p.group(0)?;
         let list = root.get("ImageList").ok_or_else(|| corrupt("no ImageList"))?;
-        let thumbs: Vec<usize> = root.get("Thumbnails").map(|t| t.entries().iter().filter_map(|(_, e)| e.get("ImageIndex")?.num()).map(|v| v as usize).collect()).unwrap_or_default();
+        let thumbs: Vec<usize> = root
+            .get("Thumbnails")
+            .map(|t| t.entries().iter().filter_map(|(_, e)| e.get("ImageIndex")?.num()).map(|v| v as usize).collect())
+            .unwrap_or_default();
         let entries = list.entries();
         let mut indices: Vec<usize> = (0..entries.len()).filter(|i| !thumbs.contains(i)).collect();
         // A file holding only thumbnails exposes them.
@@ -411,7 +426,8 @@ fn image(entry: &Node, file_len: u64) -> Result<(Image, SeriesMeta)> {
         23 => (PixelType::U8, 4),
         t => return Err(Error::UnsupportedVariant(format!("DM data type {t}"))),
     };
-    let dims: Vec<u64> = data.get("Dimensions").map(|d| d.entries().iter().filter_map(|(_, v)| v.num()).map(|v| v.max(1.0) as u64).collect()).unwrap_or_default();
+    let dims: Vec<u64> =
+        data.get("Dimensions").map(|d| d.entries().iter().filter_map(|(_, v)| v.num()).map(|v| v.max(1.0) as u64).collect()).unwrap_or_default();
     if dims.is_empty() || dims.len() > 8 {
         return Err(corrupt("image dimensions"));
     }
@@ -425,7 +441,14 @@ fn image(entry: &Node, file_len: u64) -> Result<(Image, SeriesMeta)> {
     }
     let cal: Vec<(f64, String)> = data
         .path("Calibrations.Dimension")
-        .map(|d| d.entries().iter().map(|(_, c)| (c.get("Scale").and_then(Node::num).unwrap_or(0.0), c.get("Units").and_then(Node::text).unwrap_or_default().to_string())).collect())
+        .map(|d| {
+            d.entries()
+                .iter()
+                .map(|(_, c)| {
+                    (c.get("Scale").and_then(Node::num).unwrap_or(0.0), c.get("Units").and_then(Node::text).unwrap_or_default().to_string())
+                })
+                .collect()
+        })
         .unwrap_or_default();
     let unit = |i: usize| cal.get(i).map(|c| c.1.as_str()).unwrap_or("");
     let spacing = |i: usize| cal.get(i).and_then(|(s, u)| length_nm(u).map(|f| s.abs() * f)).filter(|v| v.is_finite() && *v > 0.0);
@@ -453,7 +476,11 @@ fn image(entry: &Node, file_len: u64) -> Result<(Image, SeriesMeta)> {
         pixel_type,
         samples_per_pixel: spp as u8,
         levels: vec![LevelMeta { size_x: w, size_y: h, tile: None, downsample: 1.0 }],
-        physical_size: PhysicalSize { x_nm: spacing(0), y_nm: if dims.len() > 1 { spacing(1) } else { None }, z_nm: if size_z > 1 { spacing(2) } else { None } },
+        physical_size: PhysicalSize {
+            x_nm: spacing(0),
+            y_nm: if dims.len() > 1 { spacing(1) } else { None },
+            z_nm: if size_z > 1 { spacing(2) } else { None },
+        },
         channels: vec![ChannelMeta::default(); size_c as usize],
         ..Default::default()
     };

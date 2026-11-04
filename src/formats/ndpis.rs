@@ -29,8 +29,8 @@ use super::slide::Slide;
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage};
 use crate::{
-    AssociatedKind, Error, FormatId, FormatInfo, Layout, OpenOptions, OriginalMeta, OutputType, PixelType, Plane,
-    PlaneMeta, Region, Result, SeriesMeta, scratch,
+    AssociatedKind, Error, FormatId, FormatInfo, Layout, OpenOptions, OriginalMeta, OutputType, PixelType, Plane, PlaneMeta, Region, Result,
+    SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpis, "Hamamatsu NDPIS", "1").extensions(&["ndpis"]);
@@ -96,7 +96,8 @@ impl Ndpis {
         let first = &channels[0].metas[0];
         for s in &channels[1..] {
             let m = &s.metas[0];
-            let same = m.levels.len() == first.levels.len() && m.levels.iter().zip(&first.levels).all(|(a, b)| a.size_x == b.size_x && a.size_y == b.size_y);
+            let same =
+                m.levels.len() == first.levels.len() && m.levels.iter().zip(&first.levels).all(|(a, b)| a.size_x == b.size_x && a.size_y == b.size_y);
             if !same || m.pixel_type != PixelType::U8 || m.samples_per_pixel != first.samples_per_pixel || m.size_z != first.size_z {
                 return Err(Error::Corrupt("NDPIS channel files with different pyramids".into()));
             }

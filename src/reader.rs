@@ -13,9 +13,8 @@
 
 use crate::pixel::{Sink, output_type};
 use crate::{
-    AssociatedKind, ChannelSelect, ColorOrder, Error, FormatInfo, ImageBuf, Layout, OriginalMeta, OutputShape,
-    OutputSpec, PixelBuf, PixelType, PixelViewMut, Plane, PlaneMeta, PlateMeta, Region, RegionRequest, Result,
-    SeriesMeta, TileRequest,
+    AssociatedKind, ChannelSelect, ColorOrder, Error, FormatInfo, ImageBuf, Layout, OriginalMeta, OutputShape, OutputSpec, PixelBuf, PixelType,
+    PixelViewMut, Plane, PlaneMeta, PlateMeta, Region, RegionRequest, Result, SeriesMeta, TileRequest,
 };
 
 /// Common interface of all format readers.
@@ -118,12 +117,7 @@ pub(crate) struct NativeImage {
 /// Largest decoded associated image (label, macro, thumbnail).
 const MAX_ASSOCIATED_BYTES: u128 = 1 << 30;
 
-pub(crate) fn native_image(
-    region: Region,
-    spp: u8,
-    pixel_type: PixelType,
-    read: impl FnOnce(&mut Sink) -> Result<()>,
-) -> Result<NativeImage> {
+pub(crate) fn native_image(region: Region, spp: u8, pixel_type: PixelType, read: impl FnOnce(&mut Sink) -> Result<()>) -> Result<NativeImage> {
     let w = region.width as usize;
     // Associated images are small; larger sizes come from corrupt files.
     let len = (region.width as u128) * (region.height as u128) * spp as u128 * pixel_type.bytes() as u128;
@@ -134,18 +128,7 @@ pub(crate) fn native_image(
     data.try_reserve_exact(len as usize).map_err(|_| Error::OutOfRange(format!("associated image of {len} bytes cannot be allocated")))?;
     data.resize(len as usize, 0u8);
     let map: Vec<u8> = (0..spp).collect();
-    let mut sink = Sink::new(
-        &mut data,
-        Layout::Hwc,
-        w * spp as usize,
-        0,
-        spp as usize,
-        0,
-        &map,
-        spp as usize,
-        pixel_type,
-        crate::OutputType::Native,
-    );
+    let mut sink = Sink::new(&mut data, Layout::Hwc, w * spp as usize, 0, spp as usize, 0, &map, spp as usize, pixel_type, crate::OutputType::Native);
     read(&mut sink)?;
     Ok(NativeImage { width: region.width, height: region.height, samples_per_pixel: spp, pixel_type, data })
 }
@@ -284,10 +267,7 @@ impl<B: Backend> Reader<B> {
         let meta = self.series_meta(req.series)?;
         let level = meta.level(req.level)?;
         if !req.region.fits(level.size_x, level.size_y) {
-            return Err(Error::OutOfRange(format!(
-                "region {:?} outside level {} of {}x{}",
-                req.region, req.level, level.size_x, level.size_y
-            )));
+            return Err(Error::OutOfRange(format!("region {:?} outside level {} of {}x{}", req.region, req.level, level.size_x, level.size_y)));
         }
         meta.check_plane(Plane::new(0, req.z, req.t))?;
         Ok((meta, plan(meta, &req.channels, &req.output)?))
@@ -332,7 +312,8 @@ impl<B: Backend> ImageReader for Reader<B> {
         let map = samples.as_slice();
         let (w, h) = (img.width as usize, img.height as usize);
         let pixel_type = output_type(output.dtype, img.pixel_type);
-        let mut data = PixelBuf::try_zeros(pixel_type, w * h * map.len()).ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", w * h * map.len())))?;
+        let mut data = PixelBuf::try_zeros(pixel_type, w * h * map.len())
+            .ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", w * h * map.len())))?;
         {
             let mut slice = data.as_slice_mut();
             let (row_stride, plane_stride) = match output.layout {
@@ -340,18 +321,8 @@ impl<B: Backend> ImageReader for Reader<B> {
                 Layout::Chw => (w, w * h),
             };
             let spp = img.samples_per_pixel as usize;
-            let mut sink = Sink::new(
-                slice.bytes_mut(),
-                output.layout,
-                row_stride,
-                plane_stride,
-                map.len(),
-                0,
-                map,
-                spp,
-                img.pixel_type,
-                output.dtype,
-            );
+            let mut sink =
+                Sink::new(slice.bytes_mut(), output.layout, row_stride, plane_stride, map.len(), 0, map, spp, img.pixel_type, output.dtype);
             let row = w * spp * img.pixel_type.bytes();
             for (y, src) in img.data.chunks_exact(row).take(h).enumerate() {
                 sink.put(y, 0, src);
@@ -369,15 +340,8 @@ impl<B: Backend> ImageReader for Reader<B> {
 
     fn read_tile_into(&self, req: &TileRequest, out: PixelViewMut<'_>) -> Result<()> {
         let region = self.series_meta(req.series)?.level(req.level)?.tile_rect(req.tile_x, req.tile_y)?;
-        let region_req = RegionRequest {
-            series: req.series,
-            level: req.level,
-            z: req.z,
-            t: req.t,
-            channels: req.channels.clone(),
-            region,
-            output: req.output,
-        };
+        let region_req =
+            RegionRequest { series: req.series, level: req.level, z: req.z, t: req.t, channels: req.channels.clone(), region, output: req.output };
         self.read_region_into(&region_req, out)
     }
 
@@ -385,15 +349,10 @@ impl<B: Backend> ImageReader for Reader<B> {
         let (meta, plan) = self.checked(req)?;
         let pixel_type = output_type(req.output.dtype, meta.pixel_type);
         if out.data.pixel_type() != pixel_type {
-            return Err(Error::TypeMismatch(format!(
-                "buffer holds {:?}, output is {pixel_type:?}",
-                out.data.pixel_type()
-            )));
+            return Err(Error::TypeMismatch(format!("buffer holds {:?}, output is {pixel_type:?}", out.data.pixel_type())));
         }
         let r = req.region;
-        if (out.width, out.height, out.channels as usize) != (r.width, r.height, plan.out_channels)
-            || out.layout != req.output.layout
-        {
+        if (out.width, out.height, out.channels as usize) != (r.width, r.height, plan.out_channels) || out.layout != req.output.layout {
             return Err(Error::TypeMismatch(format!(
                 "view is {}x{}x{} {:?}, output is {}x{}x{} {:?}",
                 out.width, out.height, out.channels, out.layout, r.width, r.height, plan.out_channels, req.output.layout
@@ -425,7 +384,8 @@ impl<B: Backend> ImageReader for Reader<B> {
 
     fn read_region(&self, req: &RegionRequest) -> Result<ImageBuf> {
         let shape = self.output_shape(req)?;
-        let mut data = PixelBuf::try_zeros(shape.pixel_type, shape.len()).ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", shape.len())))?;
+        let mut data = PixelBuf::try_zeros(shape.pixel_type, shape.len())
+            .ok_or_else(|| Error::OutOfRange(format!("output of {} samples cannot be allocated", shape.len())))?;
         let view = PixelViewMut::contiguous(data.as_slice_mut(), shape.width, shape.height, shape.channels, shape.layout);
         self.read_region_into(req, view)?;
         Ok(ImageBuf {

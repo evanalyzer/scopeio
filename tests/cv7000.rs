@@ -20,7 +20,7 @@ fn matches_reference_readers() {
 }
 
 use common::{crc, decode_level, read_tsv, root};
-use scopeio::{FormatId, Plane, PixelType};
+use scopeio::{FormatId, PixelType, Plane};
 
 fn sample(name: &str) -> std::path::PathBuf {
     root().join("tests/data/cv7000").join(name)
@@ -52,7 +52,10 @@ fn synthetic_metadata() {
     let names: Vec<_> = m.channels.iter().map(|c| c.name.as_deref().unwrap_or_default()).collect();
     assert_eq!(names, ["DNA", "ER", "BF"]);
     let c = &m.channels[0];
-    assert_eq!((c.excitation_wavelength_nm, c.emission_wavelength_nm, c.exposure_s, c.binning, c.color), (Some(405.0), Some(445.0), Some(0.1), Some((2, 2)), Some([0, 0x2f, 0xff, 0xff])));
+    assert_eq!(
+        (c.excitation_wavelength_nm, c.emission_wavelength_nm, c.exposure_s, c.binning, c.color),
+        (Some(405.0), Some(445.0), Some(0.1), Some((2, 2)), Some([0, 0x2f, 0xff, 0xff]))
+    );
     assert_eq!(m.channels[2].excitation_wavelength_nm, None);
     let p = r.plane_meta(0, Plane::new(2, 1, 1)).unwrap();
     assert_eq!(p.position.and_then(|p| p.z_nm), Some(-1000.0));

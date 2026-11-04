@@ -60,11 +60,7 @@ pub(crate) fn lzw(src: &[u8], out: &mut [u8]) -> Result<usize> {
     use weezl::{BitOrder, LzwStatus, decode::Decoder};
     // Old-style streams start with a clear code written LSB first.
     let old_style = src.len() >= 2 && src[0] == 0 && src[1] & 1 == 1;
-    let mut decoder = if old_style {
-        Decoder::new(BitOrder::Lsb, 8)
-    } else {
-        Decoder::with_tiff_size_switch(BitOrder::Msb, 8)
-    };
+    let mut decoder = if old_style { Decoder::new(BitOrder::Lsb, 8) } else { Decoder::with_tiff_size_switch(BitOrder::Msb, 8) };
     let (mut i, mut o) = (0, 0);
     while o < out.len() {
         let r = decoder.decode_bytes(&src[i..], &mut out[o..]);
@@ -212,8 +208,8 @@ mod tests {
         assert_eq!(
             out,
             [
-                0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0xAA, 0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0x22, 0xAA,
-                0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA
+                0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0xAA, 0xAA, 0xAA, 0xAA, 0x80, 0x00, 0x2A, 0x22, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+                0xAA, 0xAA
             ]
         );
     }

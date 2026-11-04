@@ -71,10 +71,9 @@ impl ReadAt for Source {
 pub(crate) fn read_exact_at(file: &(impl ReadAt + ?Sized), buf: &mut [u8], offset: u64) -> Result<()> {
     let result = file.read_exact_at_io(buf, offset);
     match result {
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Err(Error::Corrupt(format!(
-            "file truncated: need {} bytes at offset {offset}",
-            buf.len()
-        ))),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+            Err(Error::Corrupt(format!("file truncated: need {} bytes at offset {offset}", buf.len())))
+        }
         other => other.map_err(Error::Io),
     }
 }

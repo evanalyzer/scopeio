@@ -127,11 +127,7 @@ impl Backend for Slide {
     }
 
     fn read_associated_native(&self, kind: &AssociatedKind) -> Result<NativeImage> {
-        let i = self
-            .associated_kinds
-            .iter()
-            .position(|k| k == kind)
-            .ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
+        let i = self.associated_kinds.iter().position(|k| k == kind).ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
         let img = &self.associated[i];
         let region = Region::new(0, 0, img.width as u64, img.height as u64);
         let samples = if img.samples_out == 1 { Samples::One(0) } else { Samples::All };

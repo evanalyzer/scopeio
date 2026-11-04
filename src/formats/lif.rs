@@ -47,8 +47,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize,
-    PixelType, Plane, PlaneMeta, Position, Region, Result, SeriesMeta, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
+    Position, Region, Result, SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Lif, "Leica LIF", "1").extensions(&["lif"]);
@@ -95,10 +95,7 @@ fn decode_text(b: &[u8]) -> String {
 
 /// Returns `true` if `head` starts with a LIF header block.
 pub(super) fn matches(head: &[u8]) -> bool {
-    head.len() >= 14
-        && u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) == MARKER
-        && head[8] == TEXT
-        && head[13] == b'<'
+    head.len() >= 14 && u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) == MARKER && head[8] == TEXT && head[13] == b'<'
 }
 
 /// Stride of one non-spatial index: (count, byte increment).
@@ -134,7 +131,11 @@ struct Frame {
 #[derive(Debug)]
 enum Xml {
     /// UTF-16 code units in a LIF file.
-    File { source: usize, at: u64, units: usize },
+    File {
+        source: usize,
+        at: u64,
+        units: usize,
+    },
     Text(String),
 }
 
@@ -185,7 +186,15 @@ impl Lif {
     /// Returns [`Error::Corrupt`] for an invalid header, XML or block
     /// structure and [`Error::UnsupportedVariant`] for files without images.
     pub fn open(path: &Path, _opts: &OpenOptions) -> Result<Self> {
-        let mut lif = Lif { format: &FORMAT, sources: Vec::new(), docs: Vec::new(), series_doc: Vec::new(), images: Vec::new(), metas: Vec::new(), times: Vec::new() };
+        let mut lif = Lif {
+            format: &FORMAT,
+            sources: Vec::new(),
+            docs: Vec::new(),
+            series_doc: Vec::new(),
+            images: Vec::new(),
+            metas: Vec::new(),
+            times: Vec::new(),
+        };
         let mut head = [0u8; 64];
         let file = File::open(path)?;
         let len = file.metadata()?.len();
@@ -237,7 +246,8 @@ impl Lif {
         let (block, xml) = lof_parts(&file, len, path)?;
         let options = roxmltree::ParsingOptions { allow_dtd: true, ..Default::default() };
         let parsed = Document::parse_with_options(&xml, options).map_err(|e| Error::Corrupt(format!("LOF XML: {e}")))?;
-        let root = parsed.root_element().children().find(|c| c.has_tag_name("Element")).ok_or_else(|| Error::Corrupt("LOF without element".into()))?;
+        let root =
+            parsed.root_element().children().find(|c| c.has_tag_name("Element")).ok_or_else(|| Error::Corrupt("LOF without element".into()))?;
         let id = child(root, "Memory").and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
         let blocks = HashMap::from([(id.to_string(), block)]);
         let source = self.sources.len();
@@ -298,7 +308,13 @@ impl Lif {
         }
         // Folder: its children, named below this element (the top file's
         // name is not part of image names).
-        let folder = if depth == 0 { String::new() } else if prefix.is_empty() { name.to_string() } else { format!("{prefix}/{name}") };
+        let folder = if depth == 0 {
+            String::new()
+        } else if prefix.is_empty() {
+            name.to_string()
+        } else {
+            format!("{prefix}/{name}")
+        };
         if let Some(children) = child(root, "Children") {
             for r in children.children().filter(|c| c.has_tag_name("Reference")) {
                 if let Some(p) = r.attribute("File").and_then(|f| resolve(dir, f)) {
@@ -311,26 +327,42 @@ impl Lif {
 
     /// Adds the images of `element` and its children, in document order.
     #[allow(clippy::too_many_arguments)]
-    fn walk(&mut self, element: Node, prefix: &str, blocks: &HashMap<String, (u64, u64)>, top: bool, depth: usize, source: usize, doc: usize) -> Result<()> {
+    fn walk(
+        &mut self,
+        element: Node,
+        prefix: &str,
+        blocks: &HashMap<String, (u64, u64)>,
+        top: bool,
+        depth: usize,
+        source: usize,
+        doc: usize,
+    ) -> Result<()> {
         if depth > 64 {
             return Err(Error::Corrupt("LIF elements nested too deeply".into()));
         }
         let name = element.attribute("Name").unwrap_or("");
         // The top element is the project; its name is not part of image names.
-        let path = if top { String::new() } else if prefix.is_empty() { name.to_string() } else { format!("{prefix}/{name}") };
+        let path = if top {
+            String::new()
+        } else if prefix.is_empty() {
+            name.to_string()
+        } else {
+            format!("{prefix}/{name}")
+        };
         if let Some(image) = child(element, "Data").and_then(|d| child(d, "Image"))
-            && let Some(desc) = child(image, "ImageDescription") {
-                let memory = child(element, "Memory");
-                let id = memory.and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
-                // LOF files written without a Memory element hold one block.
-                let size: u64 = memory.map_or(Some(u64::MAX), |m| m.attribute("Size").and_then(|s| s.parse().ok())).unwrap_or(0);
-                if let Some(&(offset, len)) = blocks.get(id).filter(|_| size > 0) {
-                    self.add_image(element, image, desc, &path, offset, len.min(size), source)?;
-                    while self.series_doc.len() < self.images.len() {
-                        self.series_doc.push(doc);
-                    }
+            && let Some(desc) = child(image, "ImageDescription")
+        {
+            let memory = child(element, "Memory");
+            let id = memory.and_then(|m| m.attribute("MemoryBlockID")).unwrap_or("");
+            // LOF files written without a Memory element hold one block.
+            let size: u64 = memory.map_or(Some(u64::MAX), |m| m.attribute("Size").and_then(|s| s.parse().ok())).unwrap_or(0);
+            if let Some(&(offset, len)) = blocks.get(id).filter(|_| size > 0) {
+                self.add_image(element, image, desc, &path, offset, len.min(size), source)?;
+                while self.series_doc.len() < self.images.len() {
+                    self.series_doc.push(doc);
                 }
             }
+        }
         if let Some(children) = child(element, "Children") {
             for c in children.children().filter(|c| c.has_tag_name("Element")) {
                 self.walk(c, &path, blocks, false, depth + 1, source, doc)?;
@@ -343,8 +375,10 @@ impl Lif {
     fn add_image(&mut self, element: Node, image: Node, desc: Node, name: &str, offset: u64, block_len: u64, source: usize) -> Result<()> {
         let num = |n: Node, a: &str| n.attribute(a).and_then(|v| v.trim().parse::<f64>().ok());
         let int = |n: Node, a: &str| n.attribute(a).and_then(|v| v.trim().parse::<u64>().ok()).unwrap_or(0);
-        let chans: Vec<Node> = child(desc, "Channels").map(|c| c.children().filter(|c| c.has_tag_name("ChannelDescription")).collect()).unwrap_or_default();
-        let dims: Vec<Node> = child(desc, "Dimensions").map(|c| c.children().filter(|c| c.has_tag_name("DimensionDescription")).collect()).unwrap_or_default();
+        let chans: Vec<Node> =
+            child(desc, "Channels").map(|c| c.children().filter(|c| c.has_tag_name("ChannelDescription")).collect()).unwrap_or_default();
+        let dims: Vec<Node> =
+            child(desc, "Dimensions").map(|c| c.children().filter(|c| c.has_tag_name("DimensionDescription")).collect()).unwrap_or_default();
         if chans.is_empty() || dims.is_empty() {
             return Ok(());
         }
@@ -400,11 +434,8 @@ impl Lif {
         let z = axis(dim(3));
         let t: Vec<Axis> = [4, 7, 8].iter().map(|&id| axis(dim(id))).filter(|a| a.count > 1).collect();
         // Split axes: tiles and other non-spatial dimensions, one series per index.
-        let splits: Vec<(u64, Axis)> = dims
-            .iter()
-            .map(|d| (int(*d, "DimID"), axis(Some(d))))
-            .filter(|(id, a)| !matches!(id, 1..=5 | 7 | 8) && a.count > 1)
-            .collect();
+        let splits: Vec<(u64, Axis)> =
+            dims.iter().map(|d| (int(*d, "DimID"), axis(Some(d)))).filter(|(id, a)| !matches!(id, 1..=5 | 7 | 8) && a.count > 1).collect();
         let size_t = t.iter().map(|a| a.count).product::<u64>().max(1);
 
         // Metadata shared by all split series.
@@ -506,7 +537,8 @@ impl Lif {
                 half,
             };
             img.check(size_t, offset)?;
-            let position = tile.and_then(|i| tiles.get(i)).map(|p| Position { x_nm: Some(p[0] * 1e9), y_nm: Some(p[1] * 1e9), z_nm: Some(p[2] * 1e9) });
+            let position =
+                tile.and_then(|i| tiles.get(i)).map(|p| Position { x_nm: Some(p[0] * 1e9), y_nm: Some(p[1] * 1e9), z_nm: Some(p[2] * 1e9) });
             self.images.push(img);
             self.times.push(times.clone());
             self.metas.push(SeriesMeta {
@@ -589,7 +621,11 @@ fn lof_parts(file: &File, len: u64, path: &Path) -> Result<((u64, u64), String)>
     at = data.checked_add(block_len).filter(|&e| e + 13 <= len).ok_or_else(bad)?;
     read_exact_at(file, &mut head, at)?;
     let xml_units = u32::from_le_bytes(head[9..13].try_into().expect("4 bytes")) as usize;
-    if u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) != MARKER || head[8] != TEXT || xml_units > MAX_XML_UNITS || at + 13 + 2 * xml_units as u64 > len {
+    if u32::from_le_bytes(head[..4].try_into().expect("4 bytes")) != MARKER
+        || head[8] != TEXT
+        || xml_units > MAX_XML_UNITS
+        || at + 13 + 2 * xml_units as u64 > len
+    {
         return Err(bad());
     }
     let mut xml = read_xml(file, at + 13, xml_units)?;
@@ -630,7 +666,11 @@ fn resolve(dir: &Path, reference: &str) -> Option<PathBuf> {
         path = if direct.exists() {
             direct
         } else {
-            std::fs::read_dir(&path).ok()?.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.file_name().is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(part)))?
+            std::fs::read_dir(&path)
+                .ok()?
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .find(|p| p.file_name().is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(part)))?
         };
     }
     Some(path)
@@ -860,7 +900,9 @@ impl Backend for Lif {
                     }
                 }
                 read_rows(img, plane, region, sink, &|buf, at| {
-                    let s = span.get((at - lo) as usize..(at - lo) as usize + buf.len()).ok_or_else(|| Error::Corrupt("XLIF read outside its span".into()))?;
+                    let s = span
+                        .get((at - lo) as usize..(at - lo) as usize + buf.len())
+                        .ok_or_else(|| Error::Corrupt("XLIF read outside its span".into()))?;
                     buf.copy_from_slice(s);
                     Ok(())
                 })

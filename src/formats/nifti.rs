@@ -230,9 +230,17 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Option<FormatId> {
 /// Where the voxels are.
 #[derive(Debug)]
 enum Data {
-    File { file: File, offset: u64 },
+    File {
+        file: File,
+        offset: u64,
+    },
     /// `.nii.gz`: the compressed file, decompressed on first use.
-    Gzip { path: PathBuf, len: u64, offset: u64, data: OnceLock<std::result::Result<Vec<u8>, String>> },
+    Gzip {
+        path: PathBuf,
+        len: u64,
+        offset: u64,
+        data: OnceLock<std::result::Result<Vec<u8>, String>>,
+    },
 }
 
 /// NIfTI file.

@@ -38,7 +38,13 @@ fn synthetic_samples_match_spec_truth() {
 
 #[test]
 fn every_file_of_a_dataset_opens_it() {
-    for f in ["stack/syn_MMStack_Pos0_1.ome.tif", "stack/syn_MMStack_Pos1.ome.tif", "nd/NDTiff.index", "nd/nd_NDTiffStack.tif", "sep/Pos1/img_000000002_FITC_000.tif"] {
+    for f in [
+        "stack/syn_MMStack_Pos0_1.ome.tif",
+        "stack/syn_MMStack_Pos1.ome.tif",
+        "nd/NDTiff.index",
+        "nd/nd_NDTiffStack.tif",
+        "sep/Pos1/img_000000002_FITC_000.tif",
+    ] {
         let r = scopeio::open(&sample(f)).unwrap();
         assert_eq!((r.format().id, r.series_count()), (FormatId::MicroManager, 2), "{f}");
     }

@@ -30,7 +30,8 @@ fn sample(name: &str) -> std::path::PathBuf {
 fn synthetic_slide_matches_truth() {
     let r = scopeio::open(&sample("slide.vms")).unwrap();
     assert_eq!(r.format().id, FormatId::Vms);
-    let truth: std::collections::HashMap<String, String> = read_tsv(&sample("truth.tsv")).into_iter().map(|t| (t["image"].clone(), t["crc32"].clone())).collect();
+    let truth: std::collections::HashMap<String, String> =
+        read_tsv(&sample("truth.tsv")).into_iter().map(|t| (t["image"].clone(), t["crc32"].clone())).collect();
     for level in 0..2 {
         assert_eq!(crc(&decode_level(r.as_ref(), 0, level).unwrap().pixels), truth[&format!("level{level}")], "level {level}");
     }

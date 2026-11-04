@@ -24,22 +24,22 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "fluoview")]
+mod fluoview;
 pub(super) mod ifd;
 pub(super) mod image;
 mod imagej;
-#[cfg(feature = "fluoview")]
-mod fluoview;
 #[cfg(feature = "nef")]
 mod nef;
 #[cfg(feature = "nikon-tiff")]
 mod nikon;
+mod ome;
+#[cfg(feature = "omexml")]
+pub(super) mod omexml;
 #[cfg(feature = "sis")]
 mod sis;
 #[cfg(feature = "stk")]
 mod stk;
-mod ome;
-#[cfg(feature = "omexml")]
-pub(super) mod omexml;
 
 use std::path::Path;
 use std::sync::OnceLock;
@@ -50,12 +50,20 @@ use image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, Plane, PlaneMeta,
-    PlateMeta, Region, Result, SeriesMeta,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, Plane, PlaneMeta, PlateMeta, Region, Result,
+    SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Tiff, "TIFF", "1").extensions(&["tif", "tiff", "tf2", "tf8", "btf"]);
-pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1").extensions(&["ome.tif", "ome.tiff", "ome.tf2", "ome.tf8", "ome.btf", "ome.xml", "companion.ome"]);
+pub(super) static OME_FORMAT: FormatInfo = FormatInfo::new(FormatId::OmeTiff, "OME-TIFF", "1").extensions(&[
+    "ome.tif",
+    "ome.tiff",
+    "ome.tf2",
+    "ome.tf8",
+    "ome.btf",
+    "ome.xml",
+    "companion.ome",
+]);
 #[cfg(feature = "stk")]
 pub(super) static STK_FORMAT: FormatInfo = FormatInfo::new(FormatId::Stk, "MetaMorph STK", "1").extensions(&["stk", "tif", "tiff"]);
 #[cfg(feature = "sis")]
@@ -80,9 +88,10 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
         // NDPI first IFDs may lie beyond 4 GiB; read them the NDPI way.
         if head.starts_with(b"II*\0")
             && let Ok(t) = TiffFile::open_ndpi(path, 1)
-                && t.ifds[0].has(super::ndpi::TAG_VERSION) {
-                    return Ok(Some(FormatId::Ndpi));
-                }
+            && t.ifds[0].has(super::ndpi::TAG_VERSION)
+        {
+            return Ok(Some(FormatId::Ndpi));
+        }
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
@@ -156,7 +165,12 @@ enum Slot {
     Ready(ImageRef),
     /// IFD `ifd` of file `file`; `level` 0 is the IFD itself, higher levels
     /// its SubIFDs. Parsed on first use.
-    Lazy { file: usize, ifd: usize, level: usize, image: OnceLock<std::result::Result<TiffImage, String>> },
+    Lazy {
+        file: usize,
+        ifd: usize,
+        level: usize,
+        image: OnceLock<std::result::Result<TiffImage, String>>,
+    },
 }
 
 impl Slot {
@@ -176,17 +190,12 @@ impl Slot {
                 let image = image.get_or_init(|| {
                     let load = || -> Result<TiffImage> {
                         let tiff = files[*file].get()?;
-                        let main = tiff
-                            .ifds
-                            .get(*ifd)
-                            .ok_or_else(|| Error::Corrupt(format!("IFD {ifd} missing in file {file}")))?;
+                        let main = tiff.ifds.get(*ifd).ok_or_else(|| Error::Corrupt(format!("IFD {ifd} missing in file {file}")))?;
                         if *level == 0 {
                             return TiffImage::new(tiff, main);
                         }
                         let subs = tiff.sub_ifds(main)?;
-                        let sub = subs
-                            .get(level - 1)
-                            .ok_or_else(|| Error::Corrupt(format!("SubIFD {} missing in IFD {ifd}", level - 1)))?;
+                        let sub = subs.get(level - 1).ok_or_else(|| Error::Corrupt(format!("SubIFD {} missing in IFD {ifd}", level - 1)))?;
                         TiffImage::new(tiff, sub)
                     };
                     load().map_err(|e| e.to_string())
@@ -280,9 +289,10 @@ impl Tiff {
         #[cfg(feature = "fluoview")]
         if let [s] = series.as_mut_slice()
             && flavour.is_none()
-            && fluoview::apply(s, &tiff)? {
-                flavour = Some(&FLUOVIEW_FORMAT);
-            }
+            && fluoview::apply(s, &tiff)?
+        {
+            flavour = Some(&FLUOVIEW_FORMAT);
+        }
         #[cfg(feature = "sis")]
         if is_sis && flavour.is_none() {
             for s in &mut series {
@@ -298,9 +308,10 @@ impl Tiff {
             flavour = Some(&NIKON_FORMAT);
         }
         if let Some(ij) = imagej::parse(description).filter(|_| flavour.is_none())
-            && let [s] = series.as_mut_slice() {
-                imagej::apply(&ij, s, &tiff)?;
-            }
+            && let [s] = series.as_mut_slice()
+        {
+            imagej::apply(&ij, s, &tiff)?;
+        }
         let mut t = Self::finish(vec![ome::LazyFile::ready(tiff)], series, Vec::new(), None, ome_error);
         t.flavour = flavour;
         Ok(t)
@@ -340,15 +351,16 @@ impl Backend for Tiff {
         let (file, ifd) = self.series[series].first_ifd;
         let mut meta = OriginalMeta::default();
         if let Ok(tiff) = self.files[file].get()
-            && let Some(ifd) = tiff.ifds.get(ifd) {
-                meta.pairs = original_meta(tiff, ifd)?;
-                let description = tiff.string(ifd, tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
-                if let Some(ij) = imagej::parse(&description) {
-                    meta.pairs.extend(ij.pairs);
-                } else if !description.is_empty() && self.ome.is_none() {
-                    meta.documents.push(("ImageDescription".into(), description));
-                }
+            && let Some(ifd) = tiff.ifds.get(ifd)
+        {
+            meta.pairs = original_meta(tiff, ifd)?;
+            let description = tiff.string(ifd, tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+            if let Some(ij) = imagej::parse(&description) {
+                meta.pairs.extend(ij.pairs);
+            } else if !description.is_empty() && self.ome.is_none() {
+                meta.documents.push(("ImageDescription".into(), description));
             }
+        }
         meta.pairs.extend(self.series[series].original.iter().cloned());
         if let Some(e) = &self.ome_error {
             meta.pairs.push(("OME-XML error".into(), e.clone()));
@@ -412,13 +424,14 @@ fn plain_series(tiff: &TiffFile, file: usize, palette_as_gray: bool) -> Result<V
             }
         };
         if subfile & REDUCED != 0
-            && let Some((pages, _)) = groups.last() {
-                let base = reduced.last().and_then(|r| r.last()).unwrap_or(&pages[0]);
-                if pages.len() == 1 && image.width < base.width && image.height <= base.height && image.spp == base.spp {
-                    reduced.last_mut().expect("one list per group").push(image);
-                    continue;
-                }
+            && let Some((pages, _)) = groups.last()
+        {
+            let base = reduced.last().and_then(|r| r.last()).unwrap_or(&pages[0]);
+            if pages.len() == 1 && image.width < base.width && image.height <= base.height && image.spp == base.spp {
+                reduced.last_mut().expect("one list per group").push(image);
+                continue;
             }
+        }
         match groups.last_mut() {
             Some((pages, ifds)) if pages[0].same_layout(&image) && reduced.last().is_some_and(|r| r.is_empty()) => {
                 pages.push(image);
@@ -480,12 +493,7 @@ fn sub_ifd_levels(tiff: &TiffFile, ifds: &[&Ifd], pages: &[TiffImage]) -> Result
 /// Level metadata of one image; strips count as tiles of full width.
 pub(super) fn level_meta(image: &TiffImage, full_width: u32) -> LevelMeta {
     let tile = (image.tiled || image.chunk_h < image.height).then_some((image.chunk_w, image.chunk_h));
-    LevelMeta {
-        size_x: image.width as u64,
-        size_y: image.height as u64,
-        tile,
-        downsample: full_width as f64 / image.width as f64,
-    }
+    LevelMeta { size_x: image.width as u64, size_y: image.height as u64, tile, downsample: full_width as f64 / image.width as f64 }
 }
 
 /// Creates a series with one page per time point.
@@ -496,9 +504,7 @@ fn make_series(tiff: &TiffFile, file: usize, ifd_index: usize, levels: Vec<Vec<T
     let pages = levels[0].len();
     let gray = first.samples_out == 1;
     let samples = |c: u32| if gray { Samples::One(c as u16) } else { Samples::All };
-    let planes = (0..pages)
-        .flat_map(|page| (0..channels).map(move |c| Some(PlaneRef { page, samples: samples(c) })))
-        .collect();
+    let planes = (0..pages).flat_map(|page| (0..channels).map(move |c| Some(PlaneRef { page, samples: samples(c) }))).collect();
     let channel = ChannelMeta { lut: first.lut.clone(), color: first.display_color, ..Default::default() };
     let meta = SeriesMeta {
         size_c: channels,
@@ -514,10 +520,7 @@ fn make_series(tiff: &TiffFile, file: usize, ifd_index: usize, levels: Vec<Vec<T
         description: tiff.string(ifd, tag::IMAGE_DESCRIPTION)?.filter(|d| !d.is_empty() && !d.contains("<OME")),
         ..Default::default()
     };
-    let levels = levels
-        .into_iter()
-        .map(|l| l.into_iter().map(|image| Some(Slot::ready(file, image))).collect())
-        .collect();
+    let levels = levels.into_iter().map(|l| l.into_iter().map(|image| Some(Slot::ready(file, image))).collect()).collect();
     Ok(Series { meta, levels, planes, plane_meta: Vec::new(), first_ifd: (file, ifd_index), original: Vec::new() })
 }
 

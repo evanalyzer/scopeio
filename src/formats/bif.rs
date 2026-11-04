@@ -53,8 +53,8 @@ use super::tiff::{original_meta, tiff_date};
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, Plane, Region, Result, SeriesMeta, scratch,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, Plane, Region,
+    Result, SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Bif, "Ventana BIF", "1").extensions(&["bif"]);
@@ -68,7 +68,13 @@ const TAG_IMAGE_DEPTH: u16 = 32997;
 /// plane first, then the near planes, then the far ones.
 fn storage_block(z: usize, depth: usize) -> usize {
     let nominal = (depth - 1) / 2;
-    if z < nominal { nominal - z } else if z == nominal { 0 } else { z }
+    if z < nominal {
+        nominal - z
+    } else if z == nominal {
+        0
+    } else {
+        z
+    }
 }
 
 /// Returns `true` if the XMP of a directory holds Ventana `iScan` metadata.
@@ -147,7 +153,9 @@ type Stitching = (Vec<Vec<Placed>>, (u32, u32), u32);
 /// or describes no overlap (the TIFF tile grid is then used as is).
 fn stitching(xmp: &str, chunks: usize, across: u32) -> Result<Option<Stitching>> {
     let Ok(doc) = Document::parse(xmp) else { return Ok(None) };
-    let Some(encode) = child(doc.root_element(), "EncodeInfo").or_else(|| (doc.root_element().tag_name().name() == "EncodeInfo").then(|| doc.root_element())) else {
+    let Some(encode) =
+        child(doc.root_element(), "EncodeInfo").or_else(|| (doc.root_element().tag_name().name() == "EncodeInfo").then(|| doc.root_element()))
+    else {
         return Ok(None);
     };
     if num::<u32>(encode, "Ver").unwrap_or(0) < 2 {
@@ -216,7 +224,13 @@ fn stitching(xmp: &str, chunks: usize, across: u32) -> Result<Option<Stitching>>
         let mut x = 0u32;
         for c in 0..cols_n {
             // Columns covered by a neighbour on top are not visible.
-            let left_hidden = if c > 0 && right_on_top[(r * cols_n + c - 1) as usize] { 0 } else if c > 0 { overlap[(r * cols_n + c - 1) as usize] } else { 0 };
+            let left_hidden = if c > 0 && right_on_top[(r * cols_n + c - 1) as usize] {
+                0
+            } else if c > 0 {
+                overlap[(r * cols_n + c - 1) as usize]
+            } else {
+                0
+            };
             let right_hidden = if c + 1 < cols_n && right_on_top[(r * cols_n + c) as usize] { overlap[(r * cols_n + c) as usize] } else { 0 };
             let start = x;
             let (x0, x1) = (start + left_hidden, start + tw - right_hidden);
@@ -349,7 +363,11 @@ impl Bif {
             .into_iter()
             .map(|(i, img)| {
                 // A level without the further planes repeats its nominal one.
-                let planes = if depth_of(i)? == depth { (0..depth).map(|z| img.layer(storage_block(z, depth))).collect::<Result<_>>()? } else { vec![img; depth] };
+                let planes = if depth_of(i)? == depth {
+                    (0..depth).map(|z| img.layer(storage_block(z, depth))).collect::<Result<_>>()?
+                } else {
+                    vec![img; depth]
+                };
                 Ok(planes)
             })
             .collect::<Result<_>>()?;
@@ -370,13 +388,15 @@ impl Bif {
         let (mut mpp, mut mag, mut white, mut z_spacing) = (None, None, 255u8, None);
         let mut pairs = original_meta(&tiff, &tiff.ifds[scan_ifd])?;
         if let Ok(doc) = Document::parse(&iscan)
-            && let Some(n) = child(doc.root_element(), "iScan").or_else(|| (doc.root_element().tag_name().name() == "iScan").then(|| doc.root_element())) {
-                mpp = num::<f64>(n, "ScanRes").filter(|v| *v > 0.0);
-                mag = num::<f64>(n, "Magnification").filter(|v| *v > 0.0);
-                white = num::<u8>(n, "ScanWhitePoint").unwrap_or(255);
-                z_spacing = num::<f64>(n, "Z-spacing").filter(|v| *v > 0.0 && depth > 1);
-                pairs.extend(n.attributes().map(|a| (format!("ventana.{}", a.name()), a.value().to_string())));
-            }
+            && let Some(n) =
+                child(doc.root_element(), "iScan").or_else(|| (doc.root_element().tag_name().name() == "iScan").then(|| doc.root_element()))
+        {
+            mpp = num::<f64>(n, "ScanRes").filter(|v| *v > 0.0);
+            mag = num::<f64>(n, "Magnification").filter(|v| *v > 0.0);
+            white = num::<u8>(n, "ScanWhitePoint").unwrap_or(255);
+            z_spacing = num::<f64>(n, "Z-spacing").filter(|v| *v > 0.0 && depth > 1);
+            pairs.extend(n.attributes().map(|a| (format!("ventana.{}", a.name()), a.value().to_string())));
+        }
         let level_metas: Vec<LevelMeta> = levels
             .iter()
             .enumerate()

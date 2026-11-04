@@ -142,7 +142,10 @@ impl Sdt {
                 (u32_at(&b, 2) as u64, u32_at(&b, 6) as u64)
             };
             let block_type = u16_at(&b, 10);
-            let m = meas.get(i16_at(&b, 12).max(0) as usize).or(meas.first()).ok_or_else(|| Error::Corrupt("SDT block without measurement description".into()))?;
+            let m = meas
+                .get(i16_at(&b, 12).max(0) as usize)
+                .or(meas.first())
+                .ok_or_else(|| Error::Corrupt("SDT block without measurement description".into()))?;
             let length = u32_at(&b, 18) as u64;
             let pixel_type = match block_type & 0xF00 {
                 0x000 => PixelType::U16,

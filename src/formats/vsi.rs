@@ -36,8 +36,8 @@ use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta,
-    PhysicalSize, Plane, Region, Result, SeriesMeta, scratch,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OpenOptions, OriginalMeta, PhysicalSize, Plane, Region,
+    Result, SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Vsi, "Olympus VSI", "1").extensions(&["vsi"]);
@@ -336,12 +336,7 @@ fn series_meta(root: &Field, stack: &Field, image: &Image) -> Result<SeriesMeta>
             let levels = sizes
                 .iter()
                 .enumerate()
-                .map(|(l, &(w, h))| LevelMeta {
-                    size_x: w,
-                    size_y: h,
-                    tile: Some((ets.tile_w, ets.tile_h)),
-                    downsample: (1u64 << l) as f64,
-                })
+                .map(|(l, &(w, h))| LevelMeta { size_x: w, size_y: h, tile: Some((ets.tile_w, ets.tile_h)), downsample: (1u64 << l) as f64 })
                 .collect();
             (ets.pixel_type, ets.spp, levels)
         }
@@ -363,11 +358,8 @@ fn series_meta(root: &Field, stack: &Field, image: &Image) -> Result<SeriesMeta>
         .and_then(Field::float)
         .map(|v| v.abs() * 1e3);
     let size_c = size(dims.c);
-    let channel_entries: Vec<&Field> = dims
-        .c
-        .and_then(|slot| stack.all(tag::DIMENSION).nth(slot))
-        .map(|d| d.all(tag::DIM_ENTRY).collect())
-        .unwrap_or_default();
+    let channel_entries: Vec<&Field> =
+        dims.c.and_then(|slot| stack.all(tag::DIMENSION).nth(slot)).map(|d| d.all(tag::DIM_ENTRY).collect()).unwrap_or_default();
     let setting_name = settings.and_then(|s| s.get(tag::SETTING_NAME)).and_then(Field::text);
     let channels = (0..size_c as usize)
         .map(|c| {
@@ -404,11 +396,7 @@ fn series_meta(root: &Field, stack: &Field, image: &Image) -> Result<SeriesMeta>
         pixel_type,
         samples_per_pixel: spp,
         levels,
-        physical_size: PhysicalSize {
-            x_nm: px.first().map(|v| v * nm),
-            y_nm: px.get(1).or(px.first()).map(|v| v * nm),
-            z_nm: z_step,
-        },
+        physical_size: PhysicalSize { x_nm: px.first().map(|v| v * nm), y_nm: px.get(1).or(px.first()).map(|v| v * nm), z_nm: z_step },
         channels,
         objective,
         ..Default::default()
@@ -515,11 +503,7 @@ impl Backend for Vsi {
                 thumb.read_native(tiff, region, samples, sink)
             });
         }
-        let (_, image) = self
-            .associated
-            .iter()
-            .find(|(k, _)| k == kind)
-            .ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
+        let (_, image) = self.associated.iter().find(|(k, _)| k == kind).ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
         let Pixels::Ets { ets, sizes, .. } = &image.pixels else {
             return Err(Error::UnsupportedVariant("associated image without ETS".into()));
         };

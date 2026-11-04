@@ -155,14 +155,7 @@ fn volume(file: &File, len: u64, offset: u64, depth: usize) -> Result<Vec<Field>
         let indexed = typ & FLAG_INDEXED != 0;
         let header = if indexed { 20 } else { 16 };
         let kind = typ & 0x00FF_FFFF;
-        let mut field = Field {
-            tag,
-            index: indexed.then(|| word(16)),
-            kind,
-            inline: None,
-            data: Vec::new(),
-            children: Vec::new(),
-        };
+        let mut field = Field { tag, index: indexed.then(|| word(16)), kind, inline: None, data: Vec::new(), children: Vec::new() };
         if typ & FLAG_EXTENDED != 0 && kind <= 2 {
             // Nested volumes may be empty or damaged; keep what was read.
             field.children = volume(file, len, at + header, depth + 1).unwrap_or_default();

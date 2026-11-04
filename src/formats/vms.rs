@@ -35,12 +35,12 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use super::slide::restart::RestartJpeg;
+use super::slide::restart::{Geometry, RestartJpeg};
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize,
-    PixelType, Plane, Region, Result, SeriesMeta,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result,
+    SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Vms, "Hamamatsu VMS", "1").extensions(&["vms"]);
@@ -108,7 +108,7 @@ impl Jpeg {
 }
 
 /// Size and restart tile of a JPEG file, from its header.
-fn jpeg_info(j: &Jpeg) -> Result<((u32, u32), Option<(u32, u32)>)> {
+fn jpeg_info(j: &Jpeg) -> Result<Geometry> {
     RestartJpeg::header_info(&j.file, j.len)
 }
 
@@ -222,7 +222,11 @@ impl Vms {
             levels,
             physical_size: PhysicalSize { x_nm: nm("PhysicalWidth", width), y_nm: nm("PhysicalHeight", height), z_nm: None },
             channels: vec![ChannelMeta::default()],
-            objective: kv.get("SourceLens").and_then(|v| v.parse::<f64>().ok()).filter(|v| *v > 0.0).map(|m| ObjectiveMeta { magnification: Some(m), ..Default::default() }),
+            objective: kv
+                .get("SourceLens")
+                .and_then(|v| v.parse::<f64>().ok())
+                .filter(|v| *v > 0.0)
+                .map(|m| ObjectiveMeta { magnification: Some(m), ..Default::default() }),
             ..Default::default()
         };
         let original = OriginalMeta { pairs: pairs.iter().map(|(k, v)| (format!("hamamatsu.{k}"), v.clone())).collect(), documents: Vec::new() };
@@ -257,7 +261,9 @@ impl Backend for Vms {
             return Err(Error::OutOfRange(format!("no associated image {kind:?}")));
         };
         let (w, h) = j.index()?.size();
-        native_image(Region::new(0, 0, w as u64, h as u64), 3, PixelType::U8, |sink| read_jpeg(j, Region::new(0, 0, w as u64, h as u64), (0, 0), sink))
+        native_image(Region::new(0, 0, w as u64, h as u64), 3, PixelType::U8, |sink| {
+            read_jpeg(j, Region::new(0, 0, w as u64, h as u64), (0, 0), sink)
+        })
     }
 
     fn read_native(&self, _series: usize, level: usize, plane: Plane, region: Region, sink: &mut Sink) -> Result<()> {

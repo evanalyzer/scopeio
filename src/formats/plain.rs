@@ -30,10 +30,7 @@ use std::path::{Path, PathBuf};
 
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region,
-    Result, SeriesMeta, scratch,
-};
+use crate::{ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta, scratch};
 
 #[cfg(feature = "png")]
 pub(super) static PNG_FORMAT: FormatInfo = FormatInfo::new(FormatId::Png, "PNG", "1").extensions(&["png"]);

@@ -153,7 +153,10 @@ impl Obf {
         let descr_len = c.u32()? as usize;
         let mut original = OriginalMeta::default();
         original.pairs.push(("OBF format version".into(), version.to_string()));
-        if descr_len > 0 && descr_len < 1 << 24 && let Ok(d) = read(26, descr_len) {
+        if descr_len > 0
+            && descr_len < 1 << 24
+            && let Ok(d) = read(26, descr_len)
+        {
             original.documents.push(("OBF description".into(), String::from_utf8_lossy(&d).into_owned()));
         }
         let mut stacks = Vec::new();
@@ -174,7 +177,7 @@ impl Obf {
             let (dt, compression, _level, name_len, descr_len) = (c.u32()?, c.u32()?, c.u32()?, c.u32()? as usize, c.u32()? as usize);
             let (_reserved, data_len, next_stack) = (c.u64()?, c.u64()?, c.u64()?);
             next = next_stack;
-            if rank < 2 || rank > MAX_DIMS || name_len > 1 << 16 || descr_len > 1 << 26 {
+            if !(2..=MAX_DIMS).contains(&rank) || name_len > 1 << 16 || descr_len > 1 << 26 {
                 continue;
             }
             let name = String::from_utf8_lossy(&read(at + STACK_HEADER as u64, name_len)?).into_owned();
@@ -201,7 +204,9 @@ impl Obf {
             let mut written = total;
             let mut chunk_list: Vec<(u64, u64)> = Vec::new();
             let footer_at = start.checked_add(data_len).filter(|&f| f < len);
-            if stack_version >= 1 && let Some(foot) = footer_at {
+            if stack_version >= 1
+                && let Some(foot) = footer_at
+            {
                 let fixed = read(foot, 4)?;
                 let size = u32::from_le_bytes(fixed[..4].try_into().expect("4 bytes")) as usize;
                 if (128..1 << 20).contains(&size) && foot + size as u64 <= len {
@@ -270,7 +275,10 @@ impl Obf {
                         p += meta_len + 8 * flushes + tags;
                         if chunks_n > 0 && chunks_n < 1 << 24 {
                             let raw = read(p, 16 * chunks_n as usize)?;
-                            chunk_list = raw.chunks_exact(16).map(|e| (u64::from_le_bytes(e[..8].try_into().expect("8")), u64::from_le_bytes(e[8..].try_into().expect("8")))).collect();
+                            chunk_list = raw
+                                .chunks_exact(16)
+                                .map(|e| (u64::from_le_bytes(e[..8].try_into().expect("8")), u64::from_le_bytes(e[8..].try_into().expect("8"))))
+                                .collect();
                         }
                         Ok(())
                     })();
@@ -308,7 +316,9 @@ impl Obf {
                 match i {
                     0 => (sx, spacing[0]) = (stride, metres.then_some(step * 1e9)),
                     1 => (sy, spacing[1]) = (stride, metres.then_some(step * 1e9)),
-                    _ if nz == 1 && (label == "z" || label.ends_with(" z") || (metres && label != "t")) => (sz, nz, spacing[2]) = (stride, n, metres.then_some(step * 1e9)),
+                    _ if nz == 1 && (label == "z" || label.ends_with(" z") || (metres && label != "t")) => {
+                        (sz, nz, spacing[2]) = (stride, n, metres.then_some(step * 1e9))
+                    }
                     _ if nt == 1 && (label == "t" || label.contains("time") || units[i].1 == 1) => (st, nt, spacing[3]) = (stride, n, Some(step)),
                     _ => c_axes.push((stride, n)),
                 }
@@ -333,7 +343,19 @@ impl Obf {
                 ..Default::default()
             });
             original.pairs.push((format!("Stack {} labels", stacks.len()), labels.join(", ")));
-            stacks.push(Stack { pixel_type, spp, sx, sy, sz, st, c_axes, chunks, written: written.min(total), zlib: compression == 1, inflated: OnceLock::new() });
+            stacks.push(Stack {
+                pixel_type,
+                spp,
+                sx,
+                sy,
+                sz,
+                st,
+                c_axes,
+                chunks,
+                written: written.min(total),
+                zlib: compression == 1,
+                inflated: OnceLock::new(),
+            });
             if compression > 1 {
                 return Err(Error::UnsupportedVariant(format!("OBF compression {compression}")));
             }

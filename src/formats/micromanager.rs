@@ -59,8 +59,8 @@ use crate::io::{ReadAt, read_exact_at};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
-    Position, Region, Result, SeriesMeta,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OpenOptions, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta, Position, Region,
+    Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::MicroManager, "Micro-Manager", "1")
@@ -245,14 +245,15 @@ fn summary_pairs(summary: &Value) -> Vec<(String, String)> {
 fn template(summary: &Value) -> SeriesMeta {
     let positive = |k: &str| num(summary, k).filter(|v| *v > 0.0);
     let pixel = positive("PixelSize_um").map(|um| um * 1e3);
-    let names: Vec<String> = summary.get("ChNames").and_then(Value::as_array).map(|a| a.iter().map(|n| n.as_str().map(str::to_string).unwrap_or_else(|| n.to_string())).collect()).unwrap_or_default();
-    let colors: Vec<Option<[u8; 4]>> = summary.get("ChColors").and_then(Value::as_array).map(|a| a.iter().map(java_color).collect()).unwrap_or_default();
+    let names: Vec<String> = summary
+        .get("ChNames")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().map(|n| n.as_str().map(str::to_string).unwrap_or_else(|| n.to_string())).collect())
+        .unwrap_or_default();
+    let colors: Vec<Option<[u8; 4]>> =
+        summary.get("ChColors").and_then(Value::as_array).map(|a| a.iter().map(java_color).collect()).unwrap_or_default();
     let channels = (0..names.len().max(colors.len()))
-        .map(|i| ChannelMeta {
-            name: names.get(i).filter(|n| !n.is_empty()).cloned(),
-            color: colors.get(i).copied().flatten(),
-            ..Default::default()
-        })
+        .map(|i| ChannelMeta { name: names.get(i).filter(|n| !n.is_empty()).cloned(), color: colors.get(i).copied().flatten(), ..Default::default() })
         .collect();
     SeriesMeta {
         acquisition_date: string(summary, "StartTime").or_else(|| string(summary, "Time")).and_then(|d| mm_date(&d)),
@@ -429,7 +430,9 @@ impl MicroManager {
         }
         // Geometry from the first image.
         let first = series.iter().flat_map(|s| s.planes.iter()).flatten().next().expect("at least one image");
-        let geometry = if first.file == 0 { stack_geometry(&tiff, first.offset)? } else {
+        let geometry = if first.file == 0 {
+            stack_geometry(&tiff, first.offset)?
+        } else {
             let t = TiffFile::from_file(File::open(&kept[first.file as usize])?, 1)?;
             stack_geometry(&t, first.offset)?
         };
@@ -570,9 +573,7 @@ impl MicroManager {
                 _ => std::cmp::Ordering::Equal,
             });
         }
-        let rank = |axis: &str, v: Option<&AxisValue>| -> usize {
-            v.and_then(|v| axis_values.get(axis)?.iter().position(|x| x == v)).unwrap_or(0)
-        };
+        let rank = |axis: &str, v: Option<&AxisValue>| -> usize { v.and_then(|v| axis_values.get(axis)?.iter().position(|x| x == v)).unwrap_or(0) };
         let count = |axis: &str| axis_values.get(axis).map_or(1, Vec::len);
         let sizes = (count("channel"), count("z"), count("time"));
         let series_axes: Vec<&String> = axis_values.keys().filter(|k| !matches!(k.as_str(), "channel" | "z" | "time")).collect();
@@ -596,7 +597,8 @@ impl MicroManager {
                 next
             });
             let s = keys.binary_search(&key_of(e)).expect("listed key");
-            let i = index(sizes, rank("channel", e.axes.get("channel")), rank("z", e.axes.get("z")), rank("time", e.axes.get("time"))).expect("ranks within sizes");
+            let i = index(sizes, rank("channel", e.axes.get("channel")), rank("z", e.axes.get("z")), rank("time", e.axes.get("time")))
+                .expect("ranks within sizes");
             // An image written again replaces the earlier one.
             series[s].planes[i] = Some(Loc { file, offset: e.offset, meta: e.meta, meta_len: e.meta_len });
         }
@@ -652,7 +654,7 @@ impl MicroManager {
             let Some(first) = self.series[s].planes.iter().position(Option::is_some) else { continue };
             let Ok(json) = self.image_json(s, first) else { continue };
             let pm = match self.kind {
-                Kind::Separate => self.series[s].plane_meta[first].clone(),
+                Kind::Separate => self.series[s].plane_meta[first],
                 _ => plane_meta(&json),
             };
             let m = &mut self.metas[s];
@@ -846,8 +848,7 @@ fn parse_ndtiff_index(b: &[u8]) -> Vec<NdEntry> {
         Some(s)
     };
     let u32_at = |s: &[u8], i: usize| u32::from_le_bytes(s[4 * i..4 * i + 4].try_into().expect("4 bytes"));
-    loop {
-        let Some(k) = take(&mut at, 4).map(|s| u32_at(s, 0) as usize) else { break };
+    while let Some(k) = take(&mut at, 4).map(|s| u32_at(s, 0) as usize) {
         let Some(axes) = take(&mut at, k).and_then(|s| serde_json::from_slice::<Value>(s).ok()) else { break };
         let Some(n) = take(&mut at, 4).map(|s| u32_at(s, 0) as usize) else { break };
         let Some(file) = take(&mut at, n).map(|s| String::from_utf8_lossy(s).into_owned()) else { break };
@@ -885,7 +886,10 @@ fn parse_ndtiff_index(b: &[u8]) -> Vec<NdEntry> {
 fn ndtiff_summary(path: &Path) -> Result<Value> {
     let tiff = TiffFile::from_file(File::open(path)?, 1)?;
     let head = tiff.read_bytes(0, 40)?;
-    let at = [16usize, 20, 32].into_iter().find(|&at| tiff.u32(&head[at..]) == SUMMARY_HEADER).ok_or_else(|| Error::Corrupt("NDTiff file without summary".into()))?;
+    let at = [16usize, 20, 32]
+        .into_iter()
+        .find(|&at| tiff.u32(&head[at..]) == SUMMARY_HEADER)
+        .ok_or_else(|| Error::Corrupt("NDTiff file without summary".into()))?;
     let len = tiff.u32(&head[at + 4..]) as u64;
     if len > MAX_JSON {
         return Err(Error::Corrupt("NDTiff summary too large".into()));
@@ -907,7 +911,7 @@ impl Backend for MicroManager {
         let m = &self.metas[series];
         let i = (plane.c + m.size_c * (plane.z + m.size_z * plane.t)) as usize;
         if self.kind == Kind::Separate {
-            return Ok(self.series[series].plane_meta[i].clone());
+            return Ok(self.series[series].plane_meta[i]);
         }
         Ok(plane_meta(&self.image_json(series, i)?))
     }
@@ -930,7 +934,9 @@ impl Backend for MicroManager {
             return Ok(());
         };
         let check = |img: &TiffImage| {
-            if (img.width as u64, img.height as u64, img.pixel_type, img.samples_out) != (m.levels[0].size_x, m.levels[0].size_y, m.pixel_type, m.samples_per_pixel) {
+            if (img.width as u64, img.height as u64, img.pixel_type, img.samples_out)
+                != (m.levels[0].size_x, m.levels[0].size_y, m.pixel_type, m.samples_per_pixel)
+            {
                 return Err(Error::Corrupt(format!("Micro-Manager image {i} of series {series} differs from the first image")));
             }
             Ok(if img.samples_out == 1 { Samples::One(0) } else { Samples::All })

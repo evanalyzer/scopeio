@@ -34,9 +34,7 @@ use super::slide::{PlaneImage, Slide, SlideSeries};
 use super::tiff::ifd::{TiffFile, tag};
 use super::tiff::image::TiffImage;
 use super::tiff::{level_meta, original_meta, resolution, tiff_date};
-use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta,
-};
+use crate::{AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Ndpi, "Hamamatsu NDPI", "1").extensions(&["ndpi"]);
 
@@ -154,4 +152,3 @@ pub(super) fn open(path: &Path, _opts: &OpenOptions) -> Result<Slide> {
     slide.validate()?;
     Ok(slide)
 }
-

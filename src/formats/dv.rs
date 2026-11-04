@@ -32,8 +32,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
-    Position, Region, Result, SeriesMeta, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta, Position, Region, Result,
+    SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::DeltaVision, "DeltaVision", "1").extensions(&["dv", "r3d"]);
@@ -174,7 +174,8 @@ impl Dv {
                 Order::Zwt => z + size_z * (c + size_c * t),
             }) as usize
         };
-        let times: Vec<Option<f64>> = (0..sections as usize).map(|s| floats.get(s).map(|f| f[1]).filter(|t| t.is_finite() && *t >= 0.0 && *t < 1e8)).collect();
+        let times: Vec<Option<f64>> =
+            (0..sections as usize).map(|s| floats.get(s).map(|f| f[1]).filter(|t| t.is_finite() && *t >= 0.0 && *t < 1e8)).collect();
         let channels = (0..size_c)
             .map(|c| {
                 let wavelength = i16_at(198 + 2 * c as usize) as f64;
@@ -189,7 +190,8 @@ impl Dv {
             })
             .collect();
         // Time increment: median step of the first channel and Z.
-        let mut steps: Vec<f64> = (1..size_t).filter_map(|t| Some(times[section(0, 0, t)]? - times[section(0, 0, t - 1)]?)).filter(|d| *d > 0.0).collect();
+        let mut steps: Vec<f64> =
+            (1..size_t).filter_map(|t| Some(times[section(0, 0, t)]? - times[section(0, 0, t - 1)]?)).filter(|d| *d > 0.0).collect();
         steps.sort_by(f64::total_cmp);
         let spacing = |o: usize| Some(f32_at(o)).filter(|v| v.is_finite() && *v > 0.0).map(|v| v * 1e3);
         let titles: Vec<String> = (0..10)

@@ -40,8 +40,8 @@ use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta,
-    PlateMeta, Position, Region, Result, SeriesMeta, WellSample,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, Plane, PlaneMeta, PlateMeta, Position, Region,
+    Result, SeriesMeta, WellSample,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::InCell, "IN Cell Analyzer", "1").extensions(&["xdce"]);
@@ -115,12 +115,22 @@ fn images_by_name(root: Node, dir: &Path) -> BTreeMap<(u32, u32, u32), Vec<Entry
         let Some((row, col, field, wave, z, t)) = parse_name(&name) else { continue };
         let wave_index = match waves.iter().position(|w| *w == wave) {
             Some(i) => i,
-            None => waves.len() + extra.iter().position(|w| *w == wave).unwrap_or_else(|| {
-                extra.push(wave.clone());
-                extra.len() - 1
-            }),
+            None => {
+                waves.len()
+                    + extra.iter().position(|w| *w == wave).unwrap_or_else(|| {
+                        extra.push(wave.clone());
+                        extra.len() - 1
+                    })
+            }
         };
-        groups.entry((row, col, field)).or_default().push(Entry { file: dir.join(&name), wave: wave_index as u32, z, t, time_s: None, position: None });
+        groups.entry((row, col, field)).or_default().push(Entry {
+            file: dir.join(&name),
+            wave: wave_index as u32,
+            z,
+            t,
+            time_s: None,
+            position: None,
+        });
     }
     groups
 }
@@ -179,7 +189,10 @@ impl InCell {
             let well = child(im, "Well");
             let id = child(im, "Identifier");
             let index = |a: &str| num(id, a).map_or(0, |v| v.max(0.0) as u32);
-            let (Some(row), Some(col)) = (num(well.and_then(|w| child(w, "Row")), "number"), num(well.and_then(|w| child(w, "Column")), "number")) else { continue };
+            let (Some(row), Some(col)) = (num(well.and_then(|w| child(w, "Row")), "number"), num(well.and_then(|w| child(w, "Column")), "number"))
+            else {
+                continue;
+            };
             // Only the file name: never leave the acquisition folder.
             let Some(base) = Path::new(&name.replace('\\', "/")).file_name().map(|b| b.to_os_string()) else { continue };
             let pos = child(im, "PlatePosition_um");
@@ -228,18 +241,25 @@ impl InCell {
             numerical_aperture: num(Some(c), "numerical_aperture").filter(|v| *v > 0.0),
             ..Default::default()
         });
-        let wave_nodes: Vec<Node> = descendant(root, "Wavelengths").map(|w| w.children().filter(|n| n.tag_name().name() == "Wavelength").collect()).unwrap_or_default();
+        let wave_nodes: Vec<Node> =
+            descendant(root, "Wavelengths").map(|w| w.children().filter(|n| n.tag_name().name() == "Wavelength").collect()).unwrap_or_default();
         let channels: Vec<ChannelMeta> = waves
             .iter()
             .map(|&w| {
-                let node = wave_nodes.iter().find(|n| n.attribute("index").and_then(|v| v.parse::<u32>().ok()) == Some(w)).or(wave_nodes.get(w as usize)).copied();
+                let node = wave_nodes
+                    .iter()
+                    .find(|n| n.attribute("index").and_then(|v| v.parse::<u32>().ok()) == Some(w))
+                    .or(wave_nodes.get(w as usize))
+                    .copied();
                 let filter = |f: &str| node.and_then(|n| child(n, f));
                 let exposure = filter("Exposure");
                 ChannelMeta {
                     name: node.and_then(|n| n.attribute("name")).filter(|s| !s.is_empty()).map(String::from),
                     excitation_wavelength_nm: num(filter("ExcitationFilter"), "wavelength").filter(|v| *v > 0.0),
                     emission_wavelength_nm: num(filter("EmissionFilter"), "wavelength").filter(|v| *v > 0.0),
-                    exposure_s: num(exposure, "time").filter(|v| *v > 0.0).map(|v| if exposure.and_then(|e| e.attribute("unit")) == Some("s") { v } else { v / 1e3 }),
+                    exposure_s: num(exposure, "time")
+                        .filter(|v| *v > 0.0)
+                        .map(|v| if exposure.and_then(|e| e.attribute("unit")) == Some("s") { v } else { v / 1e3 }),
                     ..Default::default()
                 }
             })
@@ -273,7 +293,7 @@ impl InCell {
                         let i = c + size_c * (z + size_z * t);
                         if s.planes[i].is_none() {
                             s.planes[i] = s.planes[first].clone();
-                            s.plane_meta[i] = s.plane_meta[first].clone();
+                            s.plane_meta[i] = s.plane_meta[first];
                         }
                     }
                 }
@@ -283,7 +303,13 @@ impl InCell {
                 pm.delta_t_s = pm.delta_t_s.zip(t0).map(|(v, t0)| v - t0);
             }
             let well = format!("{}{:02}", (b'A' + (row.saturating_sub(1) % 26) as u8) as char, col);
-            wells.push(WellSample { row: row.saturating_sub(1), col: col.saturating_sub(1), field, series: metas.len(), position: entries.first().and_then(|e| e.position) });
+            wells.push(WellSample {
+                row: row.saturating_sub(1),
+                col: col.saturating_sub(1),
+                field,
+                series: metas.len(),
+                position: entries.first().and_then(|e| e.position),
+            });
             metas.push(SeriesMeta {
                 name: Some(format!("well {well} field {}", field + 1)),
                 acquisition_date: creation.clone(),

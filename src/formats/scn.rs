@@ -30,10 +30,7 @@ use super::slide::{PlaneImage, Slide, SlideSeries};
 use super::tiff::ifd::{TiffFile, tag};
 use super::tiff::image::TiffImage;
 use super::tiff::{level_meta, original_meta};
-use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, PhysicalSize, Position,
-    Result, SeriesMeta,
-};
+use crate::{AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, ObjectiveMeta, OpenOptions, PhysicalSize, Position, Result, SeriesMeta};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Scn, "Leica SCN", "1").extensions(&["scn"]);
 

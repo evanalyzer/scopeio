@@ -33,8 +33,8 @@ use super::cfb::{self, Cfb};
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane,
-    PlaneMeta, Region, Result, SeriesMeta, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta, Region, Result,
+    SeriesMeta, scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Zvi, "Zeiss AxioVision ZVI", "1").extensions(&["zvi"]);
@@ -403,7 +403,9 @@ impl Backend for Zvi {
                 let at = item.data + ((region.y as usize + y) * item.width as usize + region.x as usize) as u64 * bpp as u64;
                 match (&item.sectors, &whole) {
                     (Some(ids), _) => self.cfb.read_at(ids, at, row)?,
-                    (None, Some(b)) => row.copy_from_slice(b.get(at as usize..at as usize + row.len()).ok_or_else(|| Error::Corrupt("ZVI item truncated".into()))?),
+                    (None, Some(b)) => {
+                        row.copy_from_slice(b.get(at as usize..at as usize + row.len()).ok_or_else(|| Error::Corrupt("ZVI item truncated".into()))?)
+                    }
                     _ => unreachable!("sectors or whole stream"),
                 }
                 // Colour samples are stored blue first.

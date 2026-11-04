@@ -98,9 +98,8 @@ pub(super) fn parse(xml: &str) -> XmlMeta {
     out.name = info.and_then(|i| text(path(i, &["Document", "Name"])));
 
     // Display settings complete the image channels, matched by id.
-    let display: Vec<Node> = path(meta, &["DisplaySetting", "Channels"])
-        .map(|c| c.children().filter(|c| c.has_tag_name("Channel")).collect())
-        .unwrap_or_default();
+    let display: Vec<Node> =
+        path(meta, &["DisplaySetting", "Channels"]).map(|c| c.children().filter(|c| c.has_tag_name("Channel")).collect()).unwrap_or_default();
     let image_channels: Vec<Node> = image
         .and_then(|i| path(i, &["Dimensions", "Channels"]))
         .map(|c| c.children().filter(|c| c.has_tag_name("Channel")).collect())

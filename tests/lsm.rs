@@ -18,7 +18,6 @@ fn matches_reference_readers() {
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }
 
-
 use common::{crc, decode, read_tsv, root};
 use scopeio::{AssociatedKind, Plane};
 

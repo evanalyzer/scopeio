@@ -40,8 +40,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane,
-    Region, Result, SeriesMeta, scratch,
+    ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, ObjectiveMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta,
+    scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Oir, "Olympus OIR", "1").extensions(&["oir"]);
@@ -110,7 +110,8 @@ fn blocks(file: &File, part: u16) -> Result<Blocks> {
     // Block offsets from the index, else by walking the chain.
     let mut offsets = Vec::new();
     let mut marker = [0u8; 4];
-    if index >= FIRST_BLOCK && index + 4 <= declared && read_exact_at(file, &mut marker, index).is_ok() && u32::from_le_bytes(marker) == INDEX_MARKER {
+    if index >= FIRST_BLOCK && index + 4 <= declared && read_exact_at(file, &mut marker, index).is_ok() && u32::from_le_bytes(marker) == INDEX_MARKER
+    {
         let n = ((declared - index - 4) / 8).min(MAX_BLOCKS) as usize;
         let mut raw = vec![0u8; n * 8];
         read_exact_at(file, &mut raw, index + 4)?;
@@ -317,7 +318,8 @@ impl Oir {
         if by_plane.is_empty() {
             return Err(Error::UnsupportedVariant("OIR without image planes (overview map)".into()));
         }
-        let distinct = |f: fn(&(u32, u32, u32)) -> u32| -> Vec<u32> { by_plane.keys().map(|(k, _)| f(k)).collect::<BTreeSet<_>>().into_iter().collect() };
+        let distinct =
+            |f: fn(&(u32, u32, u32)) -> u32| -> Vec<u32> { by_plane.keys().map(|(k, _)| f(k)).collect::<BTreeSet<_>>().into_iter().collect() };
         let (ts, ls, zs) = (distinct(|k| k.0), distinct(|k| k.1), distinct(|k| k.2));
         // Channels: imageInfo order, then channels without description by uuid.
         let with_pixels: BTreeSet<&str> = by_plane.keys().map(|(_, c)| c.as_str()).collect();
@@ -337,7 +339,12 @@ impl Oir {
         let (size_c, size_z, size_t) = (channel_ids.len() * ls.len(), zs.len(), ts.len());
         let mut planes = vec![Vec::new(); size_c * size_z * size_t];
         for (((t, l, z), ch), mut chunks) in by_plane {
-            let (Some(ti), Some(li), Some(zi), Some(ci)) = (ts.iter().position(|&v| v == t), ls.iter().position(|&v| v == l), zs.iter().position(|&v| v == z), channel_ids.iter().position(|c| *c == ch)) else {
+            let (Some(ti), Some(li), Some(zi), Some(ci)) = (
+                ts.iter().position(|&v| v == t),
+                ls.iter().position(|&v| v == l),
+                zs.iter().position(|&v| v == z),
+                channel_ids.iter().position(|c| *c == ch),
+            ) else {
                 continue;
             };
             chunks.sort_by_key(|c| c.plane_offset);
@@ -350,9 +357,13 @@ impl Oir {
             let &(p, a, l) = frames.get(k)?;
             read_bytes(&parts[p as usize], a, l).ok().and_then(|b| documents(&b).into_iter().next())
         };
-        let frame0 = documents(&read_bytes(&parts[fpart as usize], fat, flen)?).into_iter().next().ok_or_else(|| Error::Corrupt("OIR frame properties without XML".into()))?;
+        let frame0 = documents(&read_bytes(&parts[fpart as usize], fat, flen)?)
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::Corrupt("OIR frame properties without XML".into()))?;
         let f0 = Document::parse(&frame0).map_err(|e| Error::Corrupt(format!("OIR frame properties: {e}")))?;
-        let def = f0.descendants().find(|n| local(*n) == "imageDefinition").ok_or_else(|| Error::Corrupt("OIR frame without image definition".into()))?;
+        let def =
+            f0.descendants().find(|n| local(*n) == "imageDefinition").ok_or_else(|| Error::Corrupt("OIR frame without image definition".into()))?;
         let width = num(def, "width").unwrap_or(0.0) as u64;
         let height = num(def, "height").unwrap_or(0.0) as u64;
         let depth = num(def, "depth").unwrap_or(0.0) as usize;
@@ -385,9 +396,8 @@ impl Oir {
             };
             (v > 0.0).then_some(v * f)
         };
-        let axis = |name: &str| -> Option<Node> {
-            info?.descendants().filter(|n| local(*n) == "axis").find(|n| text(*n, "axis").as_deref() == Some(name))
-        };
+        let axis =
+            |name: &str| -> Option<Node> { info?.descendants().filter(|n| local(*n) == "axis").find(|n| text(*n, "axis").as_deref() == Some(name)) };
         let z_nm = axis("ZSTACK").and_then(|a| num(a, "step")).map(f64::abs).filter(|s| *s > 0.0 && size_z > 1).map(|s| s * 1e3);
         let frame_time = |k: usize| -> Option<f64> {
             let xml = frame_doc(k)?;
@@ -409,7 +419,8 @@ impl Oir {
             .filter(|n| local(*n) == "imagingMainLaser" && n.attribute("enable") == Some("true"))
             .filter_map(|n| Some((n.attribute("id")?.to_string(), num(n, "wavelength")?)))
             .collect();
-        let lsm_channels: Vec<Document> = docs.iter().filter(|d| head(d).contains("<lsmimage:lsmChannel")).filter_map(|d| Document::parse(d).ok()).collect();
+        let lsm_channels: Vec<Document> =
+            docs.iter().filter(|d| head(d).contains("<lsmimage:lsmChannel")).filter_map(|d| Document::parse(d).ok()).collect();
         let mut channels = Vec::new();
         for id in &channel_ids {
             let desc = described.iter().find(|(_, d, _)| d == id).map(|(_, _, n)| *n);
@@ -422,8 +433,15 @@ impl Oir {
                 .collect();
             let excitation = (ex.len() == 1).then(|| f64::from_bits(*ex.first().expect("one")));
             let settings = lsm_channels.iter().map(|d| d.root_element()).find(|r| r.attribute("id") == Some(id));
-            let dye = settings.and_then(|r| r.descendants().find(|n| local(*n) == "dyeName")).and_then(|n| n.text()).map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
-            let dye_emission = settings.and_then(|r| r.descendants().find(|n| local(*n) == "emissionWavelength")).and_then(|n| n.text()?.trim().parse::<f64>().ok()).filter(|v| *v > 0.0);
+            let dye = settings
+                .and_then(|r| r.descendants().find(|n| local(*n) == "dyeName"))
+                .and_then(|n| n.text())
+                .map(|t| t.trim().to_string())
+                .filter(|t| !t.is_empty());
+            let dye_emission = settings
+                .and_then(|r| r.descendants().find(|n| local(*n) == "emissionWavelength"))
+                .and_then(|n| n.text()?.trim().parse::<f64>().ok())
+                .filter(|v| *v > 0.0);
             for &l in &ls {
                 let band = (ls.len() > 1).then(|| lambda.map(|(start, step)| start + (l.max(1) - 1) as f64 * step)).flatten();
                 channels.push(ChannelMeta {

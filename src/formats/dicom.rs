@@ -39,8 +39,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::{Backend, NativeImage, native_image};
 use crate::{
-    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane,
-    Region, Result, SeriesMeta, scratch,
+    AssociatedKind, ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta,
+    scratch,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Dicom, "DICOM", "1").extensions(&["dcm", "dicom"]);
@@ -207,7 +207,8 @@ impl Image {
         scratch::with(self.frame_bytes(), |tile| {
             for ty in y0 / th..y1.div_ceil(th) {
                 for tx in x0 / tw..x1.div_ceil(tw) {
-                    let frame = self.grid.get(((plane as u64 * self.down as u64 + ty) * self.across as u64 + tx) as usize).copied().unwrap_or(u32::MAX);
+                    let frame =
+                        self.grid.get(((plane as u64 * self.down as u64 + ty) * self.across as u64 + tx) as usize).copied().unwrap_or(u32::MAX);
                     let present = frame != u32::MAX;
                     if present {
                         self.decode(frame as usize, tile)?;
@@ -294,7 +295,9 @@ fn frames(ds: &Dataset, frames: usize, frame_bytes: usize, coding: Coding) -> Re
             let item_start = |f: &(u64, u64)| f.0 - 8 - base;
             let starts: Vec<u64> = if bot.len() == frames {
                 bot.iter().map(|&o| o as u64).collect()
-            } else if let (Some(Value::Data(o)), Some(Value::Data(_))) = (ds.get(EXTENDED_OFFSETS).map(|e| &e.value), ds.get(EXTENDED_LENGTHS).map(|e| &e.value)) {
+            } else if let (Some(Value::Data(o)), Some(Value::Data(_))) =
+                (ds.get(EXTENDED_OFFSETS).map(|e| &e.value), ds.get(EXTENDED_LENGTHS).map(|e| &e.value))
+            {
                 o.chunks_exact(8).map(|c| u64::from_le_bytes(c.try_into().expect("8 bytes"))).collect()
             } else if frames == 1 {
                 vec![0]
@@ -351,7 +354,11 @@ impl Instance {
             "1.2.840.10008.1.2" | "1.2.840.10008.1.2.1" => Coding::Native,
             "1.2.840.10008.1.2.5" => Coding::Rle,
             "1.2.840.10008.1.2.4.50" | "1.2.840.10008.1.2.4.51" => Coding::Jpeg,
-            "1.2.840.10008.1.2.4.90" | "1.2.840.10008.1.2.4.91" | "1.2.840.10008.1.2.4.201" | "1.2.840.10008.1.2.4.202" | "1.2.840.10008.1.2.4.203" => Coding::Jpeg2000,
+            "1.2.840.10008.1.2.4.90"
+            | "1.2.840.10008.1.2.4.91"
+            | "1.2.840.10008.1.2.4.201"
+            | "1.2.840.10008.1.2.4.202"
+            | "1.2.840.10008.1.2.4.203" => Coding::Jpeg2000,
             ts => return Err(Error::UnsupportedVariant(format!("DICOM transfer syntax {ts}"))),
         };
         let n = |t| ds.number(t).unwrap_or(0.0);
@@ -410,7 +417,8 @@ impl Instance {
                 if tx < 0.0 || ty < 0.0 || tx >= across as f64 || ty >= down as f64 {
                     continue;
                 }
-                let z = pos.number(Z_OFFSET).map(|z| (z * 1e6).round() as i64).and_then(|z| zs.iter().position(|v| *v == z)).unwrap_or(0).min(size_z - 1);
+                let z =
+                    pos.number(Z_OFFSET).map(|z| (z * 1e6).round() as i64).and_then(|z| zs.iter().position(|v| *v == z)).unwrap_or(0).min(size_z - 1);
                 let path = g.item(OPTICAL_PATH_IDENTIFICATION).and_then(|o| o.text(OPTICAL_PATH_ID)).or_else(|| shared_path.clone());
                 let c = path.and_then(|p| paths.iter().position(|q| *q == p)).unwrap_or(0);
                 let plane = c + paths.len().max(1) * z;
@@ -476,7 +484,8 @@ impl Dicom {
         if wsi {
             let uid = instances[0].ds.text(SERIES_UID);
             let dir = path.parent().unwrap_or(Path::new("."));
-            let mut siblings: Vec<PathBuf> = std::fs::read_dir(dir)?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.is_file() && p != path).collect();
+            let mut siblings: Vec<PathBuf> =
+                std::fs::read_dir(dir)?.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.is_file() && p != path).collect();
             siblings.sort();
             for p in siblings.into_iter().take(4096) {
                 let mut head = [0u8; 132];
@@ -504,7 +513,8 @@ impl Dicom {
         let ds = &base.ds;
         let size_z = if wsi { ds.number(FOCAL_PLANES).map_or(1, |v| v.max(1.0) as usize) } else { 1 };
         // Optical paths as channels.
-        let paths: Vec<String> = if wsi { ds.items(OPTICAL_PATH_SEQUENCE).iter().filter_map(|p| p.text(OPTICAL_PATH_ID)).collect() } else { Vec::new() };
+        let paths: Vec<String> =
+            if wsi { ds.items(OPTICAL_PATH_SEQUENCE).iter().filter_map(|p| p.text(OPTICAL_PATH_ID)).collect() } else { Vec::new() };
         let size_c = paths.len().max(1);
         let channels: Vec<ChannelMeta> = if paths.is_empty() {
             vec![ChannelMeta::default()]
@@ -519,16 +529,30 @@ impl Dicom {
                 })
                 .collect()
         };
-        let spacing = ds.item(SHARED_GROUPS).and_then(|s| s.item(PIXEL_MEASURES)).map(|m| m.numbers(PIXEL_SPACING)).filter(|v| v.len() == 2).or_else(|| Some(ds.numbers(PIXEL_SPACING)).filter(|v| v.len() == 2));
-        let z_spacing = ds.item(SHARED_GROUPS).and_then(|s| s.item(PIXEL_MEASURES)).and_then(|m| m.number(SPACING_BETWEEN_SLICES)).filter(|v| *v > 0.0 && size_z > 1);
-        let date = ds.text(ACQUISITION_DATETIME).or_else(|| Some(format!("{}{}", ds.text(CONTENT_DATE)?, ds.text(CONTENT_TIME).unwrap_or_default()))).and_then(|d| dicom_date(&d));
+        let spacing = ds
+            .item(SHARED_GROUPS)
+            .and_then(|s| s.item(PIXEL_MEASURES))
+            .map(|m| m.numbers(PIXEL_SPACING))
+            .filter(|v| v.len() == 2)
+            .or_else(|| Some(ds.numbers(PIXEL_SPACING)).filter(|v| v.len() == 2));
+        let z_spacing = ds
+            .item(SHARED_GROUPS)
+            .and_then(|s| s.item(PIXEL_MEASURES))
+            .and_then(|m| m.number(SPACING_BETWEEN_SLICES))
+            .filter(|v| *v > 0.0 && size_z > 1);
+        let date = ds
+            .text(ACQUISITION_DATETIME)
+            .or_else(|| Some(format!("{}{}", ds.text(CONTENT_DATE)?, ds.text(CONTENT_TIME).unwrap_or_default())))
+            .and_then(|d| dicom_date(&d));
         let magnification = ds.items(OPTICAL_PATH_SEQUENCE).first().and_then(|p| p.number(OBJECTIVE_POWER)).filter(|v| *v > 0.0);
         let photometric = ds.text(PHOTOMETRIC).unwrap_or_default();
         let bits_stored = ds.number(BITS_STORED).map(|b| b as u8);
         let mut original = OriginalMeta::default();
         for e in &ds.0 {
             if let Value::Data(_) = e.value
-                && let Some(t) = ds.text(e.tag).filter(|_| e.vr.iter().all(u8::is_ascii_uppercase) && !matches!(&e.vr, b"OB" | b"OW" | b"UN" | b"US" | b"UL" | b"SS" | b"SL" | b"FL" | b"FD"))
+                && let Some(t) = ds.text(e.tag).filter(|_| {
+                    e.vr.iter().all(u8::is_ascii_uppercase) && !matches!(&e.vr, b"OB" | b"OW" | b"UN" | b"US" | b"UL" | b"SS" | b"SL" | b"FL" | b"FD")
+                })
             {
                 original.pairs.push((format!("({:04X},{:04X})", e.tag >> 16, e.tag & 0xFFFF), t));
             }

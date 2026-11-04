@@ -37,7 +37,9 @@ use std::path::{Path, PathBuf};
 use super::tiff::Tiff;
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, OriginalMeta, Plane, PlaneMeta, PlateMeta, Region, Result, SeriesMeta, WellSample};
+use crate::{
+    ChannelMeta, Error, FormatId, FormatInfo, OpenOptions, OriginalMeta, Plane, PlaneMeta, PlateMeta, Region, Result, SeriesMeta, WellSample,
+};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::MetaXpress, "Molecular Devices MetaXpress", "1").extensions(&["htd"]);
 
@@ -102,6 +104,9 @@ fn parse_name(name: &str, base: &str) -> Option<((u32, u32), u32, u32)> {
     Some((pos, site, wave))
 }
 
+/// (well, site, wave, z, t) of an image file.
+type ImageKey = ((u32, u32), u32, u32, u32, u32);
+
 /// Subfolders `<prefix><n>` of `dir` by `n`, matched without regard to case.
 fn numbered(dir: &Path, prefix: &str) -> BTreeMap<u32, PathBuf> {
     let Ok(read) = std::fs::read_dir(dir) else { return BTreeMap::new() };
@@ -157,7 +162,7 @@ impl MetaXpress {
             time_dirs.insert(1, root.to_path_buf());
         }
         // (well, site, wave, z, t) by file; z and t from 0.
-        let mut found: HashMap<((u32, u32), u32, u32, u32, u32), PathBuf> = HashMap::new();
+        let mut found: HashMap<ImageKey, PathBuf> = HashMap::new();
         let (mut size_z, mut size_t) = (1u32, 1u32);
         for (ti, (_, tdir)) in time_dirs.iter().enumerate() {
             let mut z_dirs = numbered(tdir, "zstep_");
@@ -194,7 +199,10 @@ impl MetaXpress {
         }
         // Sites: the number selected, else all (or one without sites).
         let sites = if yes("Sites") {
-            let selected: usize = (1..=count("YSites").min(1 << 10)).filter_map(|r| kv.get(&format!("SiteSelection{r}"))).map(|v| v.iter().filter(|v| v.eq_ignore_ascii_case("TRUE")).count()).sum();
+            let selected: usize = (1..=count("YSites").min(1 << 10))
+                .filter_map(|r| kv.get(&format!("SiteSelection{r}")))
+                .map(|v| v.iter().filter(|v| v.eq_ignore_ascii_case("TRUE")).count())
+                .sum();
             if selected > 0 { selected as u32 } else { count("XSites").max(1).saturating_mul(count("YSites").max(1)) }
         } else {
             1
@@ -217,7 +225,9 @@ impl MetaXpress {
         if fm.size_c != 1 || fm.size_z != 1 || fm.size_t != 1 || fm.samples_per_pixel != 1 {
             return Err(Error::UnsupportedVariant("MetaXpress image files with several planes".into()));
         }
-        let channels: Vec<ChannelMeta> = (1..=waves).map(|w| ChannelMeta { name: first(&format!("WaveName{w}")).filter(|n| !n.is_empty()).cloned(), ..Default::default() }).collect();
+        let channels: Vec<ChannelMeta> = (1..=waves)
+            .map(|w| ChannelMeta { name: first(&format!("WaveName{w}")).filter(|n| !n.is_empty()).cloned(), ..Default::default() })
+            .collect();
 
         let mut files = Vec::new();
         let mut metas = Vec::new();
@@ -278,7 +288,9 @@ impl Backend for MetaXpress {
 
     fn plane_meta(&self, series: usize, plane: Plane) -> Result<PlaneMeta> {
         // Exposure and stage position of the image file.
-        let Some(reader) = self.file(series, plane).and_then(|f| Tiff::open(f, &OpenOptions::default()).ok()) else { return Ok(PlaneMeta::default()) };
+        let Some(reader) = self.file(series, plane).and_then(|f| Tiff::open(f, &OpenOptions::default()).ok()) else {
+            return Ok(PlaneMeta::default());
+        };
         reader.plane_meta(0, Plane::new(0, 0, 0))
     }
 
