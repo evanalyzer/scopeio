@@ -96,6 +96,7 @@ python3 -I tests/scripts/make_vms_samples.py    # needs ImageMagick
 python3 -I tests/scripts/make_omexml_samples.py   # OME-XML with inline pixels
 python3 -I tests/scripts/make_xrm_samples.py      # Zeiss Xradia TXRM / XRM (uses cfbwriter.py)
 python3 -I tests/scripts/make_ics_samples.py      # ICS 1.0 / 2.0
+python3 -I tests/scripts/make_obf_samples.py      # Imspector OBF
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -250,6 +251,10 @@ python3 -I tests/scripts/fetch_ome.py ICS/
 python3 -I tests/scripts/oracle.py ics --repeat 3 tests/reference/ome/ICS/jan/*.ics
 python3 -I tests/scripts/oracle.py ics --append --repeat 1 tests/reference/ome/ICS/gh-4197/*.ics
 python3 -I tests/scripts/oracle.py ics --append --repeat 1 tests/data/ics/*.ics
+# Imspector OBF: OME samples (CC BY 4.0) and the synthetic file
+python3 -I tests/scripts/fetch_ome.py OBF/ Imspector/
+python3 -I tests/scripts/oracle.py obf --repeat 3 tests/reference/ome/OBF/ngladitz/v4/*.obf tests/reference/ome/OBF/ngladitz/v6/*.obf tests/reference/ome/Imspector/zenodo-10476252/test.msr
+python3 -I tests/scripts/oracle.py obf --append --repeat 1 tests/data/obf/two.obf
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

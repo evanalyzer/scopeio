@@ -127,6 +127,7 @@ compared, "n/a" means the reader cannot open the format.
 | OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
 | Zeiss Xradia XRM | 3 | 1 ms | 4.4 MiB | 207× / 40× | n/a | – |
 | ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
+| Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -166,6 +167,8 @@ compared, "n/a" means the reader cannot open the format.
   first read of a JPEG file indexes its restart markers (0.3 s for 300 MB).
   bioformats-rs has no crop or series option and cannot convert the
   7.8-gigapixel slide whole.
+- Imspector OBF: bioformats-rs reads one plane of the first stack only,
+  so its factor compares a single plane with scopeio's whole file.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -239,7 +242,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Improvision Openlab LIFF** | — |  |
 | **Improvision Openlab Raw** | — |  |
 | **Improvision TIFF** | `.tif` |  |
-| **Imspector OBF** | `.obf, .msr` |  |
+| **Imspector OBF** | `.obf, .msr` | ✅ (MSR only with OBF header) |
 | **InCell 1000/2000** | `.xdce, .tif` |  |
 | **InCell 3000** | `.frm` |  |
 | **INR** | — |  |
@@ -419,6 +422,14 @@ other dimension (`ch`, `p` and unnamed ones) adds channels, as both
 reference readers do. With `layout coordinates cartesian` (origin at the
 lower left, libics documentation) rows are returned from the top.
 bioformats-rs returns big-endian samples unswapped.
+
+**Imspector OBF.** Each stack is a series; axes 0 and 1 are x and y, a
+further axis is z (label `Z` or a length unit), t (seconds) or channels.
+Version 6 chunked stacks and short writes (missing samples read as zeros)
+are supported. Not supported yet: `.msr` files in the older archive layout
+(no OBF header, `CDataStack`). In the one public sample the 16-bit planes
+follow the axis labels directly, but the rest of the layout is
+undocumented; more samples are needed to read it reliably.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

@@ -18,6 +18,8 @@ mod bif;
 mod bmp;
 #[cfg(any(feature = "oif", feature = "zvi", feature = "xrm"))]
 mod cfb;
+#[cfg(feature = "obf")]
+mod obf;
 #[cfg(feature = "oif")]
 mod oif;
 #[cfg(feature = "stk")]
@@ -174,6 +176,8 @@ static SUPPORTED: &[FormatInfo] = &[
     mrc::FORMAT,
     #[cfg(feature = "ics")]
     ics::FORMAT,
+    #[cfg(feature = "obf")]
+    obf::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -327,6 +331,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "obf")]
+    if obf::matches(&head) {
+        return Ok(Some(FormatId::Obf));
+    }
     #[cfg(feature = "ics")]
     if ics::matches(path, &head) {
         return Ok(Some(FormatId::Ics));
@@ -381,6 +389,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "obf")]
+        Some(FormatId::Obf) => Ok(Arc::new(Reader(obf::Obf::open(path)?))),
         #[cfg(feature = "ics")]
         Some(FormatId::Ics) => Ok(Arc::new(Reader(ics::Ics::open(path)?))),
         #[cfg(feature = "nifti")]

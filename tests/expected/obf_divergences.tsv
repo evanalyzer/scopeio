@@ -1,0 +1,9 @@
+# Known differences for Imspector OBF.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/OBF/ngladitz/v4/test-v4-uncompressed.obf	bioformats-rs	-			bioformats-rs reads one plane of the first stack only (size T 1 of 18); Bio-Formats and scopeio agree on all stacks
+tests/reference/ome/OBF/ngladitz/v4/test-v4.obf	bioformats-rs	-			bioformats-rs reads one plane of the first stack only (size T 1 of 18); Bio-Formats and scopeio agree on all stacks
+tests/reference/ome/OBF/ngladitz/v6/test-v6-short-write.obf	bioformats-rs	-			bioformats-rs reads one plane of the first stack only (size T 1 of 18); Bio-Formats and scopeio agree on all stacks
+tests/reference/ome/OBF/ngladitz/v6/test-v6-uncompressed.obf	bioformats-rs	-			bioformats-rs reads one plane of the first stack only (size T 1 of 18); Bio-Formats and scopeio agree on all stacks
+tests/reference/ome/OBF/ngladitz/v6/test-v6.obf	bioformats-rs	-			bioformats-rs reads one plane of the first stack only (size T 1 of 18); Bio-Formats and scopeio agree on all stacks
+tests/reference/ome/Imspector/zenodo-10476252/test.msr	scopeio	-			MSR archive without OBF header (MFC serialization, CDataStack); not documented and only one public sample, see Format notes
+tests/data/obf/two.obf	bioformats-rs	-			the third axis is labelled "Detector" with no length unit: scopeio makes it channels, bioformats-rs z planes (same samples); Bio-Formats stops with an end-of-file error on this file

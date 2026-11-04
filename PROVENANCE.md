@@ -597,6 +597,21 @@ as black-box command-line tools to produce reference output
   (see `tests/expected/ics_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_ics_samples.py`.
 
+## Imspector OBF (`src/formats/obf.rs`)
+
+- Imspector documentation "File Formats" (MPI-BPC and Abberior
+  Instruments, `doc/imspector-obf/`): OBF file and stack headers, stack
+  footer with SI units, flush points, tag dictionary, samples written and
+  chunk positions, data types.
+- Own analysis of the OBF samples on the OME sample server
+  (`OBF/ngladitz`, CC BY 4.0: versions 4 and 6, compressed, uncompressed,
+  short write): 15 axes per header, `samples_written` counts samples, the
+  last chunk ends at the footer. The archive-style `.msr` sample
+  (`Imspector/zenodo-10476252`, CC BY 4.0) was examined but is not read.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/obf_divergences.tsv`).
+- Synthetic file written by `tests/scripts/make_obf_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

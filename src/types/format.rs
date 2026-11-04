@@ -84,6 +84,8 @@ pub enum FormatId {
     Xrm,
     /// Image Cytometry Standard (`.ics` + `.ids`, ICS 2.0).
     Ics,
+    /// Imspector / Abberior OBF (`.obf`, OBF-based `.msr`).
+    Obf,
 }
 
 /// Identification of the reader that produced the data, for
