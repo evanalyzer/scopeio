@@ -88,6 +88,8 @@ pub enum FormatId {
     Obf,
     /// GE / Cytiva IN Cell Analyzer (`.xdce` and TIFF files).
     InCell,
+    /// Becker & Hickl SPCM data (`.sdt`).
+    Sdt,
 }
 
 /// Identification of the reader that produced the data, for

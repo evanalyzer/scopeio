@@ -627,6 +627,20 @@ as black-box command-line tools to produce reference output
   `tests/expected/incell_divergences.tsv`).
 - Synthetic acquisitions written by `tests/scripts/make_incell_samples.py`.
 
+## Becker & Hickl SDT (`src/formats/sdt.rs`)
+
+- `sdtfile` (BSD-3-Clause, Christoph Gohlke; read as documentation, notice
+  in THIRD_PARTY_NOTICES.md): FILE_HEADER, BLOCK_HEADER (old and revision
+  15 with 40-bit offsets), MEASURE_INFO field layout, block type bits
+  (creation mode, contents, element type, ZIP / LZ4), ZIP-archive blocks.
+- The bh TCSPC Handbook, 8th edition (`doc/becker-hickl-sdt/`): TAC range
+  and gain, ADC resolution.
+- Own analysis of the SDT sample on the OME sample server (`SDT/gh-4198`,
+  CC BY 4.0): two ZIP-compressed FIFO image blocks of 512 x 512 x 4096.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/sdt_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_sdt_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

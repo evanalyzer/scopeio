@@ -1,0 +1,5 @@
+# Known differences for Becker & Hickl SDT.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/SDT/gh-4198/FocalCheck_A1_20x_8xzoom_800nm.sdt	bioformats	-			Bio-Formats returns each block with a second channel that is all zeros; its channel 0 equals scopeio's block sample for sample (checked on the 64 x 64 x 4096 crop of block 0)
+tests/data/sdt/image.sdt	bioformats-rs	-			bioformats-rs returns the image blocks as one row of 280 samples (7 x 5 x 8 bins flattened); Bio-Formats rejects the file
+tests/data/sdt/decay.sdt	bioformats-rs	-			bioformats-rs returns the decay curve as a 16-pixel row (one plane) instead of 16 time bins; Bio-Formats rejects the file

@@ -98,6 +98,7 @@ python3 -I tests/scripts/make_xrm_samples.py      # Zeiss Xradia TXRM / XRM (use
 python3 -I tests/scripts/make_ics_samples.py      # ICS 1.0 / 2.0
 python3 -I tests/scripts/make_obf_samples.py      # Imspector OBF
 python3 -I tests/scripts/make_incell_samples.py   # IN Cell Analyzer (uses make_micromanager_samples.py)
+python3 -I tests/scripts/make_sdt_samples.py      # Becker & Hickl SDT
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -260,6 +261,11 @@ python3 -I tests/scripts/oracle.py obf --append --repeat 1 tests/data/obf/two.ob
 I=InCell2000; python3 -I tests/scripts/fetch_ome.py $I/zenodo-14777242/ $I/zenodo-14769820/Dataset_Fail/
 python3 -I tests/scripts/oracle.py incell --repeat 1 tests/reference/ome/$I/zenodo-14777242/Training_Demo_1.xdce tests/reference/ome/$I/zenodo-14769820/Dataset_Fail/Dataset3_RedoAcq_1.xdce
 python3 -I tests/scripts/oracle.py incell --append --repeat 1 tests/data/incell/listed/plate.xdce tests/data/incell/named/plate.xdce
+# Becker & Hickl SDT: OME sample (CC BY 4.0), crops of both 2 GiB blocks, and the synthetic files
+S=tests/reference/ome/SDT/gh-4198/FocalCheck_A1_20x_8xzoom_800nm.sdt; python3 -I tests/scripts/fetch_ome.py SDT/
+BF_MAX_MEM=8g python3 -I tests/scripts/oracle.py sdt --repeat 1 --series 0 --crop 200,200,64,64 $S
+BF_MAX_MEM=8g python3 -I tests/scripts/oracle.py sdt --append --repeat 1 --series 1 --crop 300,100,64,64 $S
+python3 -I tests/scripts/oracle.py sdt --append --repeat 1 tests/data/sdt/image.sdt tests/data/sdt/decay.sdt
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

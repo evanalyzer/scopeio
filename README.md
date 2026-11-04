@@ -129,6 +129,7 @@ compared, "n/a" means the reader cannot open the format.
 | ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
 | Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
 | IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
+| Becker & Hickl SDT | 4 | 495 ms | 1033 MiB | 30× / 0.5× | 3.5× / 2.8× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -171,6 +172,9 @@ compared, "n/a" means the reader cannot open the format.
 - Imspector OBF: bioformats-rs reads one plane of the first stack only,
   so its factor compares a single plane with scopeio's whole file.
 - IN Cell Analyzer: bioformats-rs cannot parse the Latin-1 `.xdce` files.
+- Becker & Hickl SDT: a ZIP-compressed image block stores the time bins
+  fastest, so scopeio decompresses it once into memory (2 GiB for the
+  512 x 512 x 4096 sample) and needs about twice Bio-Formats' RAM there.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -204,7 +208,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **BD Pathway** | `.exp, .tif` |  |
 | **BDV** | `.xml, .h5` | ✅ |
 | **Becker & Hickl SPC FIFO** | `.spc` |  |
-| **Becker & Hickl SPCImage** | `.sdt` |  |
+| **Becker & Hickl SPCImage** | `.sdt` | ✅ |
 | **Bio-Rad Gel** | `.1sc` |  |
 | **Bio-Rad PIC** | `.pic, .raw, .xml` |  |
 | **Bio-Rad SCN** | `.scn` |  |
@@ -438,6 +442,12 @@ channels; plate rows, columns and wells are in `plates()`. A wave imaged in
 2-D within a z stack serves its plane at every z, as Bio-Formats does.
 Older `.xdce` files that list no images (`number="0"`) are read from the
 image file names.
+
+**Becker & Hickl SDT.** Each data block is a series of the image size
+with the TCSPC time bins as T (time increment = bin width), as Bio-Formats
+reports them; Bio-Formats adds a second, empty channel per block.
+ZIP-compressed blocks are held decompressed in memory after the first
+read; LZ4-compressed blocks are not supported yet.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

@@ -68,6 +68,8 @@ mod qptiff;
 mod scanr;
 #[cfg(feature = "scn")]
 mod scn;
+#[cfg(feature = "sdt")]
+mod sdt;
 #[cfg(feature = "ndpi")]
 mod ndpi;
 #[cfg(feature = "ndpi")]
@@ -182,6 +184,8 @@ static SUPPORTED: &[FormatInfo] = &[
     ics::FORMAT,
     #[cfg(feature = "obf")]
     obf::FORMAT,
+    #[cfg(feature = "sdt")]
+    sdt::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -339,6 +343,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "sdt")]
+    if sdt::matches(path, &head) {
+        return Ok(Some(FormatId::Sdt));
+    }
     #[cfg(feature = "obf")]
     if obf::matches(&head) {
         return Ok(Some(FormatId::Obf));
@@ -397,6 +405,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "sdt")]
+        Some(FormatId::Sdt) => Ok(Arc::new(Reader(sdt::Sdt::open(path)?))),
         #[cfg(feature = "obf")]
         Some(FormatId::Obf) => Ok(Arc::new(Reader(obf::Obf::open(path)?))),
         #[cfg(feature = "ics")]
