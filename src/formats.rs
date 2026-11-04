@@ -44,6 +44,8 @@ mod hdf5;
 mod ics;
 #[cfg(feature = "ims")]
 mod ims;
+#[cfg(feature = "incell")]
+mod incell;
 #[cfg(feature = "lif")]
 mod lif;
 #[cfg(feature = "tiff")]
@@ -170,6 +172,8 @@ static SUPPORTED: &[FormatInfo] = &[
     xrm::FORMAT,
     #[cfg(feature = "operetta")]
     operetta::FORMAT,
+    #[cfg(feature = "incell")]
+    incell::FORMAT,
     #[cfg(feature = "dv")]
     dv::FORMAT,
     #[cfg(feature = "mrc")]
@@ -256,6 +260,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "scanr")]
     if scanr::matches(path, &head) {
         return Ok(Some(FormatId::ScanR));
+    }
+    #[cfg(feature = "incell")]
+    if incell::matches(path, &head) {
+        return Ok(Some(FormatId::InCell));
     }
     #[cfg(feature = "operetta")]
     if operetta::matches(path, &head) {
@@ -401,6 +409,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::MicroManager) => Ok(Arc::new(Reader(micromanager::MicroManager::open(path, opts)?))),
         #[cfg(feature = "scanr")]
         Some(FormatId::ScanR) => Ok(Arc::new(Reader(scanr::ScanR::open(path)?))),
+        #[cfg(feature = "incell")]
+        Some(FormatId::InCell) => Ok(Arc::new(Reader(incell::InCell::open(path)?))),
         #[cfg(feature = "operetta")]
         Some(FormatId::Operetta) => Ok(Arc::new(Reader(operetta::Operetta::open(path)?))),
         #[cfg(feature = "xrm")]

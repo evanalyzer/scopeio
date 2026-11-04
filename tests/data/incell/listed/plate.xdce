@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<ImageStack PlateID="Synthetic">
+  <Creation date="2026-11-04" time="10:11:12"/>
+  <AutoLeadAcquisitionProtocol>
+    <ObjectiveCalibration magnification="20.00" numerical_aperture="0.75" pixel_height="0.3250" pixel_width="0.3250" unit="µm"/>
+    <Wavelengths>
+      <Wavelength index="0" name="DAPI_455">
+        <ExcitationFilter name="DAPI" unit="nm" wavelength="405"/>
+        <EmissionFilter name="DAPI" unit="nm" wavelength="455"/>
+        <Exposure time="100.0" unit="ms"/>
+      </Wavelength>
+      <Wavelength index="1" name="FITC_511">
+        <ExcitationFilter name="FITC" unit="nm" wavelength="475"/>
+        <EmissionFilter name="FITC" unit="nm" wavelength="511"/>
+        <Exposure time="200.0" unit="ms"/>
+      </Wavelength>
+    </Wavelengths>
+    <Plate columns="12" name="96 well" rows="8"/>
+    <ZDimensionParameters enabled="true" number_of_slices="2" step="1.500"/>
+  </AutoLeadAcquisitionProtocol>
+  <Images image_format="TIFF" number="16" version="1.0">
+    <Image filename="B - 03(fld 1 wv DAPI - DAPI z 01).tif" timestamp_sec="1000.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3000.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="0" time_index="0" wave_index="0" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 1 wv DAPI - DAPI z 02).tif" timestamp_sec="1001.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3000.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="0" time_index="0" wave_index="0" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 1 wv FITC - FITC z 01).tif" timestamp_sec="1010.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3000.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="0" time_index="0" wave_index="1" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 1 wv FITC - FITC z 02).tif" timestamp_sec="1011.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3000.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="0" time_index="0" wave_index="1" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 2 wv DAPI - DAPI z 01).tif" timestamp_sec="1000.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3100.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="1" time_index="0" wave_index="0" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 2 wv DAPI - DAPI z 02).tif" timestamp_sec="1001.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3100.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="1" time_index="0" wave_index="0" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 2 wv FITC - FITC z 01).tif" timestamp_sec="1010.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3100.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="1" time_index="0" wave_index="1" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="B - 03(fld 2 wv FITC - FITC z 02).tif" timestamp_sec="1011.5" version="1.1">
+      <Well label="B - 3"><Row number="2"/><Column number="3"/></Well>
+      <PlatePosition_um x="3100.0" y="4000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="1" time_index="0" wave_index="1" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 1 wv DAPI - DAPI z 01).tif" timestamp_sec="1000.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4000.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="0" time_index="0" wave_index="0" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 1 wv DAPI - DAPI z 02).tif" timestamp_sec="1001.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4000.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="0" time_index="0" wave_index="0" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 1 wv FITC - FITC z 01).tif" timestamp_sec="1010.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4000.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="0" time_index="0" wave_index="1" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 1 wv FITC - FITC z 02).tif" timestamp_sec="1011.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4000.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="0" time_index="0" wave_index="1" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 2 wv DAPI - DAPI z 01).tif" timestamp_sec="1000.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4100.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="1" time_index="0" wave_index="0" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 2 wv DAPI - DAPI z 02).tif" timestamp_sec="1001.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4100.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="1" time_index="0" wave_index="0" z_index="1" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 2 wv FITC - FITC z 01).tif" timestamp_sec="1010.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4100.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="100.0"/>
+      <Identifier field_index="1" time_index="0" wave_index="1" z_index="0" version="1.1"/>
+    </Image>
+    <Image filename="C - 04(fld 2 wv FITC - FITC z 02).tif" timestamp_sec="1011.5" version="1.1">
+      <Well label="C - 4"><Row number="3"/><Column number="4"/></Well>
+      <PlatePosition_um x="4100.0" y="6000.0"/>
+      <FocusPosition unit="µm" z="101.5"/>
+      <Identifier field_index="1" time_index="0" wave_index="1" z_index="1" version="1.1"/>
+    </Image>
+  </Images>
+</ImageStack>

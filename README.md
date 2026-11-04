@@ -128,6 +128,7 @@ compared, "n/a" means the reader cannot open the format.
 | Zeiss Xradia XRM | 3 | 1 ms | 4.4 MiB | 207× / 40× | n/a | – |
 | ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
 | Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
+| IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -169,6 +170,7 @@ compared, "n/a" means the reader cannot open the format.
   7.8-gigapixel slide whole.
 - Imspector OBF: bioformats-rs reads one plane of the first stack only,
   so its factor compares a single plane with scopeio's whole file.
+- IN Cell Analyzer: bioformats-rs cannot parse the Latin-1 `.xdce` files.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 
@@ -243,7 +245,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Improvision Openlab Raw** | — |  |
 | **Improvision TIFF** | `.tif` |  |
 | **Imspector OBF** | `.obf, .msr` | ✅ (MSR only with OBF header) |
-| **InCell 1000/2000** | `.xdce, .tif` |  |
+| **InCell 1000/2000** | `.xdce, .tif` | ✅ |
 | **InCell 3000** | `.frm` |  |
 | **INR** | — |  |
 | **Inveon** | `.hdr` |  |
@@ -430,6 +432,12 @@ are supported. Not supported yet: `.msr` files in the older archive layout
 (no OBF header, `CDataStack`). In the one public sample the 16-bit planes
 follow the axis labels directly, but the rest of the layout is
 undocumented; more samples are needed to read it reliably.
+
+**IN Cell Analyzer.** Each (well, field) is a series with the waves as
+channels; plate rows, columns and wells are in `plates()`. A wave imaged in
+2-D within a z stack serves its plane at every z, as Bio-Formats does.
+Older `.xdce` files that list no images (`number="0"`) are read from the
+image file names.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

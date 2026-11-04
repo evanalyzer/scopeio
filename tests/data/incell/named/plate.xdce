@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<ImageStack PlateID="Synthetic">
+  <Creation date="2026-11-04" time="10:11:12"/>
+  <AutoLeadAcquisitionProtocol>
+    <ObjectiveCalibration magnification="20.00" numerical_aperture="0.75" pixel_height="0.3250" pixel_width="0.3250" unit="µm"/>
+    <Wavelengths>
+      <Wavelength index="0" name="DAPI_455">
+        <ExcitationFilter name="DAPI" unit="nm" wavelength="405"/>
+        <EmissionFilter name="DAPI" unit="nm" wavelength="455"/>
+        <Exposure time="100.0" unit="ms"/>
+      </Wavelength>
+      <Wavelength index="1" name="FITC_511">
+        <ExcitationFilter name="FITC" unit="nm" wavelength="475"/>
+        <EmissionFilter name="FITC" unit="nm" wavelength="511"/>
+        <Exposure time="200.0" unit="ms"/>
+      </Wavelength>
+    </Wavelengths>
+    <Plate columns="12" name="96 well" rows="8"/>
+    <ZDimensionParameters enabled="true" number_of_slices="2" step="1.500"/>
+  </AutoLeadAcquisitionProtocol>
+  <Images image_format="TIFF" number="0" version="1.0"/>
+</ImageStack>

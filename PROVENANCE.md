@@ -612,6 +612,21 @@ as black-box command-line tools to produce reference output
   `tests/expected/obf_divergences.tsv`).
 - Synthetic file written by `tests/scripts/make_obf_samples.py`.
 
+## IN Cell Analyzer (`src/formats/incell.rs`)
+
+- IN Cell Analyzer 2200 user manual (Cytiva, `doc/incell/`): image stack
+  file and TIFF output.
+- Own analysis of the IN Cell acquisitions on the OME sample server
+  (`InCell2000/zenodo-14777242` and `zenodo-14769820`, CC BY 4.0; the
+  `.xdce` files of `INMAC384-*` and `idr0017`, the latter CC BY-NC-ND 4.0,
+  used locally only): `Images` entries with `Well`, `Identifier`,
+  `PlatePosition_um`; Latin-1 XML; image file names of indexes without
+  image entries.
+- Checked against Bio-Formats as a black box (88 series); the reference
+  readers' handling of 2-D waves in z stacks was matched (see
+  `tests/expected/incell_divergences.tsv`).
+- Synthetic acquisitions written by `tests/scripts/make_incell_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

@@ -86,6 +86,8 @@ pub enum FormatId {
     Ics,
     /// Imspector / Abberior OBF (`.obf`, OBF-based `.msr`).
     Obf,
+    /// GE / Cytiva IN Cell Analyzer (`.xdce` and TIFF files).
+    InCell,
 }
 
 /// Identification of the reader that produced the data, for
