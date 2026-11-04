@@ -1,0 +1,5 @@
+# Known differences for ICS.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/ICS/gh-4197/20240612_training_test-tiles_01_stitched.ics	bioformats-rs	-			byte_order 2 1 (big endian): bioformats-rs returns the bytes unswapped; Bio-Formats and scopeio agree
+tests/data/ics/be_u16.ics	bioformats	-			layout coordinates cartesian (origin at the lower left pixel, libics documentation): scopeio returns the rows from the top; Bio-Formats returns them as stored here (it does flip the cartesian Huygens sample of jan/, which scopeio matches)
+tests/data/ics/be_u16.ics	bioformats-rs	-			big-endian samples returned unswapped by bioformats-rs, and rows as stored (see above)

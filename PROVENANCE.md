@@ -582,6 +582,21 @@ as black-box command-line tools to produce reference output
   `tests/expected/xrm_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_xrm_samples.py`.
 
+## ICS (`src/formats/ics.rs`)
+
+- Dean et al., "Proposed standard for image cytometry data files",
+  Cytometry 11 (1990); libics documentation pages (Ics_Header with the
+  `video` / `cartesian` coordinate systems, Ics_DataRepresentation,
+  Ics_ImelRepresentation; documentation only, the LGPL code was not
+  consulted) and the SVI ICS page in `doc/ics/`.
+- Own analysis of the ICS samples on the OME sample server (`ICS/jan`,
+  Huygens ICS 1.0 with a `p` dimension; `ICS/gh-4197`, big-endian ICS 1.0
+  with an irregular header; both CC BY 4.0).
+- Checked against Bio-Formats and bioformats-rs as black boxes, including
+  reduced copies of the Huygens header to locate Bio-Formats' row order
+  (see `tests/expected/ics_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_ics_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

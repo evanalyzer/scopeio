@@ -82,6 +82,8 @@ pub enum FormatId {
     OmeXml,
     /// Zeiss Xradia (`.txm`, `.txrm`, `.xrm`).
     Xrm,
+    /// Image Cytometry Standard (`.ics` + `.ids`, ICS 2.0).
+    Ics,
 }
 
 /// Identification of the reader that produced the data, for

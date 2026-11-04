@@ -126,6 +126,7 @@ compared, "n/a" means the reader cannot open the format.
 | Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
 | OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
 | Zeiss Xradia XRM | 3 | 1 ms | 4.4 MiB | 207× / 40× | n/a | – |
+| ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -229,7 +230,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Hamamatsu VMS** | `.vms` | ✅ |
 | **Hitachi S-4800** | `.txt, .tif, .bmp, .jpg` |  |
 | **I2I** | `.i2i` |  |
-| **ICS (Image Cytometry Standard)** | `.ics, .ids` |  |
+| **ICS (Image Cytometry Standard)** | `.ics, .ids` | ✅ |
 | **Imacon** | `.fff` |  |
 | **ImagePro Sequence** | — |  |
 | **ImagePro Workspace** | — |  |
@@ -411,6 +412,13 @@ stored; Bio-Formats returns every image flipped vertically (same pixels
 otherwise). Projection angles are in the original metadata, stage
 positions and exposures in the plane metadata. bioformats-rs reads none of
 the test files.
+
+**ICS.** ICS 1.0 (`.ics` + `.ids` or `.ids.gz`) and 2.0 (one file, or a
+`source file`). Dimensions `x`, `y`, `z` and `t` keep their role; every
+other dimension (`ch`, `p` and unnamed ones) adds channels, as both
+reference readers do. With `layout coordinates cartesian` (origin at the
+lower left, libics documentation) rows are returned from the top.
+bioformats-rs returns big-endian samples unswapped.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

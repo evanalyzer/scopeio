@@ -38,6 +38,8 @@ mod dicom;
 mod dv;
 #[cfg(any(feature = "ims", feature = "bdv"))]
 mod hdf5;
+#[cfg(feature = "ics")]
+mod ics;
 #[cfg(feature = "ims")]
 mod ims;
 #[cfg(feature = "lif")]
@@ -170,6 +172,8 @@ static SUPPORTED: &[FormatInfo] = &[
     dv::FORMAT,
     #[cfg(feature = "mrc")]
     mrc::FORMAT,
+    #[cfg(feature = "ics")]
+    ics::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -323,6 +327,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if dv::matches(&head) {
         return Ok(Some(FormatId::DeltaVision));
     }
+    #[cfg(feature = "ics")]
+    if ics::matches(path, &head) {
+        return Ok(Some(FormatId::Ics));
+    }
     #[cfg(feature = "nifti")]
     if let Some(id) = nifti::probe(path, &head) {
         return Ok(Some(id));
@@ -373,6 +381,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "ics")]
+        Some(FormatId::Ics) => Ok(Arc::new(Reader(ics::Ics::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

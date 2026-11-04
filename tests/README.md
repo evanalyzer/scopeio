@@ -95,6 +95,7 @@ python3 -I tests/scripts/make_ndpi_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_vms_samples.py    # needs ImageMagick
 python3 -I tests/scripts/make_omexml_samples.py   # OME-XML with inline pixels
 python3 -I tests/scripts/make_xrm_samples.py      # Zeiss Xradia TXRM / XRM (uses cfbwriter.py)
+python3 -I tests/scripts/make_ics_samples.py      # ICS 1.0 / 2.0
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -244,6 +245,11 @@ python3 -I tests/scripts/oracle.py omexml --append --repeat 1 tests/data/omexml/
 python3 -I tests/scripts/fetch_zenodo.py 4432446 XCT_predeformation_XradiaVersa520.txm
 python3 -I tests/scripts/oracle.py xrm --repeat 1 tests/reference/zenodo-4432446/XCT_predeformation_XradiaVersa520.txm
 python3 -I tests/scripts/oracle.py xrm --append --repeat 1 tests/data/xrm/projections.txrm tests/data/xrm/single.xrm
+# ICS: OME samples (CC BY 4.0) and the synthetic files
+python3 -I tests/scripts/fetch_ome.py ICS/
+python3 -I tests/scripts/oracle.py ics --repeat 3 tests/reference/ome/ICS/jan/*.ics
+python3 -I tests/scripts/oracle.py ics --append --repeat 1 tests/reference/ome/ICS/gh-4197/*.ics
+python3 -I tests/scripts/oracle.py ics --append --repeat 1 tests/data/ics/*.ics
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

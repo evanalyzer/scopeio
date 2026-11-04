@@ -1,0 +1,15 @@
+	
+ics_version	1.0
+filename	be_u16
+layout	parameters	6
+layout	order	bits	x	y	z	ch	l
+layout	sizes	16	7	5	3	2	2
+layout	coordinates	cartesian
+representation	format	integer
+representation	sign	unsigned
+representation	compression	uncompressed
+representation	byte_order	2	1
+parameter	scale	1	0.25	0.25	1.0	1	1
+parameter	units	bits	micrometers	micrometers	micrometers	undefined	undefined
+sensor	s_params	LambdaEx	488	561
+sensor	s_params	NumAperture	1.4
