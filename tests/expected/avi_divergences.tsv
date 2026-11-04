@@ -1,0 +1,30 @@
+# Known differences for AVI.
+file	tool	series	tolerance	ignore	reason
+tests/data/avi/bgr24.avi	bioformats				rows are DWORD-padded (5 x 3 = 15 bytes stored in 16, BITMAPINFOHEADER docs); Bio-Formats does not skip the padding: its first row starts at x = 2 and contains padding bytes
+tests/data/avi/bgra32.avi	bioformats				alpha is 255 in every pixel: scopeio drops it (documented choice); the reference output is scopeio's RGB plus alpha 255 (CRC 223eaac2 computed from the generator)
+tests/data/avi/bgra32.avi	bioformats-rs				alpha is 255 in every pixel: scopeio drops it (documented choice); the reference output is scopeio's RGB plus alpha 255 (CRC 223eaac2 computed from the generator)
+tests/data/avi/dropped.avi	bioformats-rs				the third 00db chunk is empty, a dropped frame that repeats the previous one (AVI RIFF reference); bioformats-rs skips it (3 time points), Bio-Formats and scopeio keep 4
+tests/data/avi/mjpeg.avi	bioformats		1.0		Motion JPEG 4:2:0: decoders differ in IDCT and chroma upsampling
+tests/data/avi/mjpeg.avi	bioformats-rs				bioformats-rs returns other colours than the encoded image (first pixel 37,24,0; source 0,0,128); Bio-Formats and scopeio agree within 1 per block mean
+tests/data/avi/mjpeg_nodht.avi	bioformats		1.0		Motion JPEG 4:2:0 without DHT (standard tables of T.81 K.3 inserted): decoders differ in IDCT and chroma upsampling
+tests/data/avi/mjpeg_nodht.avi	bioformats-rs				bioformats-rs returns other colours than the encoded image (first pixel 37,24,0; source 0,0,128); Bio-Formats and scopeio agree within 1 per block mean
+tests/data/avi/noidx.avi	bioformats				no idx1, frames grouped in LIST 'rec ' inside movi; Bio-Formats finds 1 frame, the movi list holds 3 (scopeio scans the list)
+tests/data/avi/opendml.avi	bioformats				OpenDML: 2 frames in RIFF 'AVI ' and 3 in RIFF 'AVIX', all listed in the indx super index; the reference readers read only the first RIFF chunk
+tests/data/avi/opendml.avi	bioformats-rs				OpenDML: 2 frames in RIFF 'AVI ' and 3 in RIFF 'AVIX', all listed in the indx super index; the reference readers read only the first RIFF chunk
+tests/data/avi/palette8.avi	bioformats-rs				8-bit colour palette: bioformats-rs returns the palette indices (1 channel), scopeio the RGB colours of the strf colour table
+tests/data/avi/rle8.avi	bioformats-rs				RLE8 with a colour palette: bioformats-rs returns the palette indices (1 channel), scopeio the RGB colours of the strf colour table
+# Files a reference reader cannot open (documentation only; failed runs are not compared).
+tests/data/avi/absidx.avi	bioformats				fails to open ("0 must be non-null and strictly positive"); the file has an audio stream (strh rcFrame 0 x 0) and absolute idx1 offsets
+tests/data/avi/topdown24.avi	bioformats				fails on the negative biHeight of a top-down DIB (valid for BI_RGB per BITMAPINFOHEADER)
+tests/data/avi/topdown24.avi	bioformats-rs				fails: expects unpadded rows (64 bytes per frame are correct for 5 x 4 x 24-bit with DWORD padding)
+tests/data/avi/bgr24.avi	bioformats-rs				fails: expects unpadded rows (64 bytes per frame are correct for 5 x 4 x 24-bit with DWORD padding)
+tests/data/avi/y800.avi	bioformats				Y800 (8-bit gray) not supported
+tests/data/avi/y800.avi	bioformats-rs				Y800 (8-bit gray) not supported
+tests/data/avi/rle4.avi	bioformats				RLE4 (biCompression 2) not supported
+tests/data/avi/rle4.avi	bioformats-rs				RLE4 (biCompression 2) not supported
+tests/data/avi/mjpeg_gray.avi	bioformats				fails on a one-component (gray) Motion JPEG stream
+tests/data/avi/mjpeg_gray.avi	bioformats-rs				fails on a one-component (gray) Motion JPEG stream (expects 3 samples)
+tests/data/avi/truncated.avi	bioformats				fails on a file cut in its second frame; scopeio returns the complete first frame
+tests/data/avi/truncated.avi	bioformats-rs				fails on a file cut in its second frame; scopeio returns the complete first frame
+tests/data/avi/h264.avi	bioformats				H.264 not supported (as in scopeio)
+tests/data/avi/h264.avi	bioformats-rs				H.264 not supported (as in scopeio)

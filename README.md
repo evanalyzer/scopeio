@@ -136,6 +136,7 @@ compared, "n/a" means the reader cannot open the format.
 | MetaXpress | 6 | 10 ms | 7.5 MiB | 174× / 28× | 0.8× / 2.9× | – |
 | NRRD | 10 | 4 ms | 4.6 MiB | 192× / 44× | 10.0× / 7.3× | – |
 | Keller Lab Block | 7 | 14 ms | 6.0 MiB | 100× / 15× | 3.1× / 1.8× | – |
+| AVI | 16 | 1 ms | 4.8 MiB | 853× / 24× | 2.2× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -209,7 +210,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Aperio AFI** | `.afi, .svs` | ❌ not possible yet (see Format notes) |
 | **Aperio SVS TIFF** | `.svs` | ✅ |
 | **Applied Precision CellWorX** | `.htd, .pnl` |  |
-| **AVI (Audio Video Interleave)** | `.avi` |  |
+| **AVI (Audio Video Interleave)** | `.avi` | ✅ uncompressed, MSRLE, Motion JPEG (lossy, see notes) |
 | **Axon Raw Format** | `.arf` |  |
 | **BD Pathway** | `.exp, .tif` |  |
 | **BDV** | `.xml, .h5` | ✅ |
@@ -494,6 +495,27 @@ file they return only the first channel and time point. On a 4.4
 gigapixel idr0044 stack scopeio needs 53 s CPU and 86 MB, Bio-Formats
 306 s and 742 MB; bioformats-rs exceeds 8 GB. Not supported: 64-bit
 integer samples.
+
+**AVI.** Each video stream is a series with one time point per frame
+(counted from the index, not `avih.dwTotalFrames`); audio is ignored.
+Codecs from `strf.biCompression`: uncompressed 8-bit palette (gray
+palettes as one sample, colour palettes as RGB), 16/24/32-bit (32-bit
+alpha only when the first frame's alpha is not constant 0 or 255),
+`Y800` / `GREY` gray, MSRLE (RLE8 / RLE4 with delta frames) and Motion
+JPEG (frames without Huffman tables get the T.81 Annex K tables). OpenDML
+files above 1 GB (`indx` / `ix##`, `RIFF AVIX`) are read in full; empty
+chunks (dropped frames) repeat the previous frame. Uncompressed frames are
+read row by row from the file; compressed frames are decoded whole and the
+last one is cached. **Motion JPEG is lossy (typically 4:2:0 chroma
+subsampling): do not use it for quantitative intensity analysis.**
+Inter-frame codecs (H.264, MPEG-4, Cinepak, …) are rejected with a hint to
+convert the file. The reference readers read only the first RIFF chunk of
+OpenDML files and fail on several valid variants (see
+`tests/expected/avi_divergences.tsv`).
+On 1000 frames of 1024 x 1024 scopeio reads a 1 GB uncompressed OpenDML
+file in 0.37 s CPU with 6 MiB RAM (Bio-Formats: 8.7 s and 906 MiB for
+half of the frames) and Motion JPEG in 2.9 s with 17 MiB (Bio-Formats
+12.7 s / 739 MiB, bioformats-rs 8.7 s / 6 GiB); see BENCHMARK.md.
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

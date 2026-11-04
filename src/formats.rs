@@ -10,6 +10,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "avi")]
+mod avi;
 #[cfg(feature = "bdv")]
 mod bdv;
 #[cfg(feature = "bif")]
@@ -22,6 +24,8 @@ mod cfb;
 mod cv7000;
 #[cfg(feature = "czi")]
 mod czi;
+#[cfg(any(feature = "bmp", feature = "avi"))]
+mod dib;
 #[cfg(feature = "dicom")]
 mod dicom;
 #[cfg(feature = "dv")]
@@ -212,6 +216,8 @@ static SUPPORTED: &[FormatInfo] = &[
     nrrd::FORMAT,
     #[cfg(feature = "klb")]
     klb::FORMAT,
+    #[cfg(feature = "avi")]
+    avi::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -393,6 +399,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if obf::matches(&head) {
         return Ok(Some(FormatId::Obf));
     }
+    #[cfg(feature = "avi")]
+    if avi::matches(&head) {
+        return Ok(Some(FormatId::Avi));
+    }
     #[cfg(feature = "klb")]
     if klb::matches(path, &head) {
         return Ok(Some(FormatId::Klb));
@@ -475,6 +485,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nrrd) => Ok(Arc::new(Reader(nrrd::Nrrd::open(path)?))),
         #[cfg(feature = "klb")]
         Some(FormatId::Klb) => Ok(Arc::new(Reader(klb::Klb::open(path)?))),
+        #[cfg(feature = "avi")]
+        Some(FormatId::Avi) => Ok(Arc::new(Reader(avi::Avi::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

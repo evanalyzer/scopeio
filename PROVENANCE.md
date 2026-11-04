@@ -727,6 +727,34 @@ as black-box command-line tools to produce reference output
 - bzip2 decoding by `bzip2-rs` (see Codecs).
 - Synthetic files written by `tests/scripts/make_klb_samples.py`.
 
+## AVI (`src/formats/avi.rs`, `src/formats/dib.rs`)
+
+- Microsoft "AVI RIFF File Reference" with AVIMAINHEADER, AVISTREAMHEADER,
+  AVIOLDINDEX, AVISUPERINDEX and AVISTDINDEX (`doc/avi/`); OpenDML AVI
+  File Format Extensions (`doc/avi/opendml-avi-2.0.pdf`); RIFF
+  (`doc/riff/`).
+- BITMAPINFOHEADER, colour tables and RLE4 / RLE8 from the Microsoft bitmap
+  pages (`doc/bmp/`); this code moved from the BMP reader into
+  `src/formats/dib.rs`, shared by both.
+- ITU-T T.81 (JPEG) Annex K.3 standard Huffman tables for Motion JPEG
+  frames without DHT; decoding by zune-jpeg (existing JPEG path).
+- Own analysis of sample bytes (a private ImageJ-written MJPEG file, not
+  committed: `fccHandler` 'DIB ' with `biCompression` 'MJPG').
+- Decisions: the codec comes from `biCompression`; T from the index; a
+  zero-size chunk repeats the previous frame; 32-bit alpha is kept only if
+  the first frame's alpha is not constant 0 or 255; `Y800` / `GREY` /
+  `Y8  ` rows are top-down and unpadded; MSRLE delta frames are applied
+  from the last key frame (all frames count as key frames when found by a
+  scan); palette-change chunks (`##pc`) are ignored; a damaged file keeps
+  the frames whose chunks are complete; with several video streams,
+  streams with an unsupported codec are skipped (an error only if none is
+  supported).
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/avi_divergences.tsv`); no Bio-Formats, bioformats-rs or
+  ffmpeg code consulted.
+- Synthetic files (including a small baseline JPEG encoder with the
+  T.81 K.1 / K.3 tables) written by `tests/scripts/make_avi_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

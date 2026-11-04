@@ -105,6 +105,7 @@ python3 -I tests/scripts/make_cv7000_samples.py   # Yokogawa CV7000 (uses make_m
 python3 -I tests/scripts/make_metaxpress_samples.py # MetaXpress
 python3 -I tests/scripts/make_nrrd_samples.py     # NRRD
 python3 -I tests/scripts/make_klb_samples.py      # Keller Lab Block
+python3 -I tests/scripts/make_avi_samples.py      # AVI (--bench DIR: large benchmark files)
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -306,6 +307,12 @@ ln -f ${T}_CHN00.fusedStack.corrected.shifted.klb $K/single/stack_a.klb; ln -f $
 ln -f ${T}_CHN00.fusedStack_xyProjection.corrected.shifted.klb $K/single/projection.klb
 python3 -I tests/scripts/oracle.py klb --repeat 3 $K/samples/img.klb $K/single/stack_a.klb $K/single/stack_b.klb $K/single/projection.klb
 D=tests/data/klb; python3 -I tests/scripts/oracle.py klb --append --repeat 1 $D/stack.klb $D/plain.klb $D/int8.klb
+# AVI: the synthetic files; large benchmark files (generated, not committed) under their own name
+python3 -I tests/scripts/oracle.py avi --repeat 3 tests/data/avi/*.avi
+B=tests/reference/avi-bench; python3 -I tests/scripts/make_avi_samples.py --bench $B
+python3 -I tests/scripts/oracle.py avi-large --repeat 3 $B/bench_raw8.avi $B/bench_mjpeg.avi
+python3 -I tests/scripts/oracle.py avi-large --append --repeat 3 --crop 256,256,512,512 $B/bench_raw8.avi $B/bench_mjpeg.avi
+# Fuzzing (nightly + cargo-fuzz): cargo +nightly fuzz run avi fuzz/corpus/avi (seed with tests/data/avi/*.avi)
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

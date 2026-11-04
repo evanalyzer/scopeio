@@ -1,0 +1,26 @@
+# Fuzz targets (cargo-fuzz). A separate crate outside the library's
+# dependency graph: libfuzzer-sys ((MIT OR Apache-2.0) AND NCSA) is a
+# development tool only and never shipped with scopeio.
+[package]
+name = "scopeio-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "AGPL-3.0-only"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+scopeio = { path = ".." }
+
+# Not part of the scopeio workspace.
+[workspace]
+
+[[bin]]
+name = "avi"
+path = "fuzz_targets/avi.rs"
+test = false
+doc = false
+bench = false

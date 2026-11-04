@@ -9,3 +9,6 @@ CLAUDE.local.md
 __pycache__/
 promt.md
 .claude/
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts

@@ -102,6 +102,8 @@ pub enum FormatId {
     Nrrd,
     /// Keller Lab Block (`.klb`).
     Klb,
+    /// AVI video (`.avi`): uncompressed, MSRLE and Motion JPEG.
+    Avi,
 }
 
 /// Identification of the reader that produced the data, for

@@ -1,0 +1,16 @@
+file	frames	samples	crc32	mean
+gray8.avi	3	1	206a3ada	128.167
+palette8.avi	3	3	4ee0d075	129.630
+bgr24.avi	3	3	180cbc71	80.333
+topdown24.avi	3	3	180cbc71	80.333
+bgra32.avi	3	3	41f3d251	57.000
+y800.avi	3	1	206a3ada	128.167
+mjpeg.avi	3	3	-	125.584
+mjpeg_nodht.avi	3	3	-	125.584
+mjpeg_gray.avi	2	1	-	124.000
+rle8.avi	3	3	89d9fc87	64.045
+rle4.avi	3	3	89d9fc87	64.045
+noidx.avi	3	1	206a3ada	128.167
+absidx.avi	3	1	206a3ada	128.167
+dropped.avi	4	1	749276ee	130.000
+opendml.avi	5	1	a801a608	126.200
