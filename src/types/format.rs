@@ -92,6 +92,8 @@ pub enum FormatId {
     Sdt,
     /// Gatan DigitalMicrograph (`.dm3`, `.dm4`).
     Gatan,
+    /// PerkinElmer / Evotec Opera Flex (`.flex`).
+    Flex,
 }
 
 /// Identification of the reader that produced the data, for

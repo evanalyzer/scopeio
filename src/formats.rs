@@ -42,6 +42,8 @@ mod dv;
 mod hdf5;
 #[cfg(feature = "ics")]
 mod ics;
+#[cfg(feature = "flex")]
+mod flex;
 #[cfg(feature = "gatan")]
 mod gatan;
 #[cfg(feature = "ims")]
@@ -190,6 +192,8 @@ static SUPPORTED: &[FormatInfo] = &[
     sdt::FORMAT,
     #[cfg(feature = "gatan")]
     gatan::FORMAT,
+    #[cfg(feature = "flex")]
+    flex::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -329,6 +333,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if nd2::matches(&head) {
         return Ok(Some(FormatId::Nd2));
     }
+    #[cfg(feature = "flex")]
+    if flex::matches(path, &head) {
+        return Ok(Some(FormatId::Flex));
+    }
     // VSI files start with a TIFF header; check them before plain TIFF.
     #[cfg(feature = "vsi")]
     if vsi::matches(&head) {
@@ -413,6 +421,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Nd) => Ok(Arc::new(Reader(nd::Nd::open(path, opts)?))),
         #[cfg(feature = "dv")]
         Some(FormatId::DeltaVision) => Ok(Arc::new(Reader(dv::Dv::open(path)?))),
+        #[cfg(feature = "flex")]
+        Some(FormatId::Flex) => Ok(Arc::new(Reader(flex::Flex::open(path)?))),
         #[cfg(feature = "gatan")]
         Some(FormatId::Gatan) => Ok(Arc::new(Reader(gatan::Gatan::open(path)?))),
         #[cfg(feature = "sdt")]

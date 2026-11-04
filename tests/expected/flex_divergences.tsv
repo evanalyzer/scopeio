@@ -1,0 +1,7 @@
+# Known differences for Opera Flex.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/Flex/idr0007/Plate1/001001000.flex	bioformats-rs	-			bioformats-rs returns the first well only, its three fields as time points; Bio-Formats and scopeio return the plate folder as wells x fields
+tests/reference/ome/Flex/idr0007/Plate1/001003000.flex	bioformats-rs	-			bioformats-rs returns the first well only, its three fields as time points; Bio-Formats and scopeio return the plate folder as wells x fields
+tests/reference/ome/Flex/idr0007/Plate1/001005000.flex	bioformats-rs	-			bioformats-rs returns the first well only, its three fields as time points; Bio-Formats and scopeio return the plate folder as wells x fields
+tests/data/flex/well.flex	bioformats	-			both reference readers read the synthetic file as a plain TIFF (8 pages as time points); scopeio maps the pages by the Flex XML (2 fields x 2 cameras x 2 planes)
+tests/data/flex/well.flex	bioformats-rs	-			see above

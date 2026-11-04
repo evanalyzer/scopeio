@@ -100,6 +100,7 @@ python3 -I tests/scripts/make_obf_samples.py      # Imspector OBF
 python3 -I tests/scripts/make_incell_samples.py   # IN Cell Analyzer (uses make_micromanager_samples.py)
 python3 -I tests/scripts/make_sdt_samples.py      # Becker & Hickl SDT
 python3 -I tests/scripts/make_gatan_samples.py    # Gatan DM3 / DM4
+python3 -I tests/scripts/make_flex_samples.py     # Opera Flex
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -271,6 +272,10 @@ python3 -I tests/scripts/oracle.py sdt --append --repeat 1 tests/data/sdt/image.
 G=Gatan/imagesc-36590; python3 -I tests/scripts/fetch_ome.py $G/SmallMontage0000.dm4 $G/SmallMontage0001.dm4 $G/SmallMontage0002.dm4 $G/191041a_ctl_M2_3VBSED_0045.dm4
 python3 -I tests/scripts/oracle.py gatan --repeat 3 tests/reference/ome/$G/SmallMontage000[0-2].dm4
 python3 -I tests/scripts/oracle.py gatan --append --repeat 1 tests/reference/ome/$G/191041a_ctl_M2_3VBSED_0045.dm4 tests/data/gatan/stack.dm3 tests/data/gatan/rgba.dm4
+# Opera Flex: three wells of idr0007 (CC BY-NC-SA 3.0, local only) and the synthetic file
+F=Flex/idr0007/Plate1; python3 -I tests/scripts/fetch_ome.py $F/001001000.flex $F/001003000.flex $F/001005000.flex
+python3 -I tests/scripts/oracle.py flex --repeat 3 tests/reference/ome/$F/*.flex
+python3 -I tests/scripts/oracle.py flex --append --repeat 1 tests/data/flex/well.flex
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

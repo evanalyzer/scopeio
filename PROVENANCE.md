@@ -655,6 +655,18 @@ as black-box command-line tools to produce reference output
   `tests/expected/gatan_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_gatan_samples.py`.
 
+## Opera Flex (`src/formats/flex.rs`)
+
+- No public specification. Own analysis of the Flex files of IDR study
+  idr0007 on the OME sample server (`Flex/idr0007/Plate1`, CC BY-NC-SA 3.0,
+  downloaded and used locally only): TIFF pages with the Flex XML in tag
+  65200, `Well/Images` entries (`BufferNo`, `CameraRef`, `ExposureNo`,
+  `Sublayout`, `Stack`, positions, times, resolution).
+- Checked against Bio-Formats and bioformats-rs as black boxes; plate
+  grouping of a folder matched to Bio-Formats (see
+  `tests/expected/flex_divergences.tsv`).
+- Synthetic file written by `tests/scripts/make_flex_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

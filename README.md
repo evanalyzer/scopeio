@@ -131,6 +131,7 @@ compared, "n/a" means the reader cannot open the format.
 | IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
 | Becker & Hickl SDT | 4 | 495 ms | 1033 MiB | 30× / 0.5× | 3.5× / 2.8× | – |
 | Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
+| Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -226,7 +227,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **DICOM** (incl. whole-slide imaging) | `.dcm, .dicom` | ✅ |
 | **ECAT7** | `.v` |  |
 | **EPS (Encapsulated PostScript)** | `.eps, .epsi, .ps` |  |
-| **Evotec/PerkinElmer Opera Flex** | `.flex, .mea, .res` |  |
+| **Evotec/PerkinElmer Opera Flex** | `.flex, .mea, .res` | ✅ `.flex` |
 | **FEI** | `.img` |  |
 | **FEI TIFF** | `.tiff` |  |
 | **FITS (Flexible Image Transport System)** | `.fits` |  |
@@ -456,6 +457,12 @@ file). A third dimension is channels for an energy axis (spectrum images),
 z planes for a length axis, else time points (`Meta Data.IsSequence`).
 RGBA images keep their four samples. Not supported: complex, packed
 complex and RGB (type 8) data, and DM5 (HDF5) files.
+
+**Opera Flex.** The `.flex` files of a folder are the wells of a plate:
+any of them opens all, one series per well and field (as Bio-Formats
+does); channels are the (exposure, camera) pairs. No public specification
+exists (own analysis of IDR files). Not supported: LuraWave-compressed
+images and the `.mea` / `.res` measurement files.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,
