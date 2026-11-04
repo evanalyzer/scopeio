@@ -132,7 +132,7 @@ compared, "n/a" means the reader cannot open the format.
   the CPU and 2–7× the RAM.
 - The reference readers also write the pixels to disk (ICS output);
   scopeio only decodes.
-- bioformats-rs failed on 87 of the ops that scopeio read.
+- bioformats-rs failed on 98 of the ops that scopeio read.
 - Large plain images (24-megapixel RGB): PNG 0.31 s / 72 MiB (Bio-Formats
   1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.29 s / 145 MiB
   (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 4.9 s / 577 MiB
