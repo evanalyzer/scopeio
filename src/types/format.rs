@@ -100,6 +100,8 @@ pub enum FormatId {
     MetaXpress,
     /// NRRD (`.nrrd`, `.nhdr`).
     Nrrd,
+    /// Keller Lab Block (`.klb`).
+    Klb,
 }
 
 /// Identification of the reader that produced the data, for

@@ -52,6 +52,8 @@ mod cv7000;
 mod metaxpress;
 #[cfg(feature = "nrrd")]
 mod nrrd;
+#[cfg(feature = "klb")]
+mod klb;
 #[cfg(feature = "gatan")]
 mod gatan;
 #[cfg(feature = "ims")]
@@ -208,6 +210,8 @@ static SUPPORTED: &[FormatInfo] = &[
     metaxpress::FORMAT,
     #[cfg(feature = "nrrd")]
     nrrd::FORMAT,
+    #[cfg(feature = "klb")]
+    klb::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -389,6 +393,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if obf::matches(&head) {
         return Ok(Some(FormatId::Obf));
     }
+    #[cfg(feature = "klb")]
+    if klb::matches(path, &head) {
+        return Ok(Some(FormatId::Klb));
+    }
     #[cfg(feature = "nrrd")]
     if nrrd::matches(&head) {
         return Ok(Some(FormatId::Nrrd));
@@ -463,6 +471,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Ics) => Ok(Arc::new(Reader(ics::Ics::open(path)?))),
         #[cfg(feature = "nrrd")]
         Some(FormatId::Nrrd) => Ok(Arc::new(Reader(nrrd::Nrrd::open(path)?))),
+        #[cfg(feature = "klb")]
+        Some(FormatId::Klb) => Ok(Arc::new(Reader(klb::Klb::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

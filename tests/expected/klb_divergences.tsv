@@ -1,0 +1,6 @@
+# Known differences for Keller Lab Block.
+file	tool	series	tolerance	ignore	reason
+tests/data/klb/stack.klb	bioformats				the header gives 2 channels and 2 time points (xyzct); the reference readers return only channel 0 at time point 0 (identical to scopeio's first plane set, CRC dc5e914e)
+tests/data/klb/int8.klb	bioformats				the header gives 3 channels; the reference readers return only channel 0 (identical to scopeio's channel 0, CRC 00d68211)
+tests/data/klb/stack.klb	bioformats-rs				the header gives 2 channels and 2 time points (xyzct); the reference readers return only channel 0 at time point 0 (identical to scopeio's first plane set, CRC dc5e914e)
+tests/data/klb/int8.klb	bioformats-rs				the header gives 3 channels; the reference readers return only channel 0 (identical to scopeio's channel 0, CRC 00d68211)

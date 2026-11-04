@@ -104,6 +104,7 @@ python3 -I tests/scripts/make_flex_samples.py     # Opera Flex
 python3 -I tests/scripts/make_cv7000_samples.py   # Yokogawa CV7000 (uses make_micromanager_samples.py)
 python3 -I tests/scripts/make_metaxpress_samples.py # MetaXpress
 python3 -I tests/scripts/make_nrrd_samples.py     # NRRD
+python3 -I tests/scripts/make_klb_samples.py      # Keller Lab Block
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -295,6 +296,16 @@ N=NRRD; python3 -I tests/scripts/fetch_ome.py $N/glencoe/gzip/ $N/glencoe/versio
 python3 -I tests/scripts/oracle.py nrrd --repeat 3 $N/glencoe/gzip/dt-helix.nrrd.gz $N/glencoe/version4/dt-helix.nhdr \
     $N/gordon/dt-helix.nhdr $N/gordon/gk2-rcc-mask.nhdr $N/gordon/gk2-rcc-mask2.nhdr
 D=tests/data/nrrd; python3 -I tests/scripts/oracle.py nrrd --append --repeat 1 $D/scalar.nrrd $D/rgb.nhdr $D/text.nrrd $D/hex.nhdr $D/tail.nhdr
+# KLB: the OME samples; idr0044 files under neutral names, as the reference readers group
+# files named like a time-lapse (TM…/CHN…) and fail when only some are present
+K=KLB; T=$K/idr0044/Mmu_E1_CAGTAG1.TM000000_timeFused_blending/SPM00_TM000000_CM00_CM01
+python3 -I tests/scripts/fetch_ome.py $K/samples/ ${T}_CHN00.fusedStack.corrected.shifted.klb \
+    ${T}_CHN01.fusedStack.corrected.shifted.klb ${T}_CHN00.fusedStack_xyProjection.corrected.shifted.klb
+K=tests/reference/ome/KLB; T=$K/idr0044/Mmu_E1_CAGTAG1.TM000000_timeFused_blending/SPM00_TM000000_CM00_CM01; mkdir -p $K/single
+ln -f ${T}_CHN00.fusedStack.corrected.shifted.klb $K/single/stack_a.klb; ln -f ${T}_CHN01.fusedStack.corrected.shifted.klb $K/single/stack_b.klb
+ln -f ${T}_CHN00.fusedStack_xyProjection.corrected.shifted.klb $K/single/projection.klb
+python3 -I tests/scripts/oracle.py klb --repeat 3 $K/samples/img.klb $K/single/stack_a.klb $K/single/stack_b.klb $K/single/projection.klb
+D=tests/data/klb; python3 -I tests/scripts/oracle.py klb --append --repeat 1 $D/stack.klb $D/plain.klb $D/int8.klb
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

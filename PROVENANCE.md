@@ -711,6 +711,22 @@ as black-box command-line tools to produce reference output
 - Strided sample reading shared with ICS (own code).
 - Synthetic files written by `tests/scripts/make_nrrd_samples.py`.
 
+## Keller Lab Block (`src/formats/klb.rs`)
+
+- KLB README (F. Amat, Janelia, `doc/klb/`): header items and the block
+  layout; Amat et al., Nature Protocols 2015, supplementary material.
+- Own analysis of the KLB samples on the OME sample server (`KLB/samples`,
+  HHMI BSD-style licence, and `KLB/idr0044`, CC BY 4.0; neither committed):
+  little-endian header, data type 1 = uint16, compression 1 = bzip2,
+  block offsets are the cumulative end offsets after the header. The other
+  data type codes follow the README's order (uint8, uint16, uint32,
+  uint64, int8, int16, int32, int64, float32, float64), checked with
+  synthetic files against the reference readers.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/klb_divergences.tsv`).
+- bzip2 decoding by `bzip2-rs` (see Codecs).
+- Synthetic files written by `tests/scripts/make_klb_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on
@@ -730,6 +746,7 @@ the wrappers follow the specifications in `doc/codecs/`:
 | JPEG (8-bit baseline, progressive) | zune-jpeg | MIT/Apache-2.0/Zlib | decodes into caller buffers, SIMD |
 | Zstandard | ruzstd (default), zstd + libzstd (`zstd-c`) | MIT; BSD-3-Clause | see below |
 | LZ4 (Blosc, numcodecs) | lz4_flex | MIT | fastest Rust LZ4 |
+| bzip2 (KLB) | bzip2-rs | MIT/Apache-2.0 | pure-Rust decoder; libbz2-rs-sys (the `bzip2` crate's backend) is under the bzip2-1.0.6 licence, not on the allowlist |
 | Blosc 1 | own (chunk format document) | - | no mature pure-Rust crate; blusc depends on C zstd |
 
 Zstandard benchmark (2026-10-24, Intel Core Ultra 9 185H, one thread):

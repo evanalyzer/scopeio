@@ -135,6 +135,7 @@ compared, "n/a" means the reader cannot open the format.
 | Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
 | MetaXpress | 6 | 10 ms | 7.5 MiB | 174× / 28× | 0.8× / 2.9× | – |
 | NRRD | 10 | 4 ms | 4.6 MiB | 192× / 44× | 10.0× / 7.3× | – |
+| Keller Lab Block | 7 | 14 ms | 6.0 MiB | 100× / 15× | 3.1× / 1.8× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -267,7 +268,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **JPEG 2000** | `.jp2, .j2k` | ✅ |
 | **JPK** | — |  |
 | **JPX** | — |  |
-| **Keller Lab Block** | — |  |
+| **Keller Lab Block** | `.klb` | ✅ |
 | **Khoros VIFF Bitmap** | — |  |
 | **Kodak BIP** | — |  |
 | **Lambert Instruments FLIM** | — |  |
@@ -483,6 +484,16 @@ folders (`ZStep_0` projections are skipped). Images are placed by their
 file names (`<plate>_<well>_s<site>_w<wave>`), so a missing image reads as
 zeros without shifting the others (Bio-Formats shifts the later planes).
 Pixel size from the MetaMorph calibration of the TIFF files.
+
+**Keller Lab Block.** One `.klb` file is one 5-D image (x, y, z,
+channels, time) of bzip2-compressed or uncompressed blocks; a region read
+decompresses only the blocks it touches (with a small block cache). Files
+are opened one at a time: the reference readers group the files of a
+time-lapse by their `TM…` / `CHN…` names, scopeio does not; within one
+file they return only the first channel and time point. On a 4.4
+gigapixel idr0044 stack scopeio needs 53 s CPU and 86 MB, Bio-Formats
+306 s and 742 MB; bioformats-rs exceeds 8 GB. Not supported: 64-bit
+integer samples.
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

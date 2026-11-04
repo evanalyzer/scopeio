@@ -14,6 +14,7 @@ following crates (all transitive dependencies of the default features):
 | roxmltree, memchr | MIT OR Apache-2.0; Unlicense OR MIT | OME-XML |
 | serde_json, serde_core, itoa, zmij | MIT OR Apache-2.0; MIT | Zarr metadata |
 | lz4_flex | MIT | LZ4 in Blosc and numcodecs |
+| bzip2-rs, tinyvec | MIT OR Apache-2.0; Zlib OR Apache-2.0 OR MIT | bzip2 (KLB) |
 | hayro-jpeg2000 | Apache-2.0 OR MIT | JPEG 2000 |
 | png, fdeflate, miniz_oxide, adler2, crc32fast, simd-adler32, bitflags, cfg-if | MIT OR Apache-2.0; miniz_oxide also Zlib; adler2 also 0BSD; simd-adler32 MIT | PNG files |
 | openreadout-jpegxr | BSD-2-Clause | JPEG XR (CZI); notice below |
