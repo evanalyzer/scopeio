@@ -132,6 +132,7 @@ compared, "n/a" means the reader cannot open the format.
 | Becker & Hickl SDT | 4 | 495 ms | 1033 MiB | 30× / 0.5× | 3.5× / 2.8× | – |
 | Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
 | Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
+| Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -222,7 +223,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **CellH5** | `.ch5` |  |
 | **Cellomics** | — |  |
 | **CellVoyager** | `.xml, .tif` |  |
-| **CV7000** | `.wpi, .tif` |  |
+| **CV7000** | `.wpi, .tif` | ✅ |
 | **DeltaVision** | `.dv, .r3d` | ✅ |
 | **DICOM** (incl. whole-slide imaging) | `.dcm, .dicom` | ✅ |
 | **ECAT7** | `.v` |  |
@@ -463,6 +464,15 @@ any of them opens all, one series per well and field (as Bio-Formats
 does); channels are the (exposure, camera) pairs. No public specification
 exists (own analysis of IDR files). Not supported: LuraWave-compressed
 images and the `.mea` / `.res` measurement files.
+
+**Yokogawa CV7000 / CV8000.** Open the plate file (`.wpi`) or
+`MeasurementData.mlf` / `MeasurementDetail.mrf`. One series per well and
+field; channels are the (action, channel) pairs of the image records. A
+2-D channel next to a z stack (e.g. fluorescence with a brightfield stack)
+repeats its plane at every z, as Bio-Formats does; at later time points
+Bio-Formats repeats the first time point's plane, scopeio that time
+point's own. No public specification exists (own analysis of IDR and
+Cell Painting Gallery plates). bioformats-rs cannot open these plates.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

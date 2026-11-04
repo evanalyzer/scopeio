@@ -1,0 +1,5 @@
+# Known differences for Yokogawa CV7000 / CV8000.
+file	tool	series	tolerance	ignore	reason
+tests/data/cv7000/plate/synth.wpi	bioformats	0			Bio-Formats repeats a 2-D channel's plane of the first time point at every z of later time points (checked plane by plane against the TIFF files); ours repeats each time point's own plane
+tests/data/cv7000/plate/synth.wpi	bioformats	1			Bio-Formats repeats a 2-D channel's plane of the first time point at every z of later time points (checked plane by plane against the TIFF files); ours repeats each time point's own plane
+tests/data/cv7000/plate/synth.wpi	bioformats	2			Bio-Formats repeats a 2-D channel's plane of the first time point at every z of later time points (checked plane by plane against the TIFF files); ours repeats each time point's own plane

@@ -94,6 +94,8 @@ pub enum FormatId {
     Gatan,
     /// PerkinElmer / Evotec Opera Flex (`.flex`).
     Flex,
+    /// Yokogawa CellVoyager CV7000 / CV8000 (`.wpi`, `.mlf`, `.mrf` and TIFF files).
+    Cv7000,
 }
 
 /// Identification of the reader that produced the data, for

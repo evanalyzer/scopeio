@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<bts:MeasurementDetail bts:Version="1.0" bts:Title="synth" bts:OperatorName="synth" bts:Application="" bts:BeginTime="2026-11-04T10:11:12.5+01:00" bts:EndTime="2026-11-04T10:30:00.0+01:00" bts:MeasurementSettingFileName="synth.mes" bts:ColumnCount="12" bts:RowCount="8" bts:TimePointCount="2" bts:FieldCount="2" bts:ZCount="3" bts:TargetSystem="CV7000" xmlns:bts="http://www.yokogawa.co.jp/BTS/BTSSchema/1.0">
+  <bts:MeasurementSamplePlate bts:Name="synth" bts:WellPlateFileName="synth.wpi" />
+  <bts:MeasurementChannel bts:Ch="1" bts:HorizontalPixelDimension="0.65" bts:VerticalPixelDimension="0.65" bts:CameraNumber="1" bts:InputBitDepth="16" bts:InputLevel="1000" bts:HorizontalPixels="7" bts:VerticalPixels="5" bts:FilterWheelPosition="1" bts:FilterPosition="1" bts:ShadingCorrectionSource="" />
+  <bts:MeasurementChannel bts:Ch="2" bts:HorizontalPixelDimension="0.65" bts:VerticalPixelDimension="0.65" bts:CameraNumber="1" bts:InputBitDepth="16" bts:InputLevel="1000" bts:HorizontalPixels="7" bts:VerticalPixels="5" bts:FilterWheelPosition="1" bts:FilterPosition="1" bts:ShadingCorrectionSource="" />
+  <bts:MeasurementChannel bts:Ch="3" bts:HorizontalPixelDimension="0.65" bts:VerticalPixelDimension="0.65" bts:CameraNumber="1" bts:InputBitDepth="16" bts:InputLevel="1000" bts:HorizontalPixels="7" bts:VerticalPixels="5" bts:FilterWheelPosition="1" bts:FilterPosition="1" bts:ShadingCorrectionSource="" />
+</bts:MeasurementDetail>

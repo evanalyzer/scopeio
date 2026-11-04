@@ -101,6 +101,7 @@ python3 -I tests/scripts/make_incell_samples.py   # IN Cell Analyzer (uses make_
 python3 -I tests/scripts/make_sdt_samples.py      # Becker & Hickl SDT
 python3 -I tests/scripts/make_gatan_samples.py    # Gatan DM3 / DM4
 python3 -I tests/scripts/make_flex_samples.py     # Opera Flex
+python3 -I tests/scripts/make_cv7000_samples.py   # Yokogawa CV7000 (uses make_micromanager_samples.py)
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -276,6 +277,11 @@ python3 -I tests/scripts/oracle.py gatan --append --repeat 1 tests/reference/ome
 F=Flex/idr0007/Plate1; python3 -I tests/scripts/fetch_ome.py $F/001001000.flex $F/001003000.flex $F/001005000.flex
 python3 -I tests/scripts/oracle.py flex --repeat 3 tests/reference/ome/$F/*.flex
 python3 -I tests/scripts/oracle.py flex --append --repeat 1 tests/data/flex/well.flex
+# Yokogawa CV7000: trimmed copies of idr0088 (CC BY-NC 4.0, local only), idr0093 and cpg0016;
+# --per-series, bfconvert returns wrong pixels for later series when converting all at once
+python3 -I tests/scripts/fetch_cv7000.py; T=tests/reference/ome/CV7000/trim
+python3 -I tests/scripts/oracle.py cv7000 --repeat 3 $T/idr0088/110000251230.wpi $T/idr0093/020.wpi
+python3 -I tests/scripts/oracle.py cv7000 --append --per-series --repeat 1 $T/cpg0016/Dest210531-152149.wpi tests/data/cv7000/plate/synth.wpi
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

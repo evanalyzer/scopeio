@@ -667,6 +667,20 @@ as black-box command-line tools to produce reference output
   `tests/expected/flex_divergences.tsv`).
 - Synthetic file written by `tests/scripts/make_flex_samples.py`.
 
+## Yokogawa CV7000 / CV8000 (`src/formats/cv7000.rs`)
+
+- CellVoyager CV7000 user guide (Yokogawa, NCI training edition,
+  `doc/yokogawa-cv/`): measurement folders, image files and settings
+  (prose; no file schema is published).
+- Own analysis of the index files (`.wpi`, `MeasurementDetail.mrf`, `.mes`,
+  `MeasurementData.mlf`) and TIFF files of three public plates on the OME
+  sample server: `CV7000/idr0088` (CC BY-NC 4.0, used locally only),
+  `CV7000/idr0093` (CC BY 4.0) and `CV7000/cpg0016` (Cell Painting Gallery,
+  CC0 1.0); trimmed copies built by `tests/scripts/fetch_cv7000.py`.
+- Checked against Bio-Formats and bioformats-rs as black boxes, plane by
+  plane where they differed (see `tests/expected/cv7000_divergences.tsv`).
+- Synthetic measurement written by `tests/scripts/make_cv7000_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

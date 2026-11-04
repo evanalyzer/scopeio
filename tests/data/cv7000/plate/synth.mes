@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<bts:MeasurementSetting bts:Version="1.0" bts:Columns="12" bts:Rows="8" xmlns:bts="http://www.yokogawa.co.jp/BTS/BTSSchema/1.0">
+  <bts:Timelapse>
+    <bts:Timeline bts:Name="Time Line 1" bts:InitialTime="0" bts:Period="60" bts:Interval="60">
+      <bts:ActionList bts:RunMode="sequential">
+        <bts:ActionAcquire bts:XOffset="0" bts:YOffset="0" bts:ZOffset="-3">
+          <bts:Ch>1</bts:Ch>
+          <bts:Ch>2</bts:Ch>
+        </bts:ActionAcquire>
+        <bts:ActionAcquireBF3D bts:XOffset="0" bts:YOffset="0" bts:TopDistance="2" bts:BottomDistance="-2" bts:SliceLength="2">
+          <bts:Ch>3</bts:Ch>
+        </bts:ActionAcquireBF3D>
+      </bts:ActionList>
+    </bts:Timeline>
+  </bts:Timelapse>
+  <bts:LightSourceList>
+    <bts:LightSource bts:Name="405nm" bts:Type="Laser" bts:WaveLength="405" bts:Power="100" />
+    <bts:LightSource bts:Name="488nm" bts:Type="Laser" bts:WaveLength="488" bts:Power="100" />
+    <bts:LightSource bts:Name="Lamp" bts:Type="Lamp" bts:WaveLength="0" bts:Power="30" />
+  </bts:LightSourceList>
+  <bts:ChannelList>
+    <bts:Channel bts:Ch="1" bts:Target="DNA" bts:ObjectiveID="20000" bts:Objective="20x" bts:Magnification="20" bts:MethodID="1" bts:Method="Fluorescence" bts:FilterID="1" bts:Fluorophore="" bts:CameraType="AndorZyla" bts:InputLevel="1000" bts:MinLevel="0" bts:MaxLevel="1" bts:Acquisition="BP445/45" bts:ExposureTime="100" bts:Binning="2" bts:Color="#FF002FFF" bts:PinholeDiameter="50" bts:Kind="ConfocalFluorescence">
+      <bts:LightSourceName>405nm</bts:LightSourceName>
+    </bts:Channel>
+    <bts:Channel bts:Ch="2" bts:Target="ER" bts:ObjectiveID="20000" bts:Objective="20x" bts:Magnification="20" bts:MethodID="1" bts:Method="Fluorescence" bts:FilterID="1" bts:Fluorophore="" bts:CameraType="AndorZyla" bts:InputLevel="1000" bts:MinLevel="0" bts:MaxLevel="1" bts:Acquisition="BP525/50" bts:ExposureTime="50" bts:Binning="2" bts:Color="#FF00FFA1" bts:Kind="ConfocalFluorescence">
+      <bts:LightSourceName>488nm</bts:LightSourceName>
+    </bts:Channel>
+    <bts:Channel bts:Ch="3" bts:Target="BF" bts:ObjectiveID="20000" bts:Objective="20x" bts:Magnification="20" bts:MethodID="1" bts:Method="Fluorescence" bts:FilterID="1" bts:Fluorophore="" bts:CameraType="AndorZyla" bts:InputLevel="1000" bts:MinLevel="0" bts:MaxLevel="1" bts:Acquisition="BP525/50" bts:ExposureTime="20" bts:Binning="2" bts:Color="#FFFFFFFF" bts:Kind="Brightfield">
+      <bts:LightSourceName>Lamp</bts:LightSourceName>
+    </bts:Channel>
+  </bts:ChannelList>
+</bts:MeasurementSetting>
