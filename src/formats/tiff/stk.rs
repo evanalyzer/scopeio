@@ -6,6 +6,8 @@
 //! modification Julian day and milliseconds); UIC1 (33628) holds tagged
 //! values such as the x/y calibration (fractions) and its unit. A stack
 //! whose z distances are all zero is a time series, otherwise a z stack.
+//! One-plane MetaMorph TIFF files (no UIC2, e.g. MetaXpress images) get the
+//! UIC1 calibration only.
 //!
 //! Provenance: Molecular Devices "MetaMorph STK and TIFF file formats"
 //! (T10243, in `doc/metamorph-stk/`); tifffile (BSD-3-Clause, Christoph
@@ -71,6 +73,45 @@ pub(super) fn metaseries_calibration(description: &str) -> Option<(f64, f64)> {
     Some((x * nm, y * nm))
 }
 
+/// Calibration from the UIC1 tag ((tag id, value or offset) pairs):
+/// nanometres per unit, `None` for a calibration in pixels or an unknown
+/// unit, and the x / y calibration in that unit. `None` without an x
+/// calibration.
+fn uic1_calibration(tiff: &TiffFile) -> Option<(Option<f64>, f64, f64)> {
+    let uic1 = tiff.ifds[0].entry(UIC1).filter(|e| e.count <= 4096)?;
+    let pairs = tiff.read_bytes(tiff.value_offset(uic1), 8 * uic1.count as usize).unwrap_or_default();
+    let (mut x, mut y, mut units) = (None, None, None);
+    for p in pairs.chunks_exact(8) {
+        let (id, value) = (u32_le(p), u32_le(&p[4..]) as u64);
+        match id {
+            X_CALIBRATION | Y_CALIBRATION => {
+                if let Ok(f) = tiff.read_bytes(value, 8) {
+                    let v = u32_le(&f) as f64 / u32_le(&f[4..]).max(1) as f64;
+                    if id == X_CALIBRATION { x = Some(v) } else { y = Some(v) }
+                }
+            }
+            CALIBRATION_UNITS => {
+                if let Ok(l) = tiff.read_bytes(value, 4) {
+                    let len = (u32_le(&l) as usize).min(256);
+                    // Ends at the first NUL; bytes after it are padding.
+                    units = tiff.read_bytes(value + 4, len).ok().map(|t| String::from_utf8_lossy(t.split(|&b| b == 0).next().unwrap_or_default()).into_owned());
+                }
+            }
+            _ => {}
+        }
+    }
+    let x = x.filter(|v| *v > 0.0)?;
+    Some((units.as_deref().and_then(unit_nm), x, y.filter(|v| *v > 0.0).unwrap_or(x)))
+}
+
+/// Applies the UIC1 calibration; without one the TIFF resolution tags stay.
+pub(super) fn apply_calibration(s: &mut Series, tiff: &TiffFile) -> Option<f64> {
+    let (nm, x, y) = uic1_calibration(tiff)?;
+    s.meta.physical_size.x_nm = nm.map(|nm| x * nm);
+    s.meta.physical_size.y_nm = nm.map(|nm| y * nm);
+    nm
+}
+
 /// Turns a one-plane series of an STK file into its stack. Returns `false`
 /// for files without UIC2 tag or with non-contiguous planes.
 pub(super) fn apply(s: &mut Series, tiff: &TiffFile) -> Result<bool> {
@@ -99,36 +140,7 @@ pub(super) fn apply(s: &mut Series, tiff: &TiffFile) -> Result<bool> {
         s.meta.size_t = n as u32;
     }
     s.planes = (0..n as usize).map(|page| Some(PlaneRef { page, samples: super::image::Samples::One(0) })).collect();
-    // Calibration from UIC1: (tag id, value or offset) pairs.
-    let mut calibration = (None, None, None);
-    if let Some(uic1) = ifd.entry(UIC1).filter(|e| e.count <= 4096) {
-        let pairs = tiff.read_bytes(tiff.value_offset(uic1), 8 * uic1.count as usize).unwrap_or_default();
-        for p in pairs.chunks_exact(8) {
-            let (id, value) = (u32_le(p), u32_le(&p[4..]) as u64);
-            match id {
-                X_CALIBRATION | Y_CALIBRATION => {
-                    if let Ok(f) = tiff.read_bytes(value, 8) {
-                        let v = u32_le(&f) as f64 / u32_le(&f[4..]).max(1) as f64;
-                        if id == X_CALIBRATION { calibration.0 = Some(v) } else { calibration.1 = Some(v) }
-                    }
-                }
-                CALIBRATION_UNITS => {
-                    if let Ok(l) = tiff.read_bytes(value, 4) {
-                        let len = (u32_le(&l) as usize).min(256);
-                        calibration.2 = tiff.read_bytes(value + 4, len).ok().map(|t| String::from_utf8_lossy(&t).trim_end_matches('\0').to_string());
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-    let nm = calibration.2.as_deref().and_then(unit_nm);
-    if let Some(x) = calibration.0.filter(|v| *v > 0.0) {
-        // A calibration in pixels (or an unknown unit) is no physical size;
-        // without a calibration the TIFF resolution tags stay.
-        s.meta.physical_size.x_nm = nm.map(|nm| x * nm);
-        s.meta.physical_size.y_nm = nm.map(|nm| calibration.1.filter(|v| *v > 0.0).unwrap_or(x) * nm);
-    }
+    let nm = apply_calibration(s, tiff);
     if z_stack {
         s.meta.physical_size.z_nm = z.iter().copied().find(|v| *v > 0.0).map(|v| v * nm.unwrap_or(1e3));
     } else if n > 1 {

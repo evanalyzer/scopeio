@@ -1,0 +1,7 @@
+# Known differences for MetaXpress.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/MetaXpress/trim/idr0006/plate 11001.HTD	bioformats				With the HTD above TimePoint_1 the reference readers order the 16 sites s10-s16, s1-s9; with the same HTD inside TimePoint_1 Bio-Formats orders them s1-s16 like scopeio (pixels then match)
+tests/reference/ome/MetaXpress/trim/idr0006/plate 11001.HTD	bioformats-rs				With the HTD above TimePoint_1 the reference readers order the 16 sites s10-s16, s1-s9; with the same HTD inside TimePoint_1 Bio-Formats orders them s1-s16 like scopeio (pixels then match)
+tests/data/metaxpress/plate/synth.HTD	bioformats	3			Bio-Formats shifts the planes after the missing image of B03 site 2 by one (series 3 at t 2 z 2: channel 1 holds the w2 image, channel 2 another file; checked plane by plane); scopeio places each file by its name
+tests/data/metaxpress/plate/synth.HTD	bioformats	4			Bio-Formats shifts the planes after the missing image of B03 site 2 by one (series 3 at t 2 z 2: channel 1 holds the w2 image, channel 2 another file; checked plane by plane); scopeio places each file by its name
+tests/data/metaxpress/plate/synth.HTD	bioformats	5			Bio-Formats shifts the planes after the missing image of B03 site 2 by one (series 3 at t 2 z 2: channel 1 holds the w2 image, channel 2 another file; checked plane by plane); scopeio places each file by its name

@@ -102,6 +102,7 @@ python3 -I tests/scripts/make_sdt_samples.py      # Becker & Hickl SDT
 python3 -I tests/scripts/make_gatan_samples.py    # Gatan DM3 / DM4
 python3 -I tests/scripts/make_flex_samples.py     # Opera Flex
 python3 -I tests/scripts/make_cv7000_samples.py   # Yokogawa CV7000 (uses make_micromanager_samples.py)
+python3 -I tests/scripts/make_metaxpress_samples.py # MetaXpress
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py
 python3 -I tests/scripts/make_qptiff_samples.py
@@ -282,6 +283,11 @@ python3 -I tests/scripts/oracle.py flex --append --repeat 1 tests/data/flex/well
 python3 -I tests/scripts/fetch_cv7000.py; T=tests/reference/ome/CV7000/trim
 python3 -I tests/scripts/oracle.py cv7000 --repeat 3 $T/idr0088/110000251230.wpi $T/idr0093/020.wpi
 python3 -I tests/scripts/oracle.py cv7000 --append --per-series --repeat 1 $T/cpg0016/Dest210531-152149.wpi tests/data/cv7000/plate/synth.wpi
+# MetaXpress: trimmed copies of four IDR plates (no licence stated, local only)
+python3 -I tests/scripts/fetch_metaxpress.py; T=tests/reference/ome/MetaXpress/trim
+python3 -I tests/scripts/oracle.py metaxpress --per-series --repeat 1 "$T/idr0005/2011-04-19-plate-1.HTD" "$T/idr0006/plate 11001.HTD" \
+    "$T/idr0006/TimePoint_1/plate 11001.HTD" "$T/idr0008/Act1_Plate10-SP-A8.HTD" "$T/idr0081/BSF018292-1A.HTD"
+python3 -I tests/scripts/oracle.py metaxpress --append --per-series --repeat 1 tests/data/metaxpress/plate/synth.HTD
 python3 -I tests/scripts/oracle.py bmp tests/data/bmp/*.bmp \
     "tests/reference/ome/Leica-XLEF/format test/format test BMP/"*.bmp
 cargo test

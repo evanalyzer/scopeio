@@ -681,6 +681,23 @@ as black-box command-line tools to produce reference output
   plane where they differed (see `tests/expected/cv7000_divergences.tsv`).
 - Synthetic measurement written by `tests/scripts/make_cv7000_samples.py`.
 
+## MetaXpress (`src/formats/metaxpress.rs`)
+
+- MetaXpress 6 batch import / export guide and MetaXpress analysis guide
+  (Molecular Devices, `doc/metaxpress-htd/`): image naming
+  `<plate>_<well>_<site>_<wave>.TIF`, `TimePoint_<n>` and `ZStep_<n>`
+  folders (`ZStep_0` with projections), thumbnails, `.HTD` contents.
+- Own analysis of the `.HTD` files and images of four public IDR plates on
+  the OME sample server (`MetaXpress/idr0005`, `idr0006`, `idr0008`,
+  `idr0081`; no licence stated on the server, used locally only); trimmed
+  copies built by `tests/scripts/fetch_metaxpress.py`.
+- MetaMorph UIC1 calibration of one-plane TIFF files as for STK (see
+  MetaMorph STK); the unit string ends at its first NUL (observed in the
+  sample files).
+- Checked against Bio-Formats and bioformats-rs as black boxes, plane by
+  plane where they differed (see `tests/expected/metaxpress_divergences.tsv`).
+- Synthetic plate written by `tests/scripts/make_metaxpress_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

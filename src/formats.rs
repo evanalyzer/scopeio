@@ -46,6 +46,8 @@ mod ics;
 mod flex;
 #[cfg(feature = "cv7000")]
 mod cv7000;
+#[cfg(feature = "metaxpress")]
+mod metaxpress;
 #[cfg(feature = "gatan")]
 mod gatan;
 #[cfg(feature = "ims")]
@@ -198,6 +200,8 @@ static SUPPORTED: &[FormatInfo] = &[
     flex::FORMAT,
     #[cfg(feature = "cv7000")]
     cv7000::FORMAT,
+    #[cfg(feature = "metaxpress")]
+    metaxpress::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -280,6 +284,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "incell")]
     if incell::matches(path, &head) {
         return Ok(Some(FormatId::InCell));
+    }
+    #[cfg(feature = "metaxpress")]
+    if metaxpress::matches(path, &head) {
+        return Ok(Some(FormatId::MetaXpress));
     }
     #[cfg(feature = "cv7000")]
     if cv7000::matches(path, &head) {
@@ -433,6 +441,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Flex) => Ok(Arc::new(Reader(flex::Flex::open(path)?))),
         #[cfg(feature = "cv7000")]
         Some(FormatId::Cv7000) => Ok(Arc::new(Reader(cv7000::Cv7000::open(path)?))),
+        #[cfg(feature = "metaxpress")]
+        Some(FormatId::MetaXpress) => Ok(Arc::new(Reader(metaxpress::MetaXpress::open(path, opts)?))),
         #[cfg(feature = "gatan")]
         Some(FormatId::Gatan) => Ok(Arc::new(Reader(gatan::Gatan::open(path)?))),
         #[cfg(feature = "sdt")]

@@ -133,6 +133,7 @@ compared, "n/a" means the reader cannot open the format.
 | Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
 | Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
 | Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
+| MetaXpress | 6 | 10 ms | 7.5 MiB | 174× / 28× | 0.8× / 2.9× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -280,7 +281,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **LIM (Laboratory Imaging/Nikon)** | `.lim` |  |
 | **MetaMorph 7.5 TIFF** | `.tiff` |  |
 | **MetaMorph Stack (STK)** | `.stk, .nd` | ✅ |
-| **MetaXpress** | — |  |
+| **MetaXpress** | `.htd, .tif` | ✅ |
 | **MIAS (Maia Scientific)** | `.tif` |  |
 | **Micro-Manager** (image stacks, separate files, NDTiff) | `.tif, .txt, .index` | ✅ |
 | **Mikroscan TIFF** | `.tif, .tiff` |  |
@@ -473,6 +474,14 @@ repeats its plane at every z, as Bio-Formats does; at later time points
 Bio-Formats repeats the first time point's plane, scopeio that time
 point's own. No public specification exists (own analysis of IDR and
 Cell Painting Gallery plates). bioformats-rs cannot open these plates.
+
+**MetaXpress.** Open the `.HTD` file (in the plate folder or a
+`TimePoint_<n>` folder). One series per selected well and site; channels
+are the waves, time points and z steps the `TimePoint_<n>` / `ZStep_<n>`
+folders (`ZStep_0` projections are skipped). Images are placed by their
+file names (`<plate>_<well>_s<site>_w<wave>`), so a missing image reads as
+zeros without shifting the others (Bio-Formats shifts the later planes).
+Pixel size from the MetaMorph calibration of the TIFF files.
 
 **Nikon EZ-C1 TIFF: not supported.** No format documentation is published,
 and no public sample file could be found (searched: OME sample server,

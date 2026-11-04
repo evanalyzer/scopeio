@@ -268,6 +268,9 @@ impl Tiff {
         if let [s] = series.as_mut_slice() {
             if stk::apply(s, &tiff)? {
                 flavour = Some(&STK_FORMAT);
+            } else {
+                // A one-plane MetaMorph TIFF: only its UIC1 calibration.
+                stk::apply_calibration(s, &tiff);
             }
             if let Some((x, y)) = stk::metaseries_calibration(description) {
                 s.meta.physical_size.x_nm = Some(x);

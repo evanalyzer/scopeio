@@ -96,6 +96,8 @@ pub enum FormatId {
     Flex,
     /// Yokogawa CellVoyager CV7000 / CV8000 (`.wpi`, `.mlf`, `.mrf` and TIFF files).
     Cv7000,
+    /// Molecular Devices MetaXpress (`.HTD` and TIFF files).
+    MetaXpress,
 }
 
 /// Identification of the reader that produced the data, for
