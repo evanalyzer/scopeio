@@ -68,7 +68,7 @@ pub(super) fn apply(s: &mut Series, tiff: &TiffFile) -> Result<()> {
     }
     let count = (u16::from_le_bytes([h[58], h[59]]) as usize).min(MAX_RECORDS);
     let Ok(records) = tiff.read_bytes(at + 60, 8 * count) else { return Ok(()) };
-    for r in records.chunks_exact(8) {
+    for r in records.as_chunks::<8>().0.iter() {
         let offset = u32::from_le_bytes(r[4..8].try_into().expect("4 bytes")) as u64;
         // General data: pixel size, magnification, camera, picture type.
         if i16_le(r) != 1 {

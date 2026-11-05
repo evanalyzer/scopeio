@@ -58,8 +58,9 @@ pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Avi, "AVI (Audi
 
 /// Most frames of one stream, against corrupt indexes.
 const MAX_FRAMES: usize = 1 << 24;
-/// Largest frame decoded (bytes of samples).
-const MAX_FRAME_BYTES: u64 = 1 << 31;
+/// Largest frame decoded (bytes of samples): far above 8K RGBA (128 MiB),
+/// so corrupt headers cannot claim gigabyte frames.
+const MAX_FRAME_BYTES: u64 = 512 << 20;
 /// Deepest LIST nesting followed.
 const MAX_DEPTH: usize = 8;
 /// `idx1` / `ix##` key frame flag.
@@ -351,7 +352,7 @@ fn walk(r: &Riff, start: u64, end: u64, depth: usize, w: &mut Walk) -> Result<()
 /// Frames of every stream from `idx1`; `None` if it does not match the file.
 fn frames_from_idx1(r: &Riff, idx1: &[u8], movi: (u64, u64)) -> Option<Vec<Vec<Frame>>> {
     let entries: Vec<(u32, u32, u64, u32)> =
-        idx1.chunks_exact(16).map(|e| (u32_at(e, 0), u32_at(e, 4), u32_at(e, 8) as u64, u32_at(e, 12))).collect();
+        idx1.as_chunks::<16>().0.iter().map(|e| (u32_at(e, 0), u32_at(e, 4), u32_at(e, 8) as u64, u32_at(e, 12))).collect();
     let first = entries.iter().find(|e| e.0 != id(b"rec ") && stream_of(e.0).is_some())?;
     // Offsets point at the chunk header, relative to the `movi` fourcc or
     // absolute: the chunk id there tells which.
@@ -391,7 +392,7 @@ fn frames_from_indx(r: &Riff, indx: &[u8]) -> Option<Vec<Frame>> {
     let chunks = |std: &[u8], frames: &mut Vec<Frame>| -> Option<()> {
         let count = u32_at(std, 4) as usize;
         let base = u64_at(std, 12);
-        for e in std.get(24..)?.chunks_exact(8).take(count) {
+        for e in std.get(24..)?.as_chunks::<8>().0.iter().take(count) {
             let (off, raw) = (u32_at(e, 0) as u64, u32_at(e, 4));
             let size = raw & 0x7FFF_FFFF;
             let at = base.checked_add(off)?;
@@ -408,7 +409,7 @@ fn frames_from_indx(r: &Riff, indx: &[u8]) -> Option<Vec<Frame>> {
             if longs != 4 {
                 return None;
             }
-            for e in indx.get(24..)?.chunks_exact(16).take(n) {
+            for e in indx.get(24..)?.as_chunks::<16>().0.iter().take(n) {
                 let (off, size) = (u64_at(e, 0), u32_at(e, 8));
                 let (_, csize, data) = r.header(off)?;
                 if size < 8 {
@@ -581,15 +582,16 @@ impl Avi {
                 if masks.len() == 4 {
                     let f = stream.frames[0];
                     let frame = r.read(f.offset, f.size, (*stride * height).min(64 << 20))?;
-                    let alphas: Vec<u8> = frame.chunks_exact(4).map(|px| masks[3].sample(u32::from_le_bytes([px[0], px[1], px[2], px[3]]))).collect();
+                    let alphas: Vec<u8> =
+                        frame.as_chunks::<4>().0.iter().map(|px| masks[3].sample(u32::from_le_bytes([px[0], px[1], px[2], px[3]]))).collect();
                     if alphas.iter().all(|&a| a == 0) || alphas.iter().all(|&a| a == 255) {
                         masks.pop();
                     }
                 }
                 stream.samples = masks.len();
             }
-            if (width * height * stream.samples) as u64 > MAX_FRAME_BYTES {
-                return Err(Error::UnsupportedVariant("AVI frames above 2 GiB".into()));
+            if (width as u64).saturating_mul(height as u64).saturating_mul(stream.samples as u64) > MAX_FRAME_BYTES {
+                return Err(Error::UnsupportedVariant("AVI frames above 512 MiB".into()));
             }
             let (scale, rate) = (u32_at(strh, 20), u32_at(strh, 24));
             let dt = if scale > 0 && rate > 0 { Some(scale as f64 / rate as f64) } else { Some(u32_at(avih, 0) as f64 / 1e6).filter(|v| *v > 0.0) };
@@ -647,7 +649,7 @@ impl Avi {
                         (1, _) => out.iter_mut().zip(buf.iter().flat_map(|&v| [v, v, v])).for_each(|(o, v)| *o = v),
                         _ => out
                             .iter_mut()
-                            .zip(buf.chunks_exact(3))
+                            .zip(buf.as_chunks::<3>().0.iter())
                             .for_each(|(o, rgb)| *o = ((rgb[0] as u32 * 299 + rgb[1] as u32 * 587 + rgb[2] as u32 * 114) / 1000) as u8),
                     }
                 }
@@ -664,7 +666,11 @@ impl Avi {
                     }
                 }
                 let samples = if lut.gray { 1 } else { 3 };
-                indices.iter().flat_map(|&i| lut.rgb[i as usize][..samples].to_vec()).collect()
+                let mut out = Vec::with_capacity(indices.len() * samples);
+                for &i in &indices {
+                    out.extend_from_slice(&lut.rgb[i as usize][..samples]);
+                }
+                out
             }
             Codec::Rle { .. } => return Err(Error::Corrupt("AVI RLE stream without palette".into())),
             Codec::Raw { .. } => return Err(Error::Corrupt("AVI raw frames are read by rows".into())),

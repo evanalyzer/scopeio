@@ -1454,7 +1454,10 @@ fn lz4_filter(src: &[u8], out: &mut [u8]) -> Result<usize> {
             if want < full && written + want == total {
                 scratch::with(full, |tmp| -> Result<()> {
                     let n = codecs::lz4(data, tmp)?;
-                    out[written..written + want].copy_from_slice(&tmp[..want.min(n)]);
+                    if n < want {
+                        return Err(Error::Corrupt("HDF5 LZ4 block size".into()));
+                    }
+                    out[written..written + want].copy_from_slice(&tmp[..want]);
                     Ok(())
                 })?;
             } else {

@@ -156,11 +156,10 @@ impl Dv {
             ext.chunks_exact(record)
                 .map(|r| {
                     r[4 * ext_ints..4 * ext_ints + 4 * SECTION_FLOATS]
-                        .chunks_exact(4)
-                        .map(|b| {
-                            let b: [u8; 4] = b.try_into().expect("4 bytes");
-                            (if little { f32::from_le_bytes(b) } else { f32::from_be_bytes(b) }) as f64
-                        })
+                        .as_chunks::<4>()
+                        .0
+                        .iter()
+                        .map(|&b| (if little { f32::from_le_bytes(b) } else { f32::from_be_bytes(b) }) as f64)
                         .collect()
                 })
                 .collect()

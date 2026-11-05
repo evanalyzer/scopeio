@@ -298,7 +298,7 @@ fn frames(ds: &Dataset, frames: usize, frame_bytes: usize, coding: Coding) -> Re
             } else if let (Some(Value::Data(o)), Some(Value::Data(_))) =
                 (ds.get(EXTENDED_OFFSETS).map(|e| &e.value), ds.get(EXTENDED_LENGTHS).map(|e| &e.value))
             {
-                o.chunks_exact(8).map(|c| u64::from_le_bytes(c.try_into().expect("8 bytes"))).collect()
+                o.as_chunks::<8>().0.iter().map(|c| u64::from_le_bytes(*c)).collect()
             } else if frames == 1 {
                 vec![0]
             } else {

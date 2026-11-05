@@ -116,12 +116,12 @@ impl Dataset {
         let Some(e) = self.get(tag) else { return Vec::new() };
         let Value::Data(d) = &e.value else { return Vec::new() };
         match &e.vr {
-            b"US" => d.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]]) as f64).collect(),
-            b"SS" => d.chunks_exact(2).map(|b| i16::from_le_bytes([b[0], b[1]]) as f64).collect(),
-            b"UL" => d.chunks_exact(4).map(|b| u32::from_le_bytes(b.try_into().expect("4 bytes")) as f64).collect(),
-            b"SL" => d.chunks_exact(4).map(|b| i32::from_le_bytes(b.try_into().expect("4 bytes")) as f64).collect(),
-            b"FL" => d.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().expect("4 bytes")) as f64).collect(),
-            b"FD" => d.chunks_exact(8).map(|b| f64::from_le_bytes(b.try_into().expect("8 bytes"))).collect(),
+            b"US" => d.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes([b[0], b[1]]) as f64).collect(),
+            b"SS" => d.as_chunks::<2>().0.iter().map(|b| i16::from_le_bytes([b[0], b[1]]) as f64).collect(),
+            b"UL" => d.as_chunks::<4>().0.iter().map(|b| u32::from_le_bytes(*b) as f64).collect(),
+            b"SL" => d.as_chunks::<4>().0.iter().map(|b| i32::from_le_bytes(*b) as f64).collect(),
+            b"FL" => d.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b) as f64).collect(),
+            b"FD" => d.as_chunks::<8>().0.iter().map(|b| f64::from_le_bytes(*b)).collect(),
             _ => self.texts(tag).iter().filter_map(|v| v.parse().ok()).collect(),
         }
     }
@@ -297,7 +297,7 @@ impl Cursor {
                     }
                     let mut b = vec![0u8; len as usize];
                     self.read(&mut b)?;
-                    bot = b.chunks_exact(4).map(|c| u32::from_le_bytes(c.try_into().expect("4 bytes"))).collect();
+                    bot = b.as_chunks::<4>().0.iter().map(|c| u32::from_le_bytes(*c)).collect();
                 }
                 ITEM => {
                     fragments.push((self.pos, len as u64));

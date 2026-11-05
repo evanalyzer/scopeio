@@ -249,7 +249,7 @@ impl Backend for Mrc {
                             }
                         }
                         Mode::Half => {
-                            for (o, s) in d.chunks_exact_mut(4).zip(row.chunks_exact(2)) {
+                            for (o, s) in d.as_chunks_mut::<4>().0.iter_mut().zip(row.as_chunks::<2>().0.iter()) {
                                 let b = [s[0], s[1]];
                                 let v = if self.little { u16::from_le_bytes(b) } else { u16::from_be_bytes(b) };
                                 o.copy_from_slice(&half_to_f32(v).to_ne_bytes());

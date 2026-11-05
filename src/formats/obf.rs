@@ -276,7 +276,9 @@ impl Obf {
                         if chunks_n > 0 && chunks_n < 1 << 24 {
                             let raw = read(p, 16 * chunks_n as usize)?;
                             chunk_list = raw
-                                .chunks_exact(16)
+                                .as_chunks::<16>()
+                                .0
+                                .iter()
                                 .map(|e| (u64::from_le_bytes(e[..8].try_into().expect("8")), u64::from_le_bytes(e[8..].try_into().expect("8"))))
                                 .collect();
                         }

@@ -93,7 +93,7 @@ fn channel_colors(tiff: &TiffFile, at: u64, channels: usize) -> Vec<ChannelMeta>
 fn time_stamps(tiff: &TiffFile, at: u64) -> Vec<f64> {
     let Some(head) = read(tiff, at, 8) else { return Vec::new() };
     let n = i32_at(&head, 4).clamp(0, 1 << 20) as usize;
-    read(tiff, at + 8, 8 * n).map(|b| b.chunks_exact(8).map(|v| f64::from_le_bytes(v.try_into().expect("8 bytes"))).collect()).unwrap_or_default()
+    read(tiff, at + 8, 8 * n).map(|b| b.as_chunks::<8>().0.iter().map(|v| f64::from_le_bytes(*v)).collect()).unwrap_or_default()
 }
 
 /// Opens an LSM file.

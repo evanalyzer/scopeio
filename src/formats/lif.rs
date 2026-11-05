@@ -85,9 +85,9 @@ pub(super) fn matches_xml(path: &Path, head: &[u8]) -> bool {
 /// UTF-8 (with or without byte-order mark) or UTF-16LE text.
 fn decode_text(b: &[u8]) -> String {
     if let Some(u) = b.strip_prefix(b"\xFF\xFE") {
-        String::from_utf16_lossy(&u.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
+        String::from_utf16_lossy(&u.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
     } else if b.len() >= 2 && b[0] == b'<' && b[1] == 0 {
-        String::from_utf16_lossy(&b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
+        String::from_utf16_lossy(&b.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
     } else {
         String::from_utf8_lossy(b.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(b)).into_owned()
     }
@@ -726,7 +726,7 @@ fn child<'a, 'i>(n: Node<'a, 'i>, name: &str) -> Option<Node<'a, 'i>> {
 fn read_xml(file: &File, at: u64, units: usize) -> Result<String> {
     let mut raw = vec![0u8; units * 2];
     read_exact_at(file, &mut raw, at)?;
-    let u: Vec<u16> = raw.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
+    let u: Vec<u16> = raw.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
     Ok(String::from_utf16_lossy(&u))
 }
 
@@ -755,7 +755,7 @@ fn memory_blocks(file: &File, len: u64, mut at: u64) -> HashMap<String, (u64, u6
         if read_exact_at(file, &mut id, at + id_at as u64 + 4).is_err() {
             break;
         }
-        let units: Vec<u16> = id.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
+        let units: Vec<u16> = id.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
         let start = at + id_at as u64 + 4 + id_units * 2;
         let data_len = data_len.min(len.saturating_sub(start));
         map.insert(String::from_utf16_lossy(&units), (start, data_len));

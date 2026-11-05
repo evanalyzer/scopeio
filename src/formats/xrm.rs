@@ -75,7 +75,7 @@ impl Xrm {
         };
         let u32_of = |name: &str| read(name).filter(|b| b.len() >= 4).map(|b| u32::from_le_bytes(b[..4].try_into().expect("4 bytes")));
         let f32s = |name: &str| -> Vec<f32> {
-            read(name).map(|b| b.chunks_exact(4).map(|c| f32::from_le_bytes(c.try_into().expect("4 bytes"))).collect()).unwrap_or_default()
+            read(name).map(|b| b.as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect()).unwrap_or_default()
         };
         let (Some(width), Some(height)) = (u32_of("ImageWidth"), u32_of("ImageHeight")) else {
             return Err(Error::Corrupt("Xradia file without image size".into()));

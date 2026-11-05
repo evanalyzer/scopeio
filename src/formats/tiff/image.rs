@@ -597,7 +597,11 @@ impl TiffImage {
                 Some(y) => chunk_rows.next_multiple_of(y.v),
                 None => rows.end,
             };
-            scratch::with_zeroed(self.stored_len(rows_needed, row_values), |buf| {
+            let len = self.stored_len(rows_needed, row_values);
+            if max_decoded(self.compression, count).is_some_and(|max| len as u64 > max) {
+                return Err(Error::Corrupt(format!("TIFF chunk {index} of {count} bytes cannot hold {len} bytes")));
+            }
+            scratch::with_zeroed(len, |buf| {
                 match self.compression {
                     compression::NONE => {
                         let n = src.len().min(buf.len());
@@ -716,7 +720,7 @@ impl TiffImage {
                         return Err(Error::Corrupt(format!("JPEG 2000 has {} components, TIFF {comps}", info.components)));
                     }
                     if self.compression == compression::JP2K_YCBCR && comps == 3 && bytes == 1 {
-                        for px in buf[..info.width * info.height * 3].chunks_exact_mut(3) {
+                        for px in buf[..info.width * info.height * 3].as_chunks_mut::<3>().0.iter_mut() {
                             let (y, cb, cr) = (px[0] as f32, px[1] as f32 - 128.0, px[2] as f32 - 128.0);
                             px[0] = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;
                             px[1] = (y - 0.344_136 * cb - 0.714_136 * cr).round().clamp(0.0, 255.0) as u8;
@@ -759,7 +763,7 @@ impl TiffImage {
                 }
             }
             (16, Kind::Float) => {
-                for (d, s) in dst.chunks_exact_mut(4).zip(src.chunks_exact(2)) {
+                for (d, s) in dst.as_chunks_mut::<4>().0.iter_mut().zip(src.as_chunks::<2>().0.iter()) {
                     let h = if self.little { u16::from_le_bytes([s[0], s[1]]) } else { u16::from_be_bytes([s[0], s[1]]) };
                     d.copy_from_slice(&f16_to_f32(h).to_ne_bytes());
                 }
@@ -776,7 +780,7 @@ impl TiffImage {
             }
             PixelType::U16 => {
                 let max = ((1u32 << self.bits) - 1) as u16;
-                for s in row.chunks_exact_mut(2) {
+                for s in row.as_chunks_mut::<2>().0.iter_mut() {
                     let v = u16::from_ne_bytes([s[0], s[1]]);
                     s.copy_from_slice(&(max - v.min(max)).to_ne_bytes());
                 }
@@ -935,6 +939,19 @@ fn copy_pixels(
         let to = ((ox + i) * out_samples + put) * bytes;
         dst[to..to + k].copy_from_slice(&src[from..from + k]);
     }
+}
+
+/// Most bytes `count` compressed bytes can decode to, for codecs with a
+/// bounded expansion: Deflate 1032:1, LZW 4096 bytes per code of at least
+/// 9 bits, PackBits 128 bytes per 2. `None` for unbounded ones (Zstandard).
+fn max_decoded(compression: u16, count: u64) -> Option<u64> {
+    let ratio = match compression {
+        compression::DEFLATE | compression::DEFLATE_OLD => 1032,
+        compression::LZW => 3641,
+        compression::PACKBITS => 64,
+        _ => return None,
+    };
+    Some(count.saturating_mul(ratio).saturating_add(4096))
 }
 
 /// Undoes horizontal differencing (TIFF 6.0 section 14) on native samples.

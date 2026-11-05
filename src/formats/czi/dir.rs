@@ -154,7 +154,7 @@ pub(super) fn entry(b: &[u8]) -> Result<(Entry, usize)> {
         stored_h: 1,
         ..Default::default()
     };
-    for d in b[32..len].chunks_exact(20) {
+    for d in b[32..len].as_chunks::<20>().0.iter() {
         let start = i32_at(d, 4);
         let size = u32_at(d, 8);
         let stored = u32_at(d, 16);
@@ -231,7 +231,7 @@ pub(super) fn attachments(file: &File, span: Span, at: u64) -> Result<Vec<Attach
     let data = span.segment(file, at, b"ZISRAWATTDIR")?;
     let count = data.get(..4).map(|b| u32_at(b, 0) as usize).unwrap_or(0);
     let list = data.get(256..).unwrap_or_default();
-    Ok(list.chunks_exact(128).take(count).filter_map(attachment_entry).collect())
+    Ok(list.as_chunks::<128>().0.iter().take(count).filter_map(|e| attachment_entry(e)).collect())
 }
 
 /// Position and length of an attachment's payload.

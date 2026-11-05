@@ -282,8 +282,12 @@ impl Parser<'_> {
                 if elem == 4 && count <= INLINE_ARRAY && !pixels {
                     let little = self.little;
                     let b = self.bytes(len as usize)?;
-                    let units: Vec<u16> =
-                        b.chunks_exact(2).map(|c| if little { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
+                    let units: Vec<u16> = b
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
+                        .map(|c| if little { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) })
+                        .collect();
                     match String::from_utf16(&units) {
                         Ok(s) => Value::Text(s.trim_end_matches('\0').to_string()),
                         Err(_) => Value::Array { offset, len },

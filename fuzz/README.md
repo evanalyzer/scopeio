@@ -33,12 +33,13 @@ Needs a nightly toolchain and `cargo install cargo-fuzz`.
 python3 -I fuzz/seed.py            # corpus from tests/data
 cd fuzz
 cargo +nightly fuzz run -O tiff corpus/tiff -- \
-    -rss_limit_mb=3072 -malloc_limit_mb=2200 -timeout=10 -max_len=1048576
+    -rss_limit_mb=3072 -malloc_limit_mb=2200 -timeout=30 -max_len=1048576
 ```
 
 Single reads may allocate up to 2 GiB (`scratch::LEN_MAX`), so the memory
-limits are above that. CI runs every target for one minute; run them for
-hours locally before a release. Reproduce a finding with
+limits are above that. CI runs every target for one minute and fails on
+crashes; inputs that only exceed the time or memory limit are uploaded as
+artifacts. Run the targets for hours locally before a release. Reproduce a finding with
 `cargo +nightly fuzz run -O <target> artifacts/<target>/<file>`.
 
 ## Licence

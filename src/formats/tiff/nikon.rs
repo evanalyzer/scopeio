@@ -51,7 +51,7 @@ fn entry<'a>(d: &'a [u8], name: &str) -> Option<&'a [u8]> {
     for _ in 0..count {
         let units = u32_at(d, at)? as usize;
         let raw = d.get(at + 4..at + 4 + 2 * units)?;
-        let entry_name = String::from_utf16_lossy(&raw.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect::<Vec<_>>());
+        let entry_name = String::from_utf16_lossy(&raw.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes([b[0], b[1]])).collect::<Vec<_>>());
         at += 4 + 2 * units;
         let (size, offset) = (u32_at(d, at + 8)? as usize, u32_at(d, at + 12)? as usize);
         at += 16;

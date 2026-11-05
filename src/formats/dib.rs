@@ -104,7 +104,7 @@ impl Pixels {
                 }
             }
             Pixels::Indexed { bits: 8, lut } => {
-                for (out, &i) in dst.chunks_exact_mut(3).zip(&src[x..]) {
+                for (out, &i) in dst.as_chunks_mut::<3>().0.iter_mut().zip(&src[x..]) {
                     out.copy_from_slice(&lut.rgb[i as usize]);
                 }
             }
@@ -120,7 +120,7 @@ impl Pixels {
             }
             Pixels::Bgr24 => {
                 let src = &src[x * 3..];
-                for (out, bgr) in dst.chunks_exact_mut(3).zip(src.chunks_exact(3)) {
+                for (out, bgr) in dst.as_chunks_mut::<3>().0.iter_mut().zip(src.as_chunks::<3>().0.iter()) {
                     out.copy_from_slice(&[bgr[2], bgr[1], bgr[0]]);
                 }
             }

@@ -370,7 +370,7 @@ fn unpack(src: &[u8], bits: u8, x0: usize, dst: &mut [u8]) {
 
 /// Swaps 16-bit big-endian samples to native order.
 fn big_endian_to_native(b: &mut [u8]) {
-    for s in b.chunks_exact_mut(2) {
+    for s in b.as_chunks_mut::<2>().0.iter_mut() {
         let v = u16::from_be_bytes([s[0], s[1]]);
         s.copy_from_slice(&v.to_ne_bytes());
     }

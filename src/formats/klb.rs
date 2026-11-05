@@ -130,7 +130,7 @@ impl Klb {
         }
         let mut raw = vec![0u8; 8 * n as usize];
         read_exact_at(&file, &mut raw, FIXED as u64)?;
-        let ends: Vec<u64> = raw.chunks_exact(8).map(|c| u64::from_le_bytes(c.try_into().expect("8 bytes"))).collect();
+        let ends: Vec<u64> = raw.as_chunks::<8>().0.iter().map(|c| u64::from_le_bytes(*c)).collect();
         if ends.windows(2).any(|w| w[1] < w[0]) || ends.last().is_some_and(|&e| data_at.saturating_add(e) > len) {
             return Err(Error::Corrupt("KLB block offsets out of order or beyond the file".into()));
         }

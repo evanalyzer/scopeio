@@ -253,7 +253,7 @@ impl Czi {
             return Vec::new();
         }
         let count = u32::from_le_bytes(b[4..8].try_into().expect("4 bytes")) as usize;
-        b[8..].chunks_exact(8).take(count).map(|v| f64::from_le_bytes(v.try_into().expect("8 bytes"))).collect()
+        b[8..].as_chunks::<8>().0.iter().take(count).map(|v| f64::from_le_bytes(*v)).collect()
     }
 
     /// File part `k`.

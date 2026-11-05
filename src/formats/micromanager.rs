@@ -724,7 +724,9 @@ fn stack_index(tiff: &TiffFile) -> Result<(Option<Value>, Vec<[u32; 5]>)> {
     }
     let raw = tiff.read_bytes(at + 8, n as usize * 20)?;
     let entries = raw
-        .chunks_exact(20)
+        .as_chunks::<20>()
+        .0
+        .iter()
         .map(|e| std::array::from_fn(|i| tiff.u32(&e[4 * i..])))
         // An entry without IFD (offset 0) is a slot that was never written.
         .filter(|e: &[u32; 5]| e[4] != 0)

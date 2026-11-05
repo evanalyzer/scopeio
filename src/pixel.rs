@@ -292,7 +292,7 @@ impl<'a> Sink<'a> {
             let from = self.map[0] as usize * S::SIZE;
             let start = self.index(y, x, 0) * 4;
             let n = src.len() / px;
-            for (d, pixel) in self.out[start..start + 4 * n].chunks_exact_mut(4).zip(src.chunks_exact(px)) {
+            for (d, pixel) in self.out[start..start + 4 * n].as_chunks_mut::<4>().0.iter_mut().zip(src.chunks_exact(px)) {
                 let mut v = S::read(&pixel[from..]) * scale + offset;
                 if clamp {
                     v = v.clamp(0.0, 1.0);
@@ -355,7 +355,7 @@ mod tests {
         let map = [2, 1, 0];
         let mut s = Sink::new(&mut out, Layout::Chw, 1, 1, 3, 0, &map, 3, PixelType::U8, OutputType::F32Normalized);
         s.put(0, 0, &[255, 0, 51]);
-        let v: Vec<f32> = out.chunks_exact(4).map(|b| f32::from_ne_bytes(b.try_into().unwrap())).collect();
+        let v: Vec<f32> = out.as_chunks::<4>().0.iter().map(|b| f32::from_ne_bytes(*b)).collect();
         assert!(v.iter().zip([0.2, 0.0, 1.0]).all(|(a, b)| (a - b).abs() < 1e-6), "{v:?}");
     }
 
@@ -367,7 +367,7 @@ mod tests {
         let dtype = OutputType::F32Range { min: 200.0, max: 600.0 };
         let mut s = Sink::new(&mut out, Layout::Hwc, 2, 0, 1, 0, &map, 1, PixelType::U16, dtype);
         s.put(0, 0, &src);
-        let v: Vec<f32> = out.chunks_exact(4).map(|b| f32::from_ne_bytes(b.try_into().unwrap())).collect();
+        let v: Vec<f32> = out.as_chunks::<4>().0.iter().map(|b| f32::from_ne_bytes(*b)).collect();
         assert_eq!(v, [0.0, 1.0]);
     }
 }

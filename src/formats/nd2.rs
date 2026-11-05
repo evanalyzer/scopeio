@@ -189,7 +189,7 @@ impl Nd2 {
     /// Frame times from `CustomData|AcqTimesCache!` (f64 ms per frame).
     fn frame_times(&self) -> Vec<f64> {
         let Ok(Some(data)) = self.chunk("CustomData|AcqTimesCache!") else { return Vec::new() };
-        data.chunks_exact(8).map(|b| f64::from_le_bytes(b.try_into().expect("8 bytes"))).collect()
+        data.as_chunks::<8>().0.iter().map(|b| f64::from_le_bytes(*b)).collect()
     }
 
     /// Number of positions, time points and z-slices.

@@ -294,7 +294,8 @@ impl Bdv {
                 .get(&s.id)
                 .and_then(|&g| bdv.h5.links(&bdv.h5.object(g).ok()?).ok())
                 .and_then(|l| l.iter().find(|(n, _)| n == "resolutions").map(|(_, a)| *a));
-            let f: Vec<f64> = res.and_then(|a| bdv.read_f64s(a)).map(|v| v.chunks_exact(3).map(|c| c[0]).collect()).unwrap_or_else(|| vec![1.0]);
+            let f: Vec<f64> =
+                res.and_then(|a| bdv.read_f64s(a)).map(|v| v.as_chunks::<3>().0.iter().map(|c| c[0]).collect()).unwrap_or_else(|| vec![1.0]);
             let mut sizes = Vec::new();
             for level in 0..f.len().max(1) {
                 let found = (0..bdv.timepoints.len()).find_map(|t| bdv.lookup(s.id, t, level).ok().flatten());

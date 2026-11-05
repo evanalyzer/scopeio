@@ -69,7 +69,7 @@ struct Settings {
 impl Settings {
     fn parse(bytes: &[u8]) -> Result<Self> {
         let text = if let Some(b) = bytes.strip_prefix(b"\xFF\xFE") {
-            let units: Vec<u16> = b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = b.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
             String::from_utf16_lossy(&units)
         } else if bytes.starts_with(b"[") {
             String::from_utf8_lossy(bytes).into_owned()

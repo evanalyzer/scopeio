@@ -81,7 +81,7 @@ fn uic1_calibration(tiff: &TiffFile) -> Option<(Option<f64>, f64, f64)> {
     let uic1 = tiff.ifds[0].entry(UIC1).filter(|e| e.count <= 4096)?;
     let pairs = tiff.read_bytes(tiff.value_offset(uic1), 8 * uic1.count as usize).unwrap_or_default();
     let (mut x, mut y, mut units) = (None, None, None);
-    for p in pairs.chunks_exact(8) {
+    for p in pairs.as_chunks::<8>().0.iter() {
         let (id, value) = (u32_le(p), u32_le(&p[4..]) as u64);
         match id {
             X_CALIBRATION | Y_CALIBRATION => {
@@ -133,8 +133,8 @@ pub(super) fn apply(s: &mut Series, tiff: &TiffFile) -> Result<bool> {
     let images: Vec<_> = (1..n).map(|k| Some(Slot::ready(file, first.image.shifted(k * plane_bytes)))).collect();
     // Plane records: z distance (fraction), dates and times.
     let records = tiff.read_bytes(tiff.value_offset(uic2), 24 * n as usize)?;
-    let z: Vec<f64> = records.chunks_exact(24).map(|r| (u32_le(&r[0..]) as f64) / (u32_le(&r[4..]).max(1) as f64)).collect();
-    let millis: Vec<f64> = records.chunks_exact(24).map(|r| u32_le(&r[8..]) as f64 * 86_400_000.0 + u32_le(&r[12..]) as f64).collect();
+    let z: Vec<f64> = records.as_chunks::<24>().0.iter().map(|r| (u32_le(&r[0..]) as f64) / (u32_le(&r[4..]).max(1) as f64)).collect();
+    let millis: Vec<f64> = records.as_chunks::<24>().0.iter().map(|r| u32_le(&r[8..]) as f64 * 86_400_000.0 + u32_le(&r[12..]) as f64).collect();
     s.levels[0].extend(images);
     let z_stack = z.iter().any(|v| *v != 0.0);
     if z_stack {

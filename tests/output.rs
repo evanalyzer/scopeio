@@ -131,6 +131,10 @@ fn sample_files_match_their_format_names() {
         for e in std::fs::read_dir(&dir).unwrap().flatten() {
             let path = e.path();
             let name = e.file_name().to_string_lossy().into_owned();
+            // Fuzzer findings are named by hash (see fuzz_regressions.rs).
+            if path == root().join("tests/data/fuzz") {
+                continue;
+            }
             // The opened reader names the flavour (probe says TIFF for STK).
             let Some(id) = scopeio::open(&path).ok().map(|r| r.format().id) else {
                 if path.is_dir() {

@@ -284,9 +284,9 @@ impl TiffFile {
         let raw = self.raw(e)?;
         Ok(match e.typ {
             1 | 6 | 7 => raw.iter().map(|&b| b as u64).collect(),
-            3 | 8 => raw.chunks_exact(2).map(|b| self.u16(b) as u64).collect(),
-            4 | 9 | 13 => raw.chunks_exact(4).map(|b| self.u32(b) as u64).collect(),
-            16..=18 => raw.chunks_exact(8).map(|b| self.u64(b)).collect(),
+            3 | 8 => raw.as_chunks::<2>().0.iter().map(|b| self.u16(b) as u64).collect(),
+            4 | 9 | 13 => raw.as_chunks::<4>().0.iter().map(|b| self.u32(b) as u64).collect(),
+            16..=18 => raw.as_chunks::<8>().0.iter().map(|b| self.u64(b)).collect(),
             t => return Err(Error::Corrupt(format!("tag {} has non-integer type {t}", e.tag))),
         })
     }
@@ -314,10 +314,10 @@ impl TiffFile {
         let Some(e) = ifd.entry(tag) else { return Ok(None) };
         let raw = self.raw(e)?;
         let v = match e.typ {
-            5 => raw.chunks_exact(8).map(|b| self.u32(b) as f64 / self.u32(&b[4..]) as f64).collect(),
-            10 => raw.chunks_exact(8).map(|b| self.u32(b) as i32 as f64 / self.u32(&b[4..]) as i32 as f64).collect(),
-            11 => raw.chunks_exact(4).map(|b| f32::from_bits(self.u32(b)) as f64).collect(),
-            12 => raw.chunks_exact(8).map(|b| f64::from_bits(self.u64(b))).collect(),
+            5 => raw.as_chunks::<8>().0.iter().map(|b| self.u32(b) as f64 / self.u32(&b[4..]) as f64).collect(),
+            10 => raw.as_chunks::<8>().0.iter().map(|b| self.u32(b) as i32 as f64 / self.u32(&b[4..]) as i32 as f64).collect(),
+            11 => raw.as_chunks::<4>().0.iter().map(|b| f32::from_bits(self.u32(b)) as f64).collect(),
+            12 => raw.as_chunks::<8>().0.iter().map(|b| f64::from_bits(self.u64(b))).collect(),
             _ => return Ok(self.uints(ifd, tag)?.map(|v| v.into_iter().map(|x| x as f64).collect())),
         };
         Ok(Some(v))

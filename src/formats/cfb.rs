@@ -137,7 +137,7 @@ impl Cfb {
         let root_size = u32_at(root, 120) as u64;
         // Mini FAT and mini stream.
         let mini_fat = cfb.read_chain(u32_at(&h, 0x3C), u64::MAX)?;
-        cfb.mini_fat = mini_fat.chunks_exact(4).map(|c| u32_at(c, 0)).collect();
+        cfb.mini_fat = mini_fat.as_chunks::<4>().0.iter().map(|c| u32_at(c, 0)).collect();
         cfb.mini_stream = cfb.chain(root_start, root_size.div_ceil(sector))?;
         // Walk the red-black trees of the storages depth first.
         let mut stack = vec![(u32_at(root, 76), String::new())];
@@ -152,7 +152,7 @@ impl Cfb {
                 return Err(Error::Corrupt("compound file directory loops".into()));
             }
             let name_len = (u16_at(e, 64) as usize).min(64);
-            let units: Vec<u16> = e[..name_len.saturating_sub(2)].chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = e[..name_len.saturating_sub(2)].as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
             let name = String::from_utf16_lossy(&units);
             stack.push((u32_at(e, 68), prefix.clone()));
             stack.push((u32_at(e, 72), prefix.clone()));
@@ -315,7 +315,7 @@ mod tests {
             let s = c.stream(&name).unwrap();
             let b = c.read(s).unwrap();
             let text = if b.starts_with(&[0xFF, 0xFE]) {
-                String::from_utf16_lossy(&b[2..].chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
+                String::from_utf16_lossy(&b[2..].as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect::<Vec<_>>())
             } else {
                 String::from_utf8_lossy(&b).into_owned()
             };

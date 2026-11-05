@@ -123,7 +123,7 @@ pub(super) fn decode(src: &[u8], compression: u32, g: &Geometry, out: &mut [u8])
 fn unshuffle_hilo(src: &[u8], out: &mut [u8]) {
     let n = src.len().min(out.len()) / 2;
     let (lo, hi) = src[..2 * n].split_at(n);
-    for (i, d) in out.chunks_exact_mut(2).take(n).enumerate() {
+    for (i, d) in out.as_chunks_mut::<2>().0.iter_mut().take(n).enumerate() {
         d[0] = lo[i];
         d[1] = hi[i];
     }

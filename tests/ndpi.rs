@@ -67,8 +67,8 @@ fn ndpis_set_reads_one_component_per_file() {
     let rgb = scopeio::open(&root().join("tests/data/ndpi/synthetic.ndpi")).unwrap();
     let full = decode_level(rgb.as_ref(), 0, 1).unwrap().pixels;
     let set = decode_level(r.as_ref(), 0, 1).unwrap().pixels;
-    let k = (0..3).max_by_key(|&k| full.chunks_exact(3).map(|p| p[k] as u64).sum::<u64>()).unwrap();
-    let expect: Vec<u8> = full.chunks_exact(3).flat_map(|p| [p[k], p[k]]).collect();
+    let k = (0..3).max_by_key(|&k| full.as_chunks::<3>().0.iter().map(|p| p[k] as u64).sum::<u64>()).unwrap();
+    let expect: Vec<u8> = full.as_chunks::<3>().0.iter().flat_map(|p| [p[k], p[k]]).collect();
     assert_eq!(set, expect);
     assert_eq!(r.associated_images(), [AssociatedKind::Macro]);
 }

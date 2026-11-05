@@ -142,7 +142,7 @@ fn dominant(s: &Slide) -> Result<usize> {
         let mut sink = Sink::new(buf, Layout::Hwc, w * 3, 0, 3, 0, &[0, 1, 2], 3, PixelType::U8, OutputType::Native);
         s.read_native(0, level, Plane::default(), region, &mut sink)?;
         let mut sums = [0u64; 3];
-        for px in buf.chunks_exact(3) {
+        for px in buf.as_chunks::<3>().0.iter() {
             for k in 0..3 {
                 sums[k] += px[k] as u64;
             }

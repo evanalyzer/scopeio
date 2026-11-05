@@ -115,7 +115,7 @@ fn blocks(file: &File, part: u16) -> Result<Blocks> {
         let n = ((declared - index - 4) / 8).min(MAX_BLOCKS) as usize;
         let mut raw = vec![0u8; n * 8];
         read_exact_at(file, &mut raw, index + 4)?;
-        offsets.extend(raw.chunks_exact(8).map(|b| u64_at(b, 0)).take_while(|&o| o >= FIRST_BLOCK && o < declared));
+        offsets.extend(raw.as_chunks::<8>().0.iter().map(|b| u64_at(b, 0)).take_while(|&o| o >= FIRST_BLOCK && o < declared));
     } else {
         let mut pos = FIRST_BLOCK;
         let mut head = [0u8; 8];

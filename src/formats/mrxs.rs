@@ -582,7 +582,7 @@ impl Backend for Mrxs {
         let (x1, y1) = (x0 + region.width as i64, y0 + region.height as i64);
         for r in 0..region.height as usize {
             sink.write_with(r, 0, region.width as usize, |d| {
-                for px in d.chunks_exact_mut(3) {
+                for px in d.as_chunks_mut::<3>().0.iter_mut() {
                     px.copy_from_slice(&self.fill);
                 }
                 Ok(())

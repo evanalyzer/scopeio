@@ -52,10 +52,17 @@ aborts or allocates without bound:
 - TIFF: panic on an empty `BitsPerSample`; out-of-bounds copy when a level
   or plane IFD has a different pixel layout than its series (also NDPI,
   SVS and the other TIFF-based readers).
+- TIFF: Deflate, LZW and PackBits chunks too small to decode to the rows
+  requested fail before their buffer is allocated (a 428-byte file claiming
+  a 13-megapixel-wide strip took 2.4 s per read).
+- AVI: frames above 512 MiB (was 2 GiB) are rejected; RLE frames expand
+  their palette without an allocation per pixel (a 1.5 KB file claiming an
+  8 x 50-megapixel RLE frame took 9 s).
 - NDPI: panic on adjacent or unordered restart-interval offsets, and an
   unchecked restart count from the JPEG header.
 - HDF5 (Imaris, BigDataViewer): panic when the element size differs from
-  the series pixel type; unbounded LZ4 block buffer.
+  the series pixel type; unbounded LZ4 block buffer; panic on a short last
+  LZ4 block.
 - OME-Zarr: division by zero for a shard shape of 0.
 - DICOM: division by zero for an empty total matrix.
 - CZI: overflow and multi-gigabyte allocations from corrupt C / Z / T

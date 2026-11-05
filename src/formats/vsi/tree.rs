@@ -76,7 +76,7 @@ impl Field {
         }
         match v.kind {
             7 if v.data.len() == 8 => vec![i64::from_le_bytes(v.data[..8].try_into().expect("8 bytes"))],
-            _ => v.data.chunks_exact(4).map(|b| i32::from_le_bytes(b.try_into().expect("4 bytes")) as i64).collect(),
+            _ => v.data.as_chunks::<4>().0.iter().map(|b| i32::from_le_bytes(*b) as i64).collect(),
         }
     }
 
@@ -91,7 +91,7 @@ impl Field {
         match v.kind {
             5 | 6 | 7 | 14 => v.ints().into_iter().map(|i| i as f64).collect(),
             _ if v.inline.is_some() => Vec::new(),
-            _ => v.data.chunks_exact(8).map(|b| f64::from_le_bytes(b.try_into().expect("8 bytes"))).collect(),
+            _ => v.data.as_chunks::<8>().0.iter().map(|b| f64::from_le_bytes(*b)).collect(),
         }
     }
 
@@ -108,7 +108,7 @@ impl Field {
         }
         let s = match v.kind {
             13 | 8192 | 8194 => {
-                let units: Vec<u16> = v.data.chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
+                let units: Vec<u16> = v.data.as_chunks::<2>().0.iter().map(|b| u16::from_le_bytes([b[0], b[1]])).collect();
                 String::from_utf16_lossy(&units)
             }
             _ => String::from_utf8_lossy(&v.data).into_owned(),

@@ -123,7 +123,7 @@ fn read_value(b: &[u8], pos: &mut usize) -> Option<TagValue> {
         8 => {
             let n = u32::from_le_bytes(take(4)?.try_into().ok()?) as usize;
             let s = take(n)?;
-            let units: Vec<u16> = s.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+            let units: Vec<u16> = s.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
             TagValue::Text(String::from_utf16_lossy(&units).trim_end_matches('\0').to_string())
         }
         30 | 31 | 65..=71 => {

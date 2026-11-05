@@ -22,8 +22,16 @@ use std::path::{Component, Path};
 use scopeio::{ChannelSelect, Plane, Region, RegionRequest};
 
 /// File name each fuzz target writes its input to (see `fuzz/fuzz_targets`).
-const TARGETS: &[(&str, &str)] =
-    &[("tiff", "f.tif"), ("ome_tiff", "f.ome.tif"), ("ndpi", "f.ndpi"), ("nd2", "f.nd2"), ("czi", "f.czi"), ("ims", "f.ims"), ("dicom", "f.dcm")];
+const TARGETS: &[(&str, &str)] = &[
+    ("tiff", "f.tif"),
+    ("ome_tiff", "f.ome.tif"),
+    ("ndpi", "f.ndpi"),
+    ("nd2", "f.nd2"),
+    ("czi", "f.czi"),
+    ("ims", "f.ims"),
+    ("dicom", "f.dcm"),
+    ("avi", "f.avi"),
+];
 
 /// Reads metadata and 256 x 256 corners of every level and plane corner,
 /// as `scopeio_fuzz::exercise` does.
