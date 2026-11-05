@@ -3,7 +3,28 @@ name = "scopeio"
 version = "0.1.0"
 edition = "2024"
 authors = ["Joachim Danmayr"]
+description = "Fast, low-footprint reader for microscopy and whole-slide image formats (TIFF/OME-TIFF, OME-Zarr, CZI, ND2, LIF, VSI, SVS, NDPI, MRXS and more)"
+# AGPL-3.0-only with the EVAnalyzer exception (LICENSE-EXCEPTION).
 license = "AGPL-3.0-only"
+repository = "https://github.com/joda01/scopeio"
+documentation = "https://docs.rs/scopeio"
+readme = "README.md"
+keywords = ["microscopy", "bioimage", "tiff", "whole-slide", "ome"]
+categories = ["multimedia::images", "science", "parser-implementations"]
+# Tests need the samples in the repository; the crate ships the library.
+include = [
+    "/src/**",
+    "/examples/**",
+    "/tests/common/crc32.rs",
+    "/Cargo.toml",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/LICENSE-EXCEPTION",
+    "/NOTICE",
+    "/PROVENANCE.md",
+    "/THIRD_PARTY_NOTICES.md",
+]
 
 [dependencies]
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"], optional = true }

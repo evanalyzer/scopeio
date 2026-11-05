@@ -23,6 +23,9 @@ log.
 - CI (`.github/workflows/ci.yml`): format, clippy, tests, every feature on
   its own (cargo-hack), cargo-deny, a one-minute run of each fuzz target and
   line coverage.
+- `extract_region` example: one region as an 8-bit PGM / PPM.
+- Crate metadata (description, repository, keywords); the package ships the
+  library, examples and licence files only.
 - Keller Lab Block reader (`klb`): bzip2 / uncompressed blocks, all
   channels and time points of a file.
 - NRRD reader (`nrrd`): attached and detached headers; raw, gzip, ASCII

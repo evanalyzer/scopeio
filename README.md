@@ -74,6 +74,14 @@ file dialog can be filtered without a list of its own:
 let ok = scopeio::supported_formats().iter().any(|f| f.matches_name("cells.ome.tif"));
 ```
 
+### Examples
+
+- `cargo run --release --example scopeio_info -- --meta <file>`: series
+  metadata and a checksum of every plane.
+- `cargo run --release --example extract_region -- <file> <x> <y> <w> <h>
+  [--series N] [--level L] [--c C] [--z Z] [--t T] [--out region.pgm]`: one
+  region as an 8-bit PGM / PPM.
+
 ## Performance
 
 CPU time and peak RAM of scopeio against Bio-Formats 8.5.0, bioformats-rs
