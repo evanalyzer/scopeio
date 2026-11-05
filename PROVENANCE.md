@@ -736,6 +736,24 @@ as black-box command-line tools to produce reference output
   `tests/expected/amira_divergences.tsv`).
 - Synthetic files written by `tests/scripts/make_amira_samples.py`.
 
+## Hamamatsu DCIMG (`src/formats/dcimg.rs`)
+
+- OpenReadout's DCIMG format description and provenance log
+  (`doc/hamamatsu-dcimg/`, OpenReadout Authors, MIT OR Apache-2.0; written
+  under a clean-room policy from hex dumps and the documentation of the
+  `dcimg` Python package by G. Mazzamuto, MIT): file and session headers
+  of both versions, footer tables, frame trailers, block table, camera
+  block, stored pixels. Prose only; no code taken.
+- Own hex dumps of the OME / Zenodo samples (`DCIMG/zenodo-14268554`,
+  `-14281237`, `-14287640`, `-15150937`, `-16875377`, CC BY 4.0),
+  confirming every field used.
+- Row order and the handling of stored pixels checked against Bio-Formats
+  and bioformats-rs as black boxes, each file alone in its own folder
+  (see `tests/expected/dcimg_divergences.tsv`, where each difference is
+  reproduced from our output).
+- No Hamamatsu DCAM-API / DCIMG-SDK headers or binaries used.
+- Synthetic files written by `tests/scripts/make_dcimg_samples.py`.
+
 ## Keller Lab Block (`src/formats/klb.rs`)
 
 - KLB README (F. Amat, Janelia, `doc/klb/`): header items and the block

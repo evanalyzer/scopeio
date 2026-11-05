@@ -1,0 +1,6 @@
+file	crc32
+packed_stored/packed_stored.dcimg	12c0087d
+framed_stored/framed_stored.dcimg	365be3aa
+framed_plain/framed_plain.dcimg	c22abc35
+packed_u8/packed_u8.dcimg	b9c68a78
+truncated/truncated.dcimg	c22abc35

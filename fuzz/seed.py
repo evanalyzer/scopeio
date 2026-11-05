@@ -33,6 +33,7 @@ FILES = {
     "zvi": (".zvi", ".oib", ".xrm", ".txrm", ".txm"),
     "avi": (".avi",),
     "amira": (".am",),
+    "dcimg": (".dcimg",),
 }
 
 

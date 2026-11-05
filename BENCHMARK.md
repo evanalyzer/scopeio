@@ -24,3 +24,19 @@ whole (one frame in memory, cached). Reference times include writing the
 pixels to ICS and, for Bio-Formats, JVM start-up.
 
 Full table: `tests/expected/avi_bench.md`.
+
+## Hamamatsu DCIMG (2026-11-05, Intel Core Ultra 9 185H, Bio-Formats 8.5.0, bioformats-rs 0.1.8)
+
+Public streams of 2048 x 200 uint16 frames (OME / Zenodo, CC BY 4.0),
+every frame read, median of 3 fresh processes, CPU s / peak RAM MiB.
+
+| Input | scopeio | Bio-Formats | bioformats-rs |
+|---|---:|---:|---:|
+| 1000 frames, 0.8 GB (`zenodo-15150937`) | 0.10 s / 6.3 | 3.33 s / 349 | 1.18 s / 1575 (frames misplaced) |
+| 2000 frames, 1.6 GB (`zenodo-16875377`) | 0.20 s / 6.2 | 7.85 s / 356 | 2.30 s / 3137 (frames misplaced) |
+
+scopeio reads each frame in bands of rows straight from the file, so RAM
+does not grow with the number of frames. bioformats-rs holds the whole
+stream in memory and reads frames without their 16-byte trailers.
+
+Full table: `tests/expected/dcimg_bench.md`.

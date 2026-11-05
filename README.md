@@ -146,6 +146,7 @@ compared, "n/a" means the reader cannot open the format.
 | Keller Lab Block | 7 | 14 ms | 6.0 MiB | 100× / 15× | 3.1× / 1.8× | – |
 | AVI | 16 | 1 ms | 4.8 MiB | 853× / 24× | 2.2× / 2.3× | – |
 | AmiraMesh | 14 | 1 ms | 5.2 MiB | 604× / 23× | 2.5× / 2.3× | – |
+| Hamamatsu DCIMG | 12 | 1 ms | 6.2 MiB | 408× / 25× | 3.6× / 6.0× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -249,7 +250,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Gatan Digital Micrograph 2** | `.dm2` |  |
 | **GIF (Graphics Interchange Format)** | `.gif` |  |
 | **Hamamatsu Aquacosmos NAF** | `.naf` |  |
-| **Hamamatsu DCIMG** | — |  |
+| **Hamamatsu DCIMG** | `.dcimg` | ✅ |
 | **Hamamatsu HIS** | — |  |
 | **Hamamatsu ndpi** | `.ndpi, .ndpis` | ✅ |
 | **Hamamatsu VMS** | `.vms` | ✅ |
@@ -543,6 +544,27 @@ fields as uint8, and Bio-Formats decodes HxByteRLE of single slices only
 (see `tests/expected/amira_divergences.tsv`). A 227 MB tomogram reads in
 0.08 s CPU with 7 MiB RAM (Bio-Formats: 2.3 s / 332 MiB; bioformats-rs
 fails to open it).
+
+**Hamamatsu DCIMG.** One camera stream (HCImage and other DCAM-API
+applications) as one series whose frames are time points; both known
+layouts (version 7 with a footer, version 0x1000000 with per-frame
+trailers), 8- and 16-bit. Frames are read row band by row band straight
+from the file, so memory does not grow with the number of frames. The camera's frame
+counters and time stamps give the acquisition date (UTC), the time
+increment and each frame's time; camera model, serial number and
+sensor sub-array go to the original metadata. ORCA-Flash4.0 cameras
+overwrite four pixels of the sensor's centre row with a marker and store
+their real values separately: each frame's own values are put back.
+Planes are returned bottom row first, as Bio-Formats and bioformats-rs
+return them (the `dcimg` Python package returns the stored order).
+Truncated files open with their complete frames. Each file is read on its
+own: Bio-Formats groups all `.dcimg` files of a folder into one series.
+Both reference readers put frame 0's stored values into every frame of
+version-7 files and ignore their row padding; bioformats-rs also ignores
+the frame trailers of version-0x1000000 files and does not restore their
+stored pixels (see `tests/expected/dcimg_divergences.tsv`). A 1.6 GB
+stream of 2000 frames reads in 0.20 s CPU with 6 MiB RAM (Bio-Formats:
+7.8 s / 356 MiB, bioformats-rs: 2.3 s / 3.1 GiB); see BENCHMARK.md.
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

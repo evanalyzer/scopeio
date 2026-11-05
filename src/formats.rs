@@ -26,6 +26,8 @@ mod cfb;
 mod cv7000;
 #[cfg(feature = "czi")]
 mod czi;
+#[cfg(feature = "dcimg")]
+mod dcimg;
 #[cfg(any(feature = "bmp", feature = "avi"))]
 mod dib;
 #[cfg(feature = "dicom")]
@@ -224,6 +226,8 @@ static SUPPORTED: &[FormatInfo] = &[
     avi::FORMAT,
     #[cfg(feature = "amira")]
     amira::FORMAT,
+    #[cfg(feature = "dcimg")]
+    dcimg::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -421,6 +425,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if amira::matches(&head) {
         return Ok(Some(FormatId::AmiraMesh));
     }
+    #[cfg(feature = "dcimg")]
+    if dcimg::matches(&head) {
+        return Ok(Some(FormatId::Dcimg));
+    }
     #[cfg(feature = "ics")]
     if ics::matches(path, &head) {
         return Ok(Some(FormatId::Ics));
@@ -499,6 +507,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Avi) => Ok(Arc::new(Reader(avi::Avi::open(path)?))),
         #[cfg(feature = "amira")]
         Some(FormatId::AmiraMesh) => Ok(Arc::new(Reader(amira::Amira::open(path)?))),
+        #[cfg(feature = "dcimg")]
+        Some(FormatId::Dcimg) => Ok(Arc::new(Reader(dcimg::Dcimg::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

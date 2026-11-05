@@ -21,6 +21,7 @@ allocations above the limits are findings.
 | `zvi` | Compound files: Zeiss ZVI, OIB, Xradia |
 | `avi` | AVI |
 | `amira` | AmiraMesh / Avizo |
+| `dcimg` | Hamamatsu DCIMG |
 | `zarr` | OME-Zarr v2 / v3 |
 
 The `zarr` input is a sequence of entries `relative path, 0x00, u32 LE

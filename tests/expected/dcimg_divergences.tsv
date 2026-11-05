@@ -1,0 +1,16 @@
+# Known differences for Hamamatsu DCIMG.
+file	tool	series	tolerance	ignore	reason
+tests/reference/ome/DCIMG/single/cell07/cell07.dcimg	bioformats				version 7 with stored pixels: the footer holds four real values per frame for the overwritten pixels of row 83; the reference readers put frame 0's values into every frame (reproduced: our output with frame 0's values in frames 1-9 has their CRC 1e270261); scopeio uses each frame's own values
+tests/reference/ome/DCIMG/single/cell07/cell07.dcimg	bioformats-rs				same as Bio-Formats: frame 0's stored values in every frame (CRC 1e270261 reproduced); scopeio uses each frame's own values
+tests/reference/ome/DCIMG/single/cell09-a/cell09-a.dcimg	bioformats-rs				bioformats-rs leaves the camera's 0, 65535, 0, 65535 marker in row 83 instead of the trailer's stored values (reproduced: our output with the marker put back has its CRC 6eb22acc); Bio-Formats and scopeio restore them
+tests/reference/ome/DCIMG/single/cell09-b/cell09-b.dcimg	bioformats-rs				as cell09-a: the stored pixels are not restored
+tests/reference/ome/DCIMG/single/beads1000/beads1000.dcimg	bioformats-rs				version 0x1000000 with 16-byte frame trailers: bioformats-rs reads frame i at frame 0 + i x frame bytes, ignoring the trailers (checked on frames 1, 2, 500 and 999 of its output); Bio-Formats and scopeio use the stride of the session header (frame bytes + 16)
+tests/reference/ome/DCIMG/single/dense2000/dense2000.dcimg	bioformats-rs				as beads1000: frames read without the 16-byte trailers between them
+tests/data/dcimg/framed_plain/framed_plain.dcimg	bioformats-rs				frames read without the 16-byte trailers between them (CRC 1150d95f reproduced); scopeio matches truth.tsv and Bio-Formats
+tests/data/dcimg/framed_stored/framed_stored.dcimg	bioformats				Bio-Formats writes frame 0's stored values into every frame at row 1 (row 3 counted from the bottom) and keeps the marker in row 3 (CRC a0c8c93e reproduced); the synthetic sub-array (y 940) does not put the sensor centre row into the frame as real cameras do; scopeio matches truth.tsv
+tests/data/dcimg/framed_stored/framed_stored.dcimg	bioformats-rs				frames read without the 32-byte trailers and the stored pixels not restored (CRC b58e461d reproduced); scopeio matches truth.tsv
+tests/data/dcimg/packed_stored/packed_stored.dcimg	bioformats				rows of 40 bytes (8 padding bytes) read as 32 contiguous bytes, and frame 0's stored values put at column 0 of row 2 of every frame instead of columns 1-4 (CRC ebc6356d reproduced); scopeio matches truth.tsv
+tests/data/dcimg/packed_stored/packed_stored.dcimg	bioformats-rs				as Bio-Formats: row padding ignored, frame 0's stored values at column 0 (CRC ebc6356d reproduced); scopeio matches truth.tsv
+tests/data/dcimg/packed_u8/packed_u8.dcimg	bioformats				rows of 12 bytes (3 padding bytes) read as 9 contiguous bytes (CRC 99547435 reproduced); scopeio matches truth.tsv
+tests/data/dcimg/packed_u8/packed_u8.dcimg	bioformats-rs				row padding ignored as in Bio-Formats (CRC 99547435 reproduced); scopeio matches truth.tsv
+tests/data/dcimg/truncated/truncated.dcimg	bioformats				the file ends inside frame 2: Bio-Formats returns 3 frames, the cut one padded with zeros (CRC 90105da3 reproduced); scopeio opens the 2 complete frames

@@ -106,6 +106,8 @@ pub enum FormatId {
     Avi,
     /// AmiraMesh / Avizo lattice (`.am`).
     AmiraMesh,
+    /// Hamamatsu DCIMG camera stream (`.dcimg`).
+    Dcimg,
 }
 
 /// Identification of the reader that produced the data, for

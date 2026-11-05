@@ -8,6 +8,10 @@ log.
 
 ### Added
 
+- Hamamatsu DCIMG reader (`dcimg`): version 7 and 0x1000000 files, frames
+  as time points read straight from the file, frame time stamps, camera
+  model / serial / sub-array, the ORCA-Flash4.0 stored pixels restored per
+  frame.
 - AmiraMesh / Avizo reader (`amira`): 2D / 3D lattice fields, BINARY
   (both byte orders) and ASCII data, HxZip and HxByteRLE, all integer and
   float types, vector components and label fields as channels, pixel size

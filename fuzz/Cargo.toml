@@ -111,3 +111,10 @@ path = "fuzz_targets/amira.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "dcimg"
+path = "fuzz_targets/dcimg.rs"
+test = false
+doc = false
+bench = false
