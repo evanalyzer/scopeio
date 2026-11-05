@@ -402,11 +402,11 @@ impl Bif {
             .enumerate()
             .map(|(l, planes)| {
                 let img = &planes[0];
-                let f = (1u64 << l) as f64;
+                let f = (1u64 << l.min(63)) as f64;
                 let (w, h) = match &lattice {
                     // Lower levels round up, as OpenSlide reports them.
                     // The lattice canvas need not fit in the stored grid.
-                    Some(lat) => (lat.width.div_ceil(1 << l), lat.height.div_ceil(1 << l)),
+                    Some(lat) => (lat.width.div_ceil(1 << l.min(63)), lat.height.div_ceil(1 << l.min(63))),
                     None if l == 0 => ((width as u64).min(img.width as u64), (height as u64).min(img.height as u64)),
                     None => (((width as f64 / f) as u64).min(img.width as u64), ((height as f64 / f) as u64).min(img.height as u64)),
                 };

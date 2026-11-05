@@ -336,7 +336,7 @@ fn series_meta(root: &Field, stack: &Field, image: &Image) -> Result<SeriesMeta>
             let levels = sizes
                 .iter()
                 .enumerate()
-                .map(|(l, &(w, h))| LevelMeta { size_x: w, size_y: h, tile: Some((ets.tile_w, ets.tile_h)), downsample: (1u64 << l) as f64 })
+                .map(|(l, &(w, h))| LevelMeta { size_x: w, size_y: h, tile: Some((ets.tile_w, ets.tile_h)), downsample: (1u64 << l.min(63)) as f64 })
                 .collect();
             (ets.pixel_type, ets.spp, levels)
         }

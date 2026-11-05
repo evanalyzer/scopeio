@@ -461,10 +461,10 @@ impl TiffImage {
         let chunk_index = |plane: u16, tx: u32, ty: u32| (plane as u32 * self.down * self.across + ty * self.across + tx) as usize;
         for ty in y0 / self.chunk_h..y1.div_ceil(self.chunk_h) {
             let cy0 = ty * self.chunk_h;
-            let rows = y0.max(cy0) - cy0..y1.min(cy0 + self.chunk_h) - cy0;
+            let rows = y0.max(cy0) - cy0..y1.min(cy0.saturating_add(self.chunk_h)) - cy0;
             for tx in x0 / self.chunk_w..x1.div_ceil(self.chunk_w) {
                 let cx0 = tx * self.chunk_w;
-                let cols = x0.max(cx0) - cx0..x1.min(cx0 + self.chunk_w) - cx0;
+                let cols = x0.max(cx0) - cx0..x1.min(cx0.saturating_add(self.chunk_w)) - cx0;
                 let ox = (cx0 + cols.start - x0) as usize;
                 let oy = |r: usize| (cy0 + rows.start - y0) as usize + r;
                 let n = cols.len();
