@@ -162,7 +162,7 @@ impl TiffImage {
         }
         let spp = uint(tag::SAMPLES_PER_PIXEL, 1)?.max(1) as u16;
         let bits_list = tiff.uints(ifd, tag::BITS_PER_SAMPLE)?.unwrap_or_else(|| vec![1]);
-        let bits = bits_list[0] as u16;
+        let bits = *bits_list.first().ok_or_else(|| Error::Corrupt("TIFF BitsPerSample without values".into()))? as u16;
         if bits_list.iter().any(|&b| b != bits as u64) {
             return Err(Error::UnsupportedVariant(format!("TIFF with mixed bits per sample {bits_list:?}")));
         }
@@ -443,6 +443,12 @@ impl TiffImage {
     /// * `tiff` - File holding the image data.
     /// * `samples` - Samples to return; [`Samples::All`] for colour images.
     pub fn read_native(&self, tiff: &TiffFile, region: Region, samples: Samples, sink: &mut Sink) -> Result<()> {
+        // Levels or planes of one series must share the pixel layout; corrupt
+        // IFDs can differ from the one the series was described by.
+        let out_samples = if samples == Samples::All { self.samples_out as usize } else { 1 };
+        if sink.pixel_bytes() != out_samples * self.pixel_type.bytes() {
+            return Err(Error::Corrupt("TIFF image layout differs from its series".into()));
+        }
         let t = self.tables(tiff)?;
         let (x0, y0) = (region.x as u32, region.y as u32);
         let (x1, y1) = (x0 + region.width as u32, y0 + region.height as u32);
@@ -808,8 +814,8 @@ impl TiffImage {
                     }
                 }
             }
-        });
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Converts subsampled YCbCr data units to RGB rows `rows`.

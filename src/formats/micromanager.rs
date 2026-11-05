@@ -330,9 +330,12 @@ fn index(sizes: (usize, usize, usize), c: usize, z: usize, t: usize) -> Option<u
     (c < sizes.0 && z < sizes.1 && t < sizes.2).then(|| c + sizes.0 * (z + sizes.1 * t))
 }
 
-/// Checks the plane count of `series` positions with `sizes`.
-fn check_planes(series: usize, sizes: (usize, usize, usize)) -> Result<usize> {
-    let n = sizes.0.checked_mul(sizes.1).and_then(|n| n.checked_mul(sizes.2)).filter(|&n| n > 0 && n.saturating_mul(series) <= MAX_PLANES);
+/// Plane count per position of `series` positions with `sizes`, if
+/// plausible for `stored` images: corrupt coordinates claim far more planes
+/// than the dataset holds.
+fn check_planes(series: usize, sizes: (usize, usize, usize), stored: usize) -> Result<usize> {
+    let limit = MAX_PLANES.min(stored.saturating_mul(64).max(1 << 16));
+    let n = sizes.0.checked_mul(sizes.1).and_then(|n| n.checked_mul(sizes.2)).filter(|&n| n > 0 && n.saturating_mul(series) <= limit);
     n.ok_or_else(|| Error::Corrupt(format!("Micro-Manager dataset of {series} x {sizes:?} planes")))
 }
 
@@ -420,7 +423,7 @@ impl MicroManager {
         let mut positions: Vec<u32> = entries.iter().map(|e| e.0[3]).collect();
         positions.sort_unstable();
         positions.dedup();
-        let n = check_planes(positions.len(), sizes)?;
+        let n = check_planes(positions.len(), sizes, entries.len())?;
         let mut series: Vec<Series> = positions.iter().map(|_| Series { planes: vec![None; n], plane_meta: Vec::new() }).collect();
         for ([c, z, t, p], file, offset) in entries {
             let s = positions.binary_search(&p).expect("listed position");
@@ -495,7 +498,7 @@ impl MicroManager {
         }
         let all = folder_planes.iter().flat_map(|(_, p)| p.iter());
         let sizes = all.fold((1, 1, 1), |s, ((c, z, t), _, _)| (s.0.max(c + 1), s.1.max(z + 1), s.2.max(t + 1)));
-        let n = check_planes(folder_planes.len(), sizes)?;
+        let n = check_planes(folder_planes.len(), sizes, folder_planes.iter().map(|(_, p)| p.len()).sum())?;
         if folder_planes.iter().all(|(_, p)| p.is_empty()) {
             return Err(Error::Corrupt("Micro-Manager metadata.txt without images".into()));
         }
@@ -581,7 +584,7 @@ impl MicroManager {
         let mut keys: Vec<Vec<usize>> = entries.iter().map(key_of).collect();
         keys.sort();
         keys.dedup();
-        let n = check_planes(keys.len(), sizes)?;
+        let n = check_planes(keys.len(), sizes, entries.len())?;
         let mut files: Vec<PathBuf> = Vec::new();
         let mut file_index: HashMap<String, u32> = HashMap::new();
         let mut series: Vec<Series> = keys.iter().map(|_| Series { planes: vec![None; n], plane_meta: Vec::new() }).collect();

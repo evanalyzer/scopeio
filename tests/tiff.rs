@@ -161,3 +161,25 @@ fn palette_ramps_keep_indices_as_intensities() {
     assert_eq!(m.channels[0].color, Some([0, 255, 0, 255]));
     assert_eq!(m.channels[0].lut.as_ref().unwrap().len(), 256);
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    // One file per layout and codec: strips, tiles, planar, BigTIFF, SubIFD
+    // pyramid, ImageJ, palette, predictors, PackBits, LZW, Deflate, JPEG.
+    for name in [
+        "u8_packbits.tif",
+        "rgb8_lzw_pred.tif",
+        "u16_deflate_pred_be_tiles.tif",
+        "f32_deflate_fpred.tif",
+        "rgb8_planar.tif",
+        "bigtiff_u16_tiles.tif",
+        "pyramid_subifd.tif",
+        "pyramid_reduced.tif",
+        "imagej_hyperstack.tif",
+        "palette8.tif",
+        "u12_le.tif",
+    ] {
+        common::corrupt_sweep(&sample(name), 1);
+    }
+    common::corrupt_sweep(&root().join("tests/data/tiff_im/gray8_jpeg.tif"), 1);
+}

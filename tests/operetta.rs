@@ -52,3 +52,11 @@ fn synthetic_metadata() {
     assert_eq!(m.stage_position.unwrap().x_nm, Some(200_000.0));
     assert_eq!(r.plane_meta(0, Plane::new(0, 0, 1)).unwrap().delta_t_s, Some(30.0));
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    let dir = root().join("tests/data/operetta");
+    let index = "Plate1__2024-01-01T00_00_00-Measurement 1/Images/Index.idx.xml";
+    common::corrupt_tree_sweep(&dir, index, index, 23);
+    common::corrupt_tree_sweep(&dir, index, "0a1b2c3d-0000-4000-8000-123456789abc/r03c03f01p03-ch1sk1fk1fl1.tiff", 3);
+}

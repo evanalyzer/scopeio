@@ -453,7 +453,13 @@ fn build_index(entries: &[Entry], xml: &meta::XmlMeta) -> Result<Index> {
         let min = |f: fn(&Entry) -> i32| level0.iter().map(|e| f(e)).min().unwrap_or(0);
         let max = |f: fn(&Entry) -> i32| level0.iter().map(|e| f(e)).max().unwrap_or(0);
         let (c0, z0, t0) = (min(|e| e.c), min(|e| e.z), min(|e| e.t));
-        let (size_c, size_z, size_t) = ((max(|e| e.c) - c0 + 1) as u32, (max(|e| e.z) - z0 + 1) as u32, (max(|e| e.t) - t0 + 1) as u32);
+        let extent = |f: fn(&Entry) -> i32, origin: i32| (max(f) as i64 - origin as i64 + 1) as u64;
+        let (size_c, size_z, size_t) = (extent(|e| e.c, c0), extent(|e| e.z, z0), extent(|e| e.t, t0));
+        // Corrupt coordinates claim planes far beyond the subblocks present.
+        if size_c.saturating_mul(size_z).saturating_mul(size_t) > (level0.len() as u64).saturating_mul(64).max(1 << 16) {
+            return Err(Error::Corrupt(format!("CZI scene of {size_c} x {size_z} x {size_t} planes in {} subblocks", level0.len())));
+        }
+        let (size_c, size_z, size_t) = (size_c as u32, size_z as u32, size_t as u32);
         // Levels: distinct factors of the downsampled subblocks.
         let mut factors = vec![1.0f64];
         let factor_of = |e: &Entry| if e.stored_w == e.w && e.stored_h == e.h { 1.0 } else { snap_factor(e.w, e.stored_w) };

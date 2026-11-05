@@ -64,3 +64,10 @@ fn synthetic_metadata() {
     assert_eq!(v2.series_meta(0).unwrap().size_z, 2);
     assert_eq!(v2.format().id, scopeio::FormatId::Nd2);
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    for name in ["zstack_2ch.nd2", "positions_time.nd2", "rgb_zlib_time.nd2", "v2_xml_z.nd2"] {
+        common::corrupt_sweep(&sample(name), 1);
+    }
+}

@@ -11,4 +11,5 @@ promt.md
 .claude/
 /fuzz/target
 /fuzz/corpus
-/fuzz/artifacts
+/fuzz/artifacts*
+/fuzz/logs

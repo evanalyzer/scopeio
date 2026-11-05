@@ -2,7 +2,8 @@
 //!
 //! Thread-local scratch buffers for compressed and intermediate data, reused
 //! across reads to avoid allocations. Buffers larger than [`RETAIN_MAX`]
-//! are released after use.
+//! are released after use; requests above [`LEN_MAX`] fail, so sizes read
+//! from corrupt headers cannot exhaust memory.
 //!
 //! **Author:** Joachim Danmayr
 //! **Date:** 2026-10-24
@@ -14,8 +15,13 @@
 
 use std::cell::RefCell;
 
+use crate::{Error, Result};
+
 /// Largest buffer kept for reuse per thread and nesting depth.
 const RETAIN_MAX: usize = 32 << 20;
+/// Largest buffer handed out: 2 GiB, above the largest chunk, frame or
+/// strip a valid file needs at once.
+pub(crate) const LEN_MAX: usize = 2 << 30;
 
 thread_local! {
     /// Free buffers; nested calls take one each.
@@ -26,9 +32,20 @@ thread_local! {
 ///
 /// The content is unspecified (zero on first use, stale data afterwards);
 /// callers must overwrite what they read.
-pub(crate) fn with<R>(len: usize, f: impl FnOnce(&mut [u8]) -> R) -> R {
+///
+/// # Errors
+///
+/// Returns [`Error::Corrupt`] if `len` exceeds [`LEN_MAX`] or cannot be
+/// allocated, else the result of `f`.
+pub(crate) fn with<R>(len: usize, f: impl FnOnce(&mut [u8]) -> Result<R>) -> Result<R> {
+    if len > LEN_MAX {
+        return Err(Error::Corrupt(format!("buffer of {len} bytes requested")));
+    }
     let mut buf = POOL.with(|p| p.borrow_mut().pop()).unwrap_or_default();
     if buf.len() < len {
+        if buf.try_reserve_exact(len - buf.len()).is_err() {
+            return Err(Error::Corrupt(format!("buffer of {len} bytes cannot be allocated")));
+        }
         buf.resize(len, 0);
     }
     let result = f(&mut buf[..len]);
@@ -39,7 +56,7 @@ pub(crate) fn with<R>(len: usize, f: impl FnOnce(&mut [u8]) -> R) -> R {
 }
 
 /// Like [`with`], but the buffer is zero-filled.
-pub(crate) fn with_zeroed<R>(len: usize, f: impl FnOnce(&mut [u8]) -> R) -> R {
+pub(crate) fn with_zeroed<R>(len: usize, f: impl FnOnce(&mut [u8]) -> Result<R>) -> Result<R> {
     with(len, |buf| {
         buf.fill(0);
         f(buf)
@@ -58,11 +75,16 @@ mod tests {
             a.fill(1);
             with(8, |b| {
                 b.fill(2);
-                b.as_ptr() as usize
-            });
-            a.iter().all(|&v| v == 1)
+                Ok(b.as_ptr() as usize)
+            })?;
+            Ok(a.iter().all(|&v| v == 1))
         });
-        assert!(outer);
-        with_zeroed(16, |a| assert!(a.iter().all(|&v| v == 0)));
+        assert!(outer.unwrap());
+        assert!(with_zeroed(16, |a| Ok(a.iter().all(|&v| v == 0))).unwrap());
+    }
+
+    #[test]
+    fn oversized_requests_fail() {
+        assert!(matches!(with(LEN_MAX + 1, |_| Ok(())), Err(Error::Corrupt(_))));
     }
 }

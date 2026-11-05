@@ -17,3 +17,9 @@ fn matches_reference_readers() {
     let failures = common::check_against_oracles("ome-tiff");
     assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    // Pixels, IFD chain and the OME-XML comment.
+    common::corrupt_sweep(&common::root().join("tests/data/ome-tiff/pyramid_u16.ome.tif"), 37);
+}

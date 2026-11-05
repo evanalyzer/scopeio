@@ -78,3 +78,19 @@ fn probe_accepts_store_and_metadata_file() {
     assert_eq!(scopeio::probe(&sample("v3_gzip_crc.zarr/zarr.json")).unwrap(), Some(scopeio::FormatId::OmeZarr));
     assert_eq!(scopeio::probe(&sample("v2_yx.zarr/0")).unwrap(), None);
 }
+
+#[test]
+fn corrupt_stores_do_not_panic() {
+    // Group and array metadata (v2 and v3), a zlib chunk and a sharded gzip
+    // chunk; the stores are opened at their root.
+    let v2 = root().join("tests/data/zarr/v2_zlib_tczyx.zarr");
+    for file in [".zattrs", "0/.zarray", "0/0/0/0/0/0"] {
+        common::corrupt_tree_sweep(&v2, ".", file, 1);
+    }
+    let v3 = root().join("tests/data/zarr/v3_shard_gzip.zarr");
+    for file in ["zarr.json", "0/zarr.json", "0/c/0/0/0"] {
+        common::corrupt_tree_sweep(&v3, ".", file, 1);
+    }
+    let plate = root().join("tests/data/zarr/plate.zarr");
+    common::corrupt_tree_sweep(&plate, ".", ".zattrs", 1);
+}

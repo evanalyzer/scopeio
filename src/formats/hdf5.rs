@@ -1169,6 +1169,9 @@ impl Volume {
     /// it touches; missing chunks read as zeros.
     pub fn read_plane(&self, h5: &H5, z: u64, region: Region, sink: &mut Sink) -> Result<()> {
         let e = self.ds.dtype.size;
+        if e != sink.pixel_bytes() {
+            return Err(Error::Corrupt(format!("HDF5 element size {e} differs from its series")));
+        }
         let (dz, dy, dx) = match self.ds.dims[..] {
             [z, y, x] => (z, y, x),
             [y, x] => (1, y, x),
@@ -1446,7 +1449,8 @@ fn lz4_filter(src: &[u8], out: &mut [u8]) -> Result<usize> {
             out[written..written + n].copy_from_slice(&data[..n]);
         } else {
             // The last block wanted may be cut: decode it whole into scratch.
-            let full = block.min(u32::MAX as usize);
+            // LZ4 expands at most 255-fold.
+            let full = block.min(u32::MAX as usize).min(data.len().saturating_mul(255).saturating_add(16));
             if want < full && written + want == total {
                 scratch::with(full, |tmp| -> Result<()> {
                     let n = codecs::lz4(data, tmp)?;

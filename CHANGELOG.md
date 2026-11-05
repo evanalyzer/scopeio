@@ -15,7 +15,11 @@ log.
   offsets, or a scan of `movi`; dropped frames. Motion JPEG is lossy and
   not suited to quantitative intensity analysis. Inter-frame codecs are
   rejected with a hint to convert the file.
-- Fuzz target for the AVI reader (`fuzz/`, cargo-fuzz).
+- Fuzz targets (`fuzz/`, cargo-fuzz) for the TIFF core, OME-TIFF, NDPI,
+  ND2, CZI, VSI, LIF, Imaris / HDF5, DICOM, compound files (ZVI, OIB,
+  Xradia), AVI and OME-Zarr, seeded from `tests/data` (`fuzz/seed.py`).
+- Corrupt-input tests for TIFF, OME-TIFF, ND2, VSI, Operetta and OME-Zarr
+  (multi-file datasets through `corrupt_tree_sweep`).
 - Keller Lab Block reader (`klb`): bzip2 / uncompressed blocks, all
   channels and time points of a file.
 - NRRD reader (`nrrd`): attached and detached headers; raw, gzip, ASCII
@@ -34,7 +38,31 @@ log.
 - `rustfmt.toml` (max width 150); the crate passes `cargo fmt --check` and
   `cargo clippy --all-features -- -D warnings`.
 
+### Fixed
+
+Found by fuzzing; each returned an error before or now no longer panics,
+aborts or allocates without bound:
+
+- TIFF: panic on an empty `BitsPerSample`; out-of-bounds copy when a level
+  or plane IFD has a different pixel layout than its series (also NDPI,
+  SVS and the other TIFF-based readers).
+- NDPI: panic on adjacent or unordered restart-interval offsets, and an
+  unchecked restart count from the JPEG header.
+- HDF5 (Imaris, BigDataViewer): panic when the element size differs from
+  the series pixel type; unbounded LZ4 block buffer.
+- OME-Zarr: division by zero for a shard shape of 0.
+- DICOM: division by zero for an empty total matrix.
+- CZI: overflow and multi-gigabyte allocations from corrupt C / Z / T
+  coordinates.
+- ND2: allocations from corrupt component counts and experiment loops.
+- Micro-Manager: plane tables of corrupt index coordinates far beyond the
+  stored images.
+
 ### Security
+
+- Scratch buffers are capped at 2 GiB: a read that would need more (sizes
+  from a corrupt header) fails with `Error::Corrupt` instead of exhausting
+  memory.
 
 - zstd 0.13.4 / zstd-safe 7.4.0 (RUSTSEC-2026-0391 and the zstd-safe
   buffer advisory) for the optional `zstd-c` feature.

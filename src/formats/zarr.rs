@@ -401,7 +401,7 @@ fn open_v3(dir: &Path, m: &Value) -> Result<Array> {
                 return Err(Error::UnsupportedVariant("Zarr compression of whole shards".into()));
             }
             let inner = dims(&config["chunk_shape"], "inner chunk shape")?;
-            if inner.len() != outer.len() || inner.iter().zip(&outer).any(|(i, o)| *i == 0 || o % i != 0) {
+            if inner.len() != outer.len() || inner.iter().zip(&outer).any(|(i, o)| *i == 0 || *o == 0 || o % i != 0) {
                 return Err(Error::Corrupt("inner chunks do not divide the shard".into()));
             }
             let (inner_pipeline, nested) = v3_pipeline(&config["codecs"])?;
@@ -728,6 +728,10 @@ impl Backend for Zarr {
         let (x0, y0) = (region.x, region.y);
         let (x1, y1) = (x0 + region.width, y0 + region.height);
         let bytes = arr.pixel_type.bytes();
+        // Levels of a corrupt store can disagree with the series data type.
+        if bytes != sink.pixel_bytes() {
+            return Err(Error::Corrupt(format!("Zarr level {level} data type differs from its series")));
+        }
         let strides = arr.strides();
         let swap = arr.pipeline.big_endian != cfg!(target_endian = "big") && bytes > 1;
         let mut idx = [0u64; MAX_DIMS];

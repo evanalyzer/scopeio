@@ -387,8 +387,11 @@ impl Instance {
             return Err(Error::UnsupportedVariant("DICOM frames too large".into()));
         }
         let frames = frames(ds, count, frame_bytes, coding)?;
-        let across = width.div_ceil(tile_w as u64) as u32;
-        let down = height.div_ceil(tile_h as u64) as u32;
+        let (across, down) = (width.div_ceil(tile_w as u64), height.div_ceil(tile_h as u64));
+        if across == 0 || down == 0 || across > u32::MAX as u64 || down > u32::MAX as u64 {
+            return Err(Error::Corrupt(format!("DICOM image of {width} x {height}")));
+        }
+        let (across, down) = (across as u32, down as u32);
         let planes = size_z * paths.len().max(1);
         let cells = planes as u64 * down as u64 * across as u64;
         if cells > (frames.len() as u64).saturating_mul(64).max(1 << 20) {

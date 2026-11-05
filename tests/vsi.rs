@@ -55,3 +55,10 @@ fn synthetic_metadata_levels_and_thumbnail() {
     assert_eq!((thumb.width, thumb.height, thumb.channels), (2, 2, 3));
     assert_eq!(&thumb.as_bytes()[..3], &[255, 0, 0]);
 }
+
+#[test]
+fn corrupt_files_do_not_panic() {
+    let dir = root().join("tests/data/vsi");
+    common::corrupt_tree_sweep(&dir, "synthetic.vsi", "synthetic.vsi", 1);
+    common::corrupt_tree_sweep(&dir, "synthetic.vsi", "_synthetic_/stack1/frame_t.ets", 13);
+}

@@ -11,6 +11,9 @@ license = "AGPL-3.0-only"
 [package.metadata]
 cargo-fuzz = true
 
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 libfuzzer-sys = "0.4"
 scopeio = { path = ".." }
@@ -21,6 +24,83 @@ scopeio = { path = ".." }
 [[bin]]
 name = "avi"
 path = "fuzz_targets/avi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tiff"
+path = "fuzz_targets/tiff.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ome_tiff"
+path = "fuzz_targets/ome_tiff.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ndpi"
+path = "fuzz_targets/ndpi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "nd2"
+path = "fuzz_targets/nd2.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "czi"
+path = "fuzz_targets/czi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vsi"
+path = "fuzz_targets/vsi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "lif"
+path = "fuzz_targets/lif.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ims"
+path = "fuzz_targets/ims.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "dicom"
+path = "fuzz_targets/dicom.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "zvi"
+path = "fuzz_targets/zvi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "zarr"
+path = "fuzz_targets/zarr.rs"
 test = false
 doc = false
 bench = false

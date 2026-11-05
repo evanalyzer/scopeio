@@ -204,6 +204,10 @@ impl RestartJpeg {
         }
         let across = mcus_x / h.restart_interval;
         let expected = across as usize * mcus_y as usize;
+        // Every interval but the first follows a two-byte RST marker.
+        if expected as u64 > len / 2 + 1 {
+            return Err(Error::Corrupt(format!("JPEG with {expected} restart intervals in {len} bytes")));
+        }
         // Each interval starts at the stream's data or after a RST marker.
         let mut offsets = Vec::with_capacity(expected);
         offsets.push(h.data_at as u64);
@@ -261,6 +265,9 @@ impl RestartJpeg {
             let (x0, y0) = (region.x as u32, region.y as u32);
             let (x1, y1) = (x0 + region.width as u32, y0 + region.height as u32);
             let px = self.components;
+            if sink.pixel_bytes() != px {
+                return Err(Error::Corrupt(format!("JPEG with {px} components for a series of {} bytes per pixel", sink.pixel_bytes())));
+            }
             let color = if self.ycbcr { Color::YcbcrToRgb } else { Color::AsStored };
             let tile_len = self.tile_w as usize * self.tile_h as usize * px;
             scratch::with(tile_len, |tile| {
@@ -269,8 +276,9 @@ impl RestartJpeg {
                         let k = (ty * self.across + tx) as usize;
                         let from = self.offsets[k];
                         // Entropy data ends before the next RST marker or the EOI.
-                        let to = self.offsets.get(k + 1).map_or(self.len, |&n| n - 2);
-                        let seg = (to - from) as usize;
+                        let to = self.offsets.get(k + 1).map_or(Some(self.len), |&n| n.checked_sub(2));
+                        let seg = to.and_then(|to| to.checked_sub(from)).ok_or_else(|| Error::Corrupt("JPEG restart markers out of order".into()))?
+                            as usize;
                         let total = self.header.len() + seg + 2;
                         scratch::with(total, |stream| {
                             stream[..self.header.len()].copy_from_slice(&self.header);

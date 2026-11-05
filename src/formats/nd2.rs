@@ -44,6 +44,8 @@ const CHUNK_MAGIC: u32 = 0x0ABE_CEDA;
 const FILE_SIGNATURE: &[u8] = b"ND2 FILE SIGNATURE CHUNK NAME01!";
 /// Largest metadata chunk read, against corrupt files.
 const MAX_META: u64 = 256 << 20;
+/// Most components (channels interleaved in a frame) accepted.
+const MAX_COMPONENTS: usize = 4096;
 
 /// Returns `true` if `head` starts with the modern ND2 signature chunk.
 pub(super) fn matches(head: &[u8]) -> bool {
@@ -122,6 +124,10 @@ impl Nd2 {
         nd2.width = int("uiWidth") as u32;
         nd2.height = int("uiHeight") as u32;
         nd2.components = int("uiComp").max(1) as usize;
+        // Spectral files have tens of components; more is a corrupt header.
+        if nd2.components > MAX_COMPONENTS {
+            return Err(Error::Corrupt(format!("ND2 with {} components", nd2.components)));
+        }
         let bits = int("uiBpcInMemory");
         nd2.pixel_type = match (int("ePixelType"), bits) {
             (2, 32) => PixelType::F32,
@@ -415,14 +421,18 @@ fn validity(v: Option<&Value>) -> Vec<bool> {
 
 /// Cuts the outermost loop if the loops describe more frames than stored.
 fn fit_loops(loops: &mut Vec<Loop>, frames: u64) {
-    let inner: u64 = loops.iter().skip(1).map(|l| l.count).product();
-    if let Some(first) = loops.first_mut()
-        && first.count * inner > frames
-        && inner > 0
-    {
-        first.count = frames.div_ceil(inner).max(1);
-    }
     loops.retain(|l| l.count > 0);
+    match loops.iter().skip(1).try_fold(1u64, |acc, l| acc.checked_mul(l.count)) {
+        Some(inner) if inner <= frames.max(1) => {
+            if let Some(first) = loops.first_mut()
+                && first.count.saturating_mul(inner) > frames
+            {
+                first.count = frames.div_ceil(inner).max(1);
+            }
+        }
+        // Inner loops alone need more frames than stored: corrupt metadata.
+        _ => loops.clear(),
+    }
 }
 
 /// ISO 8601 of a Julian day number (UTC); `None` outside 1900-2100.

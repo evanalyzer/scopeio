@@ -529,43 +529,89 @@ pub fn corrupt_sweep(path: &Path, step: usize) {
     let dir = std::env::temp_dir().join(format!("scopeio-sweep-{}-{}", std::process::id(), path.file_name().unwrap().to_string_lossy()));
     std::fs::create_dir_all(&dir).unwrap();
     let target = dir.join(path.file_name().unwrap());
-    for at in (0..data.len()).step_by(step.max(1)) {
-        let mut d = data.clone();
+    for d in mutations(&data, step) {
+        std::fs::write(&target, &d).unwrap();
+        exercise_corrupt(&target);
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Like [`corrupt_sweep`] for multi-file datasets: the folder `dir` is
+/// copied, the copy of `file` (relative to `dir`) is truncated or has one
+/// byte flipped every `step` bytes, and the copy of `open` is opened.
+pub fn corrupt_tree_sweep(dir: &Path, open: &str, file: &str, step: usize) {
+    let tag = format!("{}-{}", dir.file_name().unwrap().to_string_lossy(), file.replace(['/', ' '], "_"));
+    let copy = std::env::temp_dir().join(format!("scopeio-tree-sweep-{}-{tag}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&copy);
+    copy_tree(dir, &copy);
+    let data = std::fs::read(dir.join(file)).unwrap();
+    for d in mutations(&data, step) {
+        std::fs::write(copy.join(file), &d).unwrap();
+        exercise_corrupt(&copy.join(open));
+    }
+    let _ = std::fs::remove_dir_all(&copy);
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+    std::fs::create_dir_all(to).unwrap();
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        let target = to.join(entry.file_name());
+        if entry.file_type().unwrap().is_dir() {
+            copy_tree(&entry.path(), &target);
+        } else {
+            std::fs::copy(entry.path(), target).unwrap();
+        }
+    }
+}
+
+/// Every `step` bytes: alternately the data truncated there (at least 8
+/// bytes kept) or with that byte flipped.
+fn mutations(data: &[u8], step: usize) -> impl Iterator<Item = Vec<u8>> + '_ {
+    (0..data.len()).step_by(step.max(1)).map(|at| {
+        let mut d = data.to_vec();
         if at % 2 == 0 {
             d.truncate(at.max(8));
         } else {
             d[at] ^= 0xA5;
         }
-        std::fs::write(&target, &d).unwrap();
-        if let Ok(r) = scopeio::open(&target) {
-            // Corrupt sizes can claim huge planes: decode only small ones,
-            // so the sweep never exhausts memory.
-            let small = |m: &scopeio::SeriesMeta, l: usize| {
-                let lv = &m.levels[l];
-                (lv.size_x as u128) * (lv.size_y as u128) * (m.size_c * m.size_z * m.size_t) as u128 * m.samples_per_pixel as u128 * 8 < 64 << 20
-            };
-            let all_small = (0..r.series_count()).all(|s| r.series_meta(s).is_ok_and(|m| small(m, 0)));
-            if all_small {
-                let _ = decode(r.as_ref());
-            }
-            for s in 0..r.series_count() {
-                if let Ok(m) = r.series_meta(s) {
-                    for l in 1..m.levels.len() {
-                        if small(m, l) {
-                            let _ = decode_level(r.as_ref(), s, l);
-                        }
+        d
+    })
+}
+
+/// Opens a corrupt file and decodes what is small enough; errors are
+/// expected, panics fail the test.
+fn exercise_corrupt(target: &Path) {
+    if let Ok(r) = scopeio::open(target) {
+        // Corrupt sizes can claim huge planes: decode only small ones,
+        // so the sweep never exhausts memory.
+        // Corrupt channel counts are capped too: planes are decoded one by
+        // one, each from the whole interleaved strip.
+        let small = |m: &scopeio::SeriesMeta, l: usize| {
+            let lv = &m.levels[l];
+            let planes = m.size_c as u128 * m.size_z as u128 * m.size_t as u128;
+            planes <= 4096 && (lv.size_x as u128) * (lv.size_y as u128) * planes * m.samples_per_pixel as u128 * 8 < 64 << 20
+        };
+        let all_small = (0..r.series_count()).all(|s| r.series_meta(s).is_ok_and(|m| small(m, 0)));
+        if all_small {
+            let _ = decode(r.as_ref());
+        }
+        for s in 0..r.series_count() {
+            if let Ok(m) = r.series_meta(s) {
+                for l in 1..m.levels.len() {
+                    if small(m, l) {
+                        let _ = decode_level(r.as_ref(), s, l);
                     }
                 }
             }
-            for kind in r.associated_images().to_vec() {
-                // Associated images are decoded whole; skip implausible sizes.
-                if all_small {
-                    let _ = r.read_associated(&kind, &Default::default());
-                }
+        }
+        for kind in r.associated_images().to_vec() {
+            // Associated images are decoded whole; skip implausible sizes.
+            if all_small {
+                let _ = r.read_associated(&kind, &Default::default());
             }
         }
     }
-    let _ = std::fs::remove_dir_all(&dir);
 }
 
 /// Decodes all series like [`decode`] unless a plane would exceed 64 MiB

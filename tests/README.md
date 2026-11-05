@@ -9,6 +9,7 @@ sample files that are not present locally are skipped.
 | Path | Committed | Content |
 |---|---|---|
 | `data/<format>/` | yes | Small synthetic samples written from the format specification, plus `truth.tsv` with the CRC-32 each file must decode to |
+| `data/fuzz/<target>/` | yes | Fuzzer findings (mutations of the samples above), replayed by `fuzz_regressions.rs`; see `fuzz/README.md` |
 | `expected/<format>.tsv` | yes | Metadata and pixel CRC-32 from both reference readers |
 | `expected/<format>_divergences.tsv` | yes | Known, explained differences from the reference readers; optional columns: `tolerance` (block means, lossy codecs), `ignore` (metadata fields not compared, e.g. `phys_x_nm,phys_y_nm`) |
 | `expected/<format>_bench.md` | yes | CPU time and peak RAM of scopeio and both reference readers |
