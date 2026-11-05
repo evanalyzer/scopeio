@@ -15,9 +15,12 @@
 //!
 //! Each data block is a series; the time bins are T (with the bin width
 //! `tac_r / (tac_g * adc_re)` as time increment), as Bio-Formats reports
-//! them. Uncompressed blocks are read in place; ZIP blocks (a ZIP archive
-//! with one deflated member) are decompressed into memory on first read,
-//! as their time-bin-fastest layout touches the whole block for any plane.
+//! them. Uncompressed blocks are read in place. ZIP blocks (a ZIP archive
+//! with one deflated member) are inflated as a stream once per requested
+//! region, keeping only that region's pixels with all their time bins
+//! (time bins are fastest, so any plane touches every bin of its pixels);
+//! further planes of the same region come from that copy. A 64 x 64 crop
+//! of a 512 x 512 x 4096-bin block holds 33 MB instead of the 2 GB block.
 //! LZ4 blocks are not supported yet.
 //!
 //! Provenance: `sdtfile` (BSD-3-Clause, Christoph Gohlke; read as
@@ -37,7 +40,7 @@
 
 use std::fs::File;
 use std::path::Path;
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 
 use crate::io::read_exact_at;
 use crate::pixel::Sink;
@@ -87,9 +90,20 @@ struct Block {
     stored: u64,
     zip: bool,
     width: u64,
-    height: u64,
     bins: u64,
-    inflated: OnceLock<std::result::Result<Vec<u8>, String>>,
+    /// The last decoded region of a ZIP block.
+    cache: Mutex<Option<Arc<SubCube>>>,
+}
+
+/// Pixels `x0..x1` of rows `y0..y1` of a block with all their time bins,
+/// plane by plane (time bin, then y, then x).
+#[derive(Debug)]
+struct SubCube {
+    x0: u64,
+    x1: u64,
+    y0: u64,
+    y1: u64,
+    data: Vec<u8>,
 }
 
 /// SDT file.
@@ -200,7 +214,7 @@ impl Sdt {
                 channels: vec![ChannelMeta::default()],
                 ..Default::default()
             });
-            blocks.push(Block { offset: data, stored, zip, width, height, bins, inflated: OnceLock::new() });
+            blocks.push(Block { offset: data, stored, zip, width, bins, cache: Mutex::new(None) });
             if next == 0 {
                 break;
             }
@@ -219,39 +233,91 @@ impl Sdt {
         Ok(Sdt { file, blocks, metas, original })
     }
 
-    /// The decompressed data of a ZIP block (one deflated member).
-    fn inflated<'a>(&self, b: &'a Block, len: u64) -> Result<&'a [u8]> {
-        let data = b.inflated.get_or_init(|| {
-            let load = || -> Result<Vec<u8>> {
-                if len > MAX_INFLATED || b.stored > MAX_INFLATED {
-                    return Err(Error::UnsupportedVariant("compressed SDT block above 4 GiB".into()));
-                }
-                let mut zip = vec![0u8; b.stored as usize];
-                read_exact_at(&self.file, &mut zip, b.offset)?;
-                // ZIP local file header: signature, method at 8, name and extra lengths at 26.
-                if zip.len() < 30 || &zip[..4] != b"PK\x03\x04" {
-                    return Err(Error::Corrupt("SDT block is not a ZIP archive".into()));
-                }
-                let method = u16_at(&zip, 8);
-                let start = 30 + u16_at(&zip, 26) as usize + u16_at(&zip, 28) as usize;
-                let body = zip.get(start..).ok_or_else(|| Error::Corrupt("SDT ZIP header truncated".into()))?;
-                let mut out = vec![0u8; len as usize];
-                let n = match method {
-                    0 => {
-                        let n = body.len().min(out.len());
-                        out[..n].copy_from_slice(&body[..n]);
-                        n
+    /// Rows `y0..y1`, pixels `x0..x1` of a ZIP block (one deflated member)
+    /// with all time bins: inflated as a stream, only that region kept,
+    /// plane by plane. The last region is cached and serves every request
+    /// inside it.
+    fn subcube(&self, b: &Block, region: Region, e: u64) -> Result<Arc<SubCube>> {
+        let (x0, x1, y0, y1) = (region.x, region.x + region.width, region.y, region.y + region.height);
+        let mut cache = b.cache.lock().map_err(|_| Error::Corrupt("SDT cache poisoned".into()))?;
+        if let Some(c) = cache.as_ref().filter(|c| c.x0 <= x0 && x1 <= c.x1 && c.y0 <= y0 && y1 <= c.y1) {
+            return Ok(c.clone());
+        }
+        let row = b.width * b.bins * e;
+        let pixel = b.bins * e;
+        let (w, h) = (x1 - x0, y1 - y0);
+        let (len, total) = (w * pixel, h * w * pixel);
+        if total > MAX_INFLATED || b.stored > MAX_INFLATED {
+            return Err(Error::UnsupportedVariant("compressed SDT block above 4 GiB".into()));
+        }
+        let mut zip = vec![0u8; b.stored as usize];
+        read_exact_at(&self.file, &mut zip, b.offset)?;
+        // ZIP local file header: signature, method at 8, name and extra lengths at 26.
+        if zip.len() < 30 || &zip[..4] != b"PK\x03\x04" {
+            return Err(Error::Corrupt("SDT block is not a ZIP archive".into()));
+        }
+        let method = u16_at(&zip, 8);
+        let start = 30 + u16_at(&zip, 26) as usize + u16_at(&zip, 28) as usize;
+        let body = zip.get(start..).ok_or_else(|| Error::Corrupt("SDT ZIP header truncated".into()))?;
+        // Planes of the region (a short block leaves the rest zero); each
+        // region row is gathered in stored order, then transposed.
+        let mut data = vec![0u8; total as usize];
+        let mut staged = vec![0u8; len as usize];
+        let end = (y1 - 1) * row + x1 * pixel;
+        let mut at = 0u64;
+        let mut take = |chunk: &[u8]| -> bool {
+            let (c0, c1) = (at, at + chunk.len() as u64);
+            for r in (c0 / row).max(y0)..=((c1 - 1) / row).min(y1 - 1) {
+                let (a, z) = (r * row + x0 * pixel, r * row + x1 * pixel);
+                let (s, t) = (a.max(c0), z.min(c1));
+                if s < t {
+                    staged[(s - a) as usize..(t - a) as usize].copy_from_slice(&chunk[(s - c0) as usize..(t - c0) as usize]);
+                    if t == z {
+                        transpose_row(&staged, &mut data, (r - y0) as usize, w as usize, h as usize, b.bins as usize, e as usize);
                     }
-                    8 => crate::codecs::deflate(body, &mut out, false)?,
-                    m => return Err(Error::UnsupportedVariant(format!("SDT ZIP method {m}"))),
-                };
-                // A short block leaves the rest zero.
-                out[n..].fill(0);
-                Ok(out)
-            };
-            load().map_err(|e| e.to_string())
-        });
-        data.as_deref().map_err(|e| Error::Corrupt(e.clone()))
+                }
+            }
+            at = c1;
+            at < end
+        };
+        match method {
+            0 => {
+                take(&body[..body.len().min(end as usize)]);
+            }
+            8 => {
+                scratch::with(1 << 20, |buf| crate::codecs::inflate_each(body, false, buf, |chunk| Ok(take(chunk))).map(|_| ()))?;
+            }
+            m => return Err(Error::UnsupportedVariant(format!("SDT ZIP method {m}"))),
+        }
+        let cube = Arc::new(SubCube { x0, x1, y0, y1, data });
+        *cache = Some(cube.clone());
+        Ok(cube)
+    }
+}
+
+/// Moves one region row stored pixel by pixel (`bins` samples each) into
+/// row `y` of every plane of `planes` (`bins` planes of `w` x `h`).
+fn transpose_row(src: &[u8], planes: &mut [u8], y: usize, w: usize, h: usize, bins: usize, e: usize) {
+    match e {
+        1 => transpose::<1>(src, planes, y, w, h, bins),
+        2 => transpose::<2>(src, planes, y, w, h, bins),
+        4 => transpose::<4>(src, planes, y, w, h, bins),
+        _ => transpose::<8>(src, planes, y, w, h, bins),
+    }
+}
+
+/// [`transpose_row`] for `E`-byte samples. Bins go in groups of 32 so that
+/// reads and writes stay in cache.
+fn transpose<const E: usize>(src: &[u8], planes: &mut [u8], y: usize, w: usize, h: usize, bins: usize) {
+    let (src, planes) = (src.as_chunks::<E>().0, planes.as_chunks_mut::<E>().0);
+    for b0 in (0..bins).step_by(32) {
+        let b1 = (b0 + 32).min(bins);
+        for x in 0..w {
+            let pixel = &src[x * bins..(x + 1) * bins];
+            for b in b0..b1 {
+                planes[(b * h + y) * w + x] = pixel[b];
+            }
+        }
     }
 }
 
@@ -272,26 +338,36 @@ impl Backend for Sdt {
         let b = &self.blocks[series];
         let e = self.metas[series].pixel_type.bytes();
         let bins = b.bins as usize;
-        let total = b.width * b.height * b.bins * e as u64;
         let w = region.width as usize;
         // One image row spans `w * bins` elements; plane t is every bins-th.
         let span = w * bins * e;
-        let data = if b.zip { Some(self.inflated(b, total)?) } else { None };
         let little = cfg!(target_endian = "little");
-        scratch::with(if data.is_some() { 0 } else { span }, |row| {
+        if b.zip {
+            // Plane t of the cached region: contiguous rows.
+            let c = self.subcube(b, region, e as u64)?;
+            let (cw, ch) = ((c.x1 - c.x0) as usize, (c.y1 - c.y0) as usize);
             for r in 0..region.height as usize {
-                let first = (((region.y + r as u64) * b.width + region.x) * b.bins * e as u64) as usize;
-                let src: &[u8] = match data {
-                    Some(d) => &d[first..first + span],
-                    None => {
-                        read_exact_at(&self.file, row, b.offset + first as u64)?;
-                        row
+                let y = (region.y - c.y0) as usize + r;
+                let at = ((plane.t as usize * ch + y) * cw + (region.x - c.x0) as usize) * e;
+                let src = &c.data[at..at + w * e];
+                sink.write_with(r, 0, w, |d| {
+                    d.copy_from_slice(src);
+                    if e > 1 && !little {
+                        d.chunks_exact_mut(e).for_each(<[u8]>::reverse);
                     }
-                };
+                    Ok(())
+                })?;
+            }
+            return Ok(());
+        }
+        scratch::with(span, |row| {
+            for r in 0..region.height as usize {
+                let first = ((region.y + r as u64) * b.width + region.x) * b.bins * e as u64;
+                read_exact_at(&self.file, row, b.offset + first)?;
                 sink.write_with(r, 0, w, |d| {
                     for (k, out) in d.chunks_exact_mut(e).enumerate() {
                         let s = (k * bins + plane.t as usize) * e;
-                        out.copy_from_slice(&src[s..s + e]);
+                        out.copy_from_slice(&row[s..s + e]);
                         if e > 1 && !little {
                             out.reverse();
                         }

@@ -19,7 +19,7 @@ use std::sync::OnceLock;
 
 use super::ifd::{Entry, Ifd, TiffFile, tag};
 use crate::codecs;
-use crate::io::{Source, read_exact_at};
+use crate::io::{Source, read_exact_at, read_rows, rows_in_bands};
 use crate::pixel::Sink;
 use crate::scratch;
 use crate::{Error, PixelType, Region, Result};
@@ -497,9 +497,20 @@ impl TiffImage {
                 };
                 let index = chunk_index(plane, tx, ty);
                 if self.direct(samples) {
-                    // Uncompressed native rows: read straight into the destination.
+                    // Uncompressed native rows: in bands of rows when they fill
+                    // most of the chunk row, else straight into the destination.
                     let (offset, count) = (t.offsets[index], t.counts[index]);
                     let px = in_samples * in_bytes;
+                    if offset != 0 && rows.len() > 1 && rows_in_bands(n * px, chunk_row) {
+                        let at = offset + (rows.start as usize * chunk_row + cols.start as usize * px) as u64;
+                        read_rows(&tiff.file, at, chunk_row, n * px, rows.len(), offset + count, |r, row| {
+                            sink.write_with(oy(r), ox, n, |dst| {
+                                dst.copy_from_slice(row);
+                                Ok(())
+                            })
+                        })?;
+                        continue;
+                    }
                     for r in 0..rows.len() {
                         let start = (rows.start as usize + r) * chunk_row + cols.start as usize * px;
                         sink.write_with(oy(r), ox, n, |dst| {

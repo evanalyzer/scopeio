@@ -334,7 +334,7 @@ impl Backend for Ims {
         // Levels may hold fewer z planes than level 0: nearest plane.
         let (z_level, z_base) = (self.levels[level].size[0].max(1), self.levels[0].size[0].max(1));
         let z = (plane.z as u64 * z_level / z_base).min(z_level - 1);
-        v.read_plane(&self.h5, z, region, sink)
+        v.read_plane(&self.h5, z, region, self.metas[0].size_c as u64, sink)
     }
 }
 

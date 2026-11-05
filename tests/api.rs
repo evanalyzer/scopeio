@@ -258,3 +258,51 @@ fn format_info_and_probe() {
     let original = r.original_metadata(0).unwrap();
     assert!(original.documents.iter().any(|(name, xml)| name == "OME-XML" && xml.contains("<OME")));
 }
+
+#[test]
+fn concurrent_plane_reads_of_cached_readers_are_identical() {
+    // Readers with shared caches: HDF5 chunks (BDV, Imaris), SDT regions,
+    // AVI frames; DCIMG reads bands. Threads read planes in different orders.
+    for file in [
+        "tests/data/bdv/synthetic.xml",
+        "tests/data/ims/synthetic.ims",
+        "tests/data/sdt/image.sdt",
+        "tests/data/avi/mjpeg.avi",
+        "tests/data/dcimg/framed_stored/framed_stored.dcimg",
+    ] {
+        let r = open(file);
+        let mut requests = Vec::new();
+        for s in 0..r.series_count() {
+            let m = r.series_meta(s).unwrap();
+            for (level, l) in m.levels.iter().enumerate() {
+                for t in 0..m.size_t {
+                    for z in 0..m.size_z {
+                        for c in 0..m.size_c {
+                            // Whole planes and a crop, so region caches are swapped.
+                            for region in [
+                                Region::new(0, 0, l.size_x, l.size_y),
+                                Region::new(l.size_x / 3, l.size_y / 3, l.size_x.div_ceil(2), l.size_y.div_ceil(2)),
+                            ] {
+                                let mut req = RegionRequest::new(s, level, region);
+                                (req.z, req.t, req.channels) = (z, t, scopeio::ChannelSelect::Channel(c));
+                                requests.push(req);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let sequential: Vec<ImageBuf> = requests.iter().map(|q| r.read_region(q).unwrap()).collect();
+        std::thread::scope(|scope| {
+            for thread in 0..16usize {
+                let (r, requests, sequential) = (r.clone(), &requests, &sequential);
+                scope.spawn(move || {
+                    for i in 0..requests.len() * 2 {
+                        let k = (i * 7 + thread * 13) % requests.len();
+                        assert_eq!(r.read_region(&requests[k]).unwrap(), sequential[k], "{file} request {k}");
+                    }
+                });
+            }
+        });
+    }
+}

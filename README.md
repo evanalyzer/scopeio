@@ -129,7 +129,7 @@ compared, "n/a" means the reader cannot open the format.
 | Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
 | Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
 | Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
-| BigDataViewer XML/HDF5 | 3 | 61.99 s | 31.7 MiB | n/a | 0.8× / 28× | – |
+| BigDataViewer XML/HDF5 | 3 | 9.55 s | 59.1 MiB | n/a | 4.0× / 18× | – |
 | Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
 | Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
 | OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
@@ -137,7 +137,7 @@ compared, "n/a" means the reader cannot open the format.
 | ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
 | Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
 | IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
-| Becker & Hickl SDT | 4 | 495 ms | 1033 MiB | 30× / 0.5× | 3.5× / 2.8× | – |
+| Becker & Hickl SDT | 4 | 52 ms | 27.4 MiB | 277× / 20× | 3.0× / 2.4× | – |
 | Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
 | Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
 | Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
@@ -407,7 +407,13 @@ form one series; every other attribute combination (angle, illumination,
 tile) is a series of its own, with the time points as T and the mipmap
 levels as pyramid levels. Registrations are not applied, so fused and
 deconvolved setups are separate series too. Partitioned HDF5 and the N5 /
-OME-Zarr loaders are not supported.
+OME-Zarr loaders are not supported. Compressed chunks spanning several z
+planes (BDV and Imaris) are decoded once and kept in a cache of at most
+64 MiB per file when one plane's chunks of all channels fit in it, so a z
+stack read plane by plane decodes each chunk once; a chunk leaves the
+cache after its last plane is read, and the cache switches itself off when
+chunks are evicted before they are reused. Uncompressed chunks are read one
+plane at a time.
 
 **Hamamatsu VMS.** Level 0 is the grid of JPEG files, level 1 the map
 file (when it scales the image by a whole factor); the macro image is an
@@ -463,8 +469,11 @@ image file names.
 **Becker & Hickl SDT.** Each data block is a series of the image size
 with the TCSPC time bins as T (time increment = bin width), as Bio-Formats
 reports them; Bio-Formats adds a second, empty channel per block.
-ZIP-compressed blocks are held decompressed in memory after the first
-read; LZ4-compressed blocks are not supported yet.
+ZIP-compressed blocks are inflated as a stream once per requested region,
+keeping only that region's pixels with all their time bins, plane by
+plane (a 64 x 64 crop of a 512 x 512 x 4096-bin block holds 33 MB, not the
+2 GB block; further time bins of the region are served from it).
+LZ4-compressed blocks are not supported yet.
 
 **Gatan DigitalMicrograph.** DM3 and DM4: every `ImageList` image except
 the thumbnails is a series (the reference readers return one image per

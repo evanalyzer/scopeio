@@ -20,7 +20,7 @@ fn matches_reference_readers() {
 }
 
 use common::{crc, decode_level, read_tsv, root};
-use scopeio::{FormatId, PixelType};
+use scopeio::{FormatId, PixelType, Plane, Region};
 
 fn sample(name: &str) -> std::path::PathBuf {
     root().join("tests/data/sdt").join(name)
@@ -53,4 +53,20 @@ fn synthetic_metadata() {
 fn corrupt_files_do_not_panic() {
     common::corrupt_sweep(&sample("image.sdt"), 11);
     common::corrupt_sweep(&sample("decay.sdt"), 5);
+}
+
+#[test]
+fn zip_regions_in_any_order_equal_crops() {
+    // Block 1 is ZIP: regions are decoded per request and cached; crops
+    // inside a cached region and new regions must give the same pixels.
+    let r = scopeio::open(&sample("image.sdt")).unwrap();
+    let full: Vec<Vec<u8>> = (0..8).map(|t| common::read(r.as_ref(), 1, 0, Plane::new(0, 0, t), Region::new(0, 0, 7, 5)).unwrap()).collect();
+    let crop = |t: u32, x: u64, y: u64, w: u64, h: u64| -> Vec<u8> {
+        (y..y + h).flat_map(|row| full[t as usize][(row * 7 + x) as usize * 2..(row * 7 + x + w) as usize * 2].to_vec()).collect()
+    };
+    // Inside the cached full block, then a new small region, then outside it.
+    for (t, x, y, w, h) in [(3, 1, 1, 4, 3), (7, 2, 0, 3, 5), (0, 5, 2, 2, 2), (5, 0, 4, 7, 1), (6, 1, 1, 6, 4)] {
+        let got = common::read(r.as_ref(), 1, 0, Plane::new(0, 0, t), Region::new(x, y, w, h)).unwrap();
+        assert_eq!(got, crop(t, x, y, w, h), "plane {t} region {x},{y} {w}x{h}");
+    }
 }

@@ -109,6 +109,32 @@ pub(crate) fn deflate(_src: &[u8], _out: &mut [u8], _zlib_header: bool) -> Resul
     Err(disabled("deflate"))
 }
 
+/// Decodes a zlib stream or raw Deflate data chunk by chunk into `buf`,
+/// passing each decoded chunk to `f`; stops at the end of the stream or
+/// when `f` returns `false`. Returns the bytes decoded.
+#[cfg(feature = "deflate")]
+pub(crate) fn inflate_each(src: &[u8], zlib_header: bool, buf: &mut [u8], mut f: impl FnMut(&[u8]) -> Result<bool>) -> Result<u64> {
+    use flate2::{Decompress, FlushDecompress, Status};
+    let mut d = Decompress::new(zlib_header);
+    loop {
+        let (in_before, out_before) = (d.total_in(), d.total_out());
+        let status = d.decompress(&src[d.total_in() as usize..], buf, FlushDecompress::None).map_err(|e| Error::Corrupt(format!("Deflate: {e}")))?;
+        let n = (d.total_out() - out_before) as usize;
+        if n > 0 && !f(&buf[..n])? {
+            break;
+        }
+        if status == Status::StreamEnd || (n == 0 && d.total_in() == in_before) {
+            break;
+        }
+    }
+    Ok(d.total_out())
+}
+
+#[cfg(not(feature = "deflate"))]
+pub(crate) fn inflate_each(_src: &[u8], _zlib_header: bool, _buf: &mut [u8], _f: impl FnMut(&[u8]) -> Result<bool>) -> Result<u64> {
+    Err(disabled("deflate"))
+}
+
 /// Decodes a zlib stream of unknown decoded size, at most `limit` bytes.
 #[cfg(feature = "deflate")]
 pub(crate) fn inflate_vec(src: &[u8], limit: usize) -> Result<Vec<u8>> {

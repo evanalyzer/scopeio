@@ -64,7 +64,7 @@ const VERSION_FRAMED: u32 = 0x0100_0000;
 /// Most frames accepted, against corrupt counts.
 const MAX_FRAMES: u64 = 1 << 26;
 /// Bytes of rows read with one call.
-const READ_CHUNK: usize = 4 << 20;
+const READ_CHUNK: usize = 1 << 20;
 
 /// Returns `true` for a DCIMG file header.
 pub(super) fn matches(head: &[u8]) -> bool {

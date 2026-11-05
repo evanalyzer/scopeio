@@ -45,6 +45,18 @@ log.
 
 ### Changed
 
+- Performance: SDT ZIP blocks are inflated per requested region and kept
+  plane by plane (64 x 64 crop of a 2 GB block: 0.10 s / 49 MiB instead of
+  0.99 s / 2 GiB; a full read 3.6 s instead of 17 s); compressed HDF5
+  chunks of several z planes are cached when a plane's chunks of all
+  channels fit in 64 MiB (BigDataViewer HisYFP-SPIM 10.6 s instead of
+  78 s), uncompressed chunks are read one plane at a time (an Imaris file
+  of 47 planes: 0.017 s instead of 0.042 s); short uncompressed rows (under
+  8 KiB) of TIFF, LIF, ICS / NRRD / AmiraMesh and contiguous HDF5 data are
+  read in 256 KiB bands instead of one system call per row (414 MB OME-TIFF:
+  0.045 s instead of 0.078 s CPU; a 227 MB AmiraMesh tomogram 0.027 s instead
+  of 0.075 s).
+
 - The BMP reader's DIB header, colour table, bit mask and RLE code moved
   to a module shared with the AVI reader.
 - One-plane MetaMorph TIFF files get their UIC1 calibration (pixel size).

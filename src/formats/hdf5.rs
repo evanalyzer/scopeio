@@ -19,10 +19,11 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs::File;
+use std::sync::{Arc, Mutex};
 
-use crate::io::read_exact_at;
+use crate::io::{read_exact_at, read_rows, rows_in_bands};
 use crate::pixel::Sink;
 use crate::{Error, Region, Result, codecs, scratch};
 
@@ -266,10 +267,55 @@ pub(super) struct Chunk {
     pub mask: u32,
 }
 
+/// Decoded chunks of several planes, by file address, oldest first out:
+/// reading a z stack plane by plane decodes each such chunk once. Chunks
+/// evicted before any reuse are counted; when they outnumber the reuses
+/// (e.g. channels of one plane read in turn, each evicting the others), the
+/// cache is switched off and chunks are decoded up to the plane needed.
+#[derive(Debug, Default)]
+struct ChunkCache {
+    /// Decoded chunk and whether it was reused.
+    map: HashMap<u64, (Arc<Vec<u8>>, bool)>,
+    order: VecDeque<u64>,
+    bytes: usize,
+    reused: u64,
+    wasted: u64,
+    /// Buffers of released chunks for reuse (fresh multi-MiB allocations
+    /// cost a mapping and page faults each).
+    spare: Vec<Vec<u8>>,
+}
+
+impl ChunkCache {
+    fn off(&self) -> bool {
+        self.wasted > 16 && self.wasted > self.reused
+    }
+
+    fn remove(&mut self, address: u64) {
+        if let Some((d, _)) = self.map.remove(&address) {
+            self.bytes -= d.len();
+            self.order.retain(|&a| a != address);
+            self.keep_spare(d);
+        }
+    }
+
+    /// Keeps the buffer of a released chunk unless a reader still holds it.
+    fn keep_spare(&mut self, d: Arc<Vec<u8>>) {
+        if self.spare.len() < 8
+            && let Ok(v) = Arc::try_unwrap(d)
+        {
+            self.spare.push(v);
+        }
+    }
+}
+
+/// Budget of the decoded-chunk cache of one file.
+const CHUNK_CACHE: usize = 64 << 20;
+
 /// An open HDF5 file.
 #[derive(Debug)]
 pub(super) struct H5 {
     pub file: File,
+    cache: Mutex<ChunkCache>,
     len: u64,
     /// Absolute position of address 0 (the superblock).
     base: u64,
@@ -311,7 +357,7 @@ impl H5 {
         let mut c = Cursor::new(&b);
         c.skip(8)?;
         let version = c.u8()?;
-        let mut h = H5 { file, len, base: at, so: 8, sl: 8, root: 0 };
+        let mut h = H5 { file, cache: Mutex::default(), len, base: at, so: 8, sl: 8, root: 0 };
         match version {
             0 | 1 => {
                 c.skip(3)?;
@@ -1167,7 +1213,10 @@ impl Volume {
 
     /// Delivers `region` of plane `z` to `sink`, decoding only the chunks
     /// it touches; missing chunks read as zeros.
-    pub fn read_plane(&self, h5: &H5, z: u64, region: Region, sink: &mut Sink) -> Result<()> {
+    /// Reads `region` of plane `z`. `channels` volumes are read in turn for
+    /// one plane (the channels of a series): multi-plane chunks are cached
+    /// only when the chunks of one plane of all of them fit in the cache.
+    pub fn read_plane(&self, h5: &H5, z: u64, region: Region, channels: u64, sink: &mut Sink) -> Result<()> {
         let e = self.ds.dtype.size;
         if e != sink.pixel_bytes() {
             return Err(Error::Corrupt(format!("HDF5 element size {e} differs from its series")));
@@ -1202,8 +1251,19 @@ impl Volume {
                     .and_then(|v| v.checked_mul(e as u64))
                     .ok_or_else(|| Error::Corrupt("HDF5 data size".into()))?;
                 let base = h5.absolute(*address, total)?;
+                let first = base + ((z * dy + y0) * dx + x0) * e as u64;
+                let (len, stride) = (w * e, dx as usize * e);
+                if h > 1 && rows_in_bands(len, stride) {
+                    return read_rows(&h5.file, first, stride, len, h, u64::MAX, |r, row| {
+                        sink.write_with(r, 0, w, |d| {
+                            d.copy_from_slice(row);
+                            fix(d);
+                            Ok(())
+                        })
+                    });
+                }
                 for r in 0..h {
-                    let at = base + ((z * dy + y0 + r as u64) * dx + x0) * e as u64;
+                    let at = first + (r * stride) as u64;
                     sink.write_with(r, 0, w, |d| {
                         read_exact_at(&h5.file, d, at)?;
                         fix(d);
@@ -1231,17 +1291,45 @@ impl Volume {
                     return Err(Error::Corrupt("HDF5 chunk too large".into()));
                 }
                 let (gz, zz) = (z / cz, z % cz);
-                scratch::with(chunk_len as usize, |buf| {
+                // Chunks of several planes are decoded whole once and cached
+                // when the request's chunks of all channels fit in the cache (later
+                // planes of the stack reuse them); otherwise, and for
+                // single-plane chunks, they are decoded up to the plane needed.
+                let touched = ((y0 + h as u64).div_ceil(cy) - y0 / cy) * ((x0 + w as u64).div_ceil(cx) - x0 / cx);
+                // Unfiltered chunks: only plane `zz` is read, at its offset.
+                let raw = self.ds.filters.is_empty();
+                let cached = cz > 1
+                    && !raw
+                    && touched.saturating_mul(chunk_len).saturating_mul(channels.max(1)) <= CHUNK_CACHE as u64
+                    && h5.cache.lock().is_ok_and(|c| !c.off());
+                let plane_len = (cy * cx * e as u64) as usize;
+                scratch::with(if cached { 0 } else { chunk_len as usize }, |buf| {
                     for gy in y0 / cy..(y0 + h as u64).div_ceil(cy) {
                         for gx in x0 / cx..(x0 + w as u64).div_ceil(cx) {
                             // Bytes up to the end of plane `zz` of the chunk.
                             let need = ((zz + 1) * cy * cx * e as u64) as usize;
-                            let present = match self.chunks.get(&[gz, gy, gx]) {
+                            let whole;
+                            let (present, buf): (bool, &[u8]) = match self.chunks.get(&[gz, gy, gx]) {
+                                Some(ch) if cached => {
+                                    // Planes past the end of the volume are padding.
+                                    let planes = cz.min(dz - gz * cz);
+                                    whole = self.cached_chunk(h5, ch, (planes * cy * cx * e as u64) as usize)?;
+                                    (true, &whole[..])
+                                }
+                                Some(ch) if raw => {
+                                    // The plane's bytes stored in the chunk; the rest zero.
+                                    let at = h5.absolute(ch.address, ch.size as u64)?;
+                                    let have = (ch.size as u64).saturating_sub(zz * plane_len as u64).min(plane_len as u64) as usize;
+                                    let start = zz as usize * plane_len;
+                                    read_exact_at(&h5.file, &mut buf[start..start + have], at + start as u64)?;
+                                    buf[start + have..start + plane_len].fill(0);
+                                    (true, &buf[..])
+                                }
                                 Some(ch) => {
                                     self.decode_chunk(h5, ch, buf, need)?;
-                                    true
+                                    (true, &buf[..])
                                 }
-                                None => false,
+                                None => (false, &[]),
                             };
                             let (ax0, ax1) = (x0.max(gx * cx), (x0 + w as u64).min((gx + 1) * cx));
                             let (ay0, ay1) = (y0.max(gy * cy), (y0 + h as u64).min((gy + 1) * cy));
@@ -1258,12 +1346,60 @@ impl Volume {
                                     Ok(())
                                 })?;
                             }
+                            // A forward z scan needs a chunk no more after its last plane.
+                            if cached
+                                && (zz + 1 == cz || z + 1 == dz)
+                                && let (Some(ch), Ok(mut c)) = (self.chunks.get(&[gz, gy, gx]), h5.cache.lock())
+                            {
+                                c.remove(ch.address);
+                            }
                         }
                     }
                     Ok(())
                 })
             }
         }
+    }
+
+    /// The first `len` decoded bytes of chunk `ch` (its planes inside the
+    /// volume), from the file's cache or decoded and added to it.
+    fn cached_chunk(&self, h5: &H5, ch: &Chunk, len: usize) -> Result<Arc<Vec<u8>>> {
+        if let Ok(mut c) = h5.cache.lock()
+            && let Some((d, reused)) = c.map.get_mut(&ch.address)
+        {
+            let d = d.clone();
+            if !std::mem::replace(reused, true) {
+                c.reused += 1;
+            }
+            return Ok(d);
+        }
+        // Decoded outside the lock: other threads keep reading meanwhile.
+        let mut out = h5.cache.lock().ok().and_then(|mut c| c.spare.pop()).unwrap_or_default();
+        out.clear();
+        out.resize(len, 0);
+        self.decode_chunk(h5, ch, &mut out, len)?;
+        let out = Arc::new(out);
+        if let Ok(mut c) = h5.cache.lock()
+            && !c.map.contains_key(&ch.address)
+        {
+            while c.bytes + len > CHUNK_CACHE {
+                let Some(old) = c.order.pop_front() else { break };
+                if let Some((d, reused)) = c.map.remove(&old) {
+                    c.bytes -= d.len();
+                    c.wasted += u64::from(!reused);
+                    c.keep_spare(d);
+                }
+            }
+            if c.off() {
+                // Switched off: release the memory.
+                *c = ChunkCache { reused: c.reused, wasted: c.wasted, ..Default::default() };
+            } else {
+                c.map.insert(ch.address, (out.clone(), false));
+                c.order.push_back(ch.address);
+                c.bytes += len;
+            }
+        }
+        Ok(out)
     }
 
     /// Decodes the first `need` bytes of a chunk into `out[..need]` (`out`

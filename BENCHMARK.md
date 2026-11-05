@@ -40,3 +40,32 @@ does not grow with the number of frames. bioformats-rs holds the whole
 stream in memory and reads frames without their 16-byte trailers.
 
 Full table: `tests/expected/dcimg_bench.md`.
+
+## Performance pass (2026-11-05, Intel Core Ultra 9 185H)
+
+The library before and after this pass, same files, median of 3 fresh
+processes of `scopeio_info --no-checksum`, CPU s / peak RAM MiB. All 707
+ops of `tests/expected/*_bench.md` were compared (total CPU about 295 s
+before, 217 s after); the ops that looked slower were rerun alternately
+and are within run-to-run noise. The BigDataViewer and SDT rows of the
+README come from regenerated `tests/expected/{bdv,sdt}_bench.md`.
+
+| Input | Before | After | Change |
+|---|---:|---:|---|
+| BigDataViewer HisYFP-SPIM, all planes | 78.3 / 33 | 10.6 / 72 | compressed multi-plane HDF5 chunks decoded once (cache, at most 64 MiB) |
+| BigDataViewer drosophila, all planes | 30.0 / 56 | 12.8 / 58 | same |
+| SDT 2 GB ZIP block, 64 x 64 crop, 4096 bins | 0.94 / 2071 | 0.10 / 57 | region inflated as a stream, kept plane by plane |
+| SDT 2 GB ZIP block, whole image, 4096 bins | about 17 / 2070 | 3.6 / 2070 | planes contiguous after one transposition |
+| Imaris, 47 uncompressed planes of 1024 x 1024 | 0.042 / 7 | 0.017 / 7 | one plane read per chunk instead of the chunk's prefix |
+| OME-TIFF (Micro-Manager), 414 MB uncompressed | 0.078 / 10 | 0.045 / 11 | short rows read in 256 KiB bands |
+| AmiraMesh tomogram, 227 MB | 0.075 / 7 | 0.027 / 7 | same |
+| Leica LIF, 9 series of 1024 x 1024 | 0.026 / 6 | 0.010 / 7 | same |
+
+Rows of 8 KiB and more are still read one by one: one system call per
+row costs less than the extra pass over a band that has left the CPU
+cache (a 17 KB-row ICS file was 15 % slower with 1 MiB bands).
+
+The bioformats-rs factors in the README understate scopeio on files with
+several series: bioformats-rs converts only the first series (e.g. one of
+29 Operetta wells, where its 1.2 s are for 108 of the 3132 planes scopeio
+reads in 25 s).

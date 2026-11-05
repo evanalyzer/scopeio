@@ -494,7 +494,7 @@ impl Backend for Bdv {
         // Levels may hold fewer z planes than level 0: nearest plane.
         let (z_level, z_base) = (sizes[level][0].max(1), sizes[0][0].max(1));
         let z = (plane.z as u64 * z_level / z_base).min(z_level - 1);
-        v.read_plane(&self.h5, z, region, sink)
+        v.read_plane(&self.h5, z, region, self.groups[series].setups.len() as u64, sink)
     }
 }
 

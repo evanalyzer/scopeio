@@ -911,6 +911,9 @@ impl Backend for Lif {
     }
 }
 
+/// Bytes of rows read with one call.
+const BAND_BYTES: usize = 256 << 10;
+
 /// Reads `region` of `plane` of `img` through `read(buf, at)`.
 fn read_rows(img: &Image, plane: Plane, region: Region, sink: &mut Sink, read: &dyn Fn(&mut [u8], u64) -> Result<()>) -> Result<()> {
     {
@@ -918,8 +921,29 @@ fn read_rows(img: &Image, plane: Plane, region: Region, sink: &mut Sink, read: &
         let (x0, y0, w, h) = (region.x, region.y, region.width as usize, region.height as usize);
         let px = img.pixel_bytes();
         let n = img.bytes;
-        // Contiguous gray rows go straight into the destination.
+        // Contiguous gray rows: short rows that fill most of the row stride
+        // in bands of rows with one read each, else row by row straight into
+        // the destination (see `io::rows_in_bands`).
         if img.rgb.is_none() && !img.half && img.x_inc == n as u64 {
+            let (len, stride) = (w * n, img.y_inc as usize);
+            let band = (BAND_BYTES / stride.max(1)).clamp(1, h);
+            if band > 1 && crate::io::rows_in_bands(len, stride) {
+                return scratch::with((band - 1) * stride + len, |buf| {
+                    for r0 in (0..h).step_by(band) {
+                        let rows = band.min(h - r0);
+                        let at = base + (y0 + r0 as u64) * img.y_inc + x0 * img.x_inc;
+                        let span = (rows - 1) * stride + len;
+                        read(&mut buf[..span], at)?;
+                        for r in 0..rows {
+                            sink.write_with(r0 + r, 0, w, |dst| {
+                                dst.copy_from_slice(&buf[r * stride..r * stride + len]);
+                                Ok(())
+                            })?;
+                        }
+                    }
+                    Ok(())
+                });
+            }
             for r in 0..h {
                 let at = base + (y0 + r as u64) * img.y_inc + x0 * img.x_inc;
                 sink.write_with(r, 0, w, |dst| read(dst, at))?;

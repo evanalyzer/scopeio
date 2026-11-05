@@ -78,6 +78,53 @@ pub(crate) fn read_exact_at(file: &(impl ReadAt + ?Sized), buf: &mut [u8], offse
     }
 }
 
+/// Bytes of rows read with one call by [`read_rows`].
+const BAND_BYTES: usize = 256 << 10;
+
+/// Whether [`read_rows`] should read rows of `len` bytes `stride` bytes
+/// apart in bands: short rows (one system call each costs more than the
+/// copy) that fill most of the stride. Longer rows are read one by one,
+/// which keeps them in cache.
+pub(crate) fn rows_in_bands(len: usize, stride: usize) -> bool {
+    len > 0 && len < 8 << 10 && stride <= 4 * len
+}
+
+/// Reads `rows` rows of `len` bytes, `stride` bytes apart from `offset`,
+/// in bands of rows with one read each, and passes each row to `f`. Bytes
+/// at or after `end` (the end of the available data) read as zeros.
+///
+/// # Errors
+///
+/// Returns the errors of [`read_exact_at`] and of `f`.
+pub(crate) fn read_rows(
+    file: &(impl ReadAt + ?Sized),
+    offset: u64,
+    stride: usize,
+    len: usize,
+    rows: usize,
+    end: u64,
+    mut f: impl FnMut(usize, &[u8]) -> Result<()>,
+) -> Result<()> {
+    if rows == 0 {
+        return Ok(());
+    }
+    let band = (BAND_BYTES / stride.max(1)).clamp(1, rows);
+    crate::scratch::with((band - 1) * stride + len, |buf| {
+        for r0 in (0..rows).step_by(band) {
+            let n = band.min(rows - r0);
+            let span = (n - 1) * stride + len;
+            let at = offset + (r0 * stride) as u64;
+            let have = end.saturating_sub(at).min(span as u64) as usize;
+            read_exact_at(file, &mut buf[..have], at)?;
+            buf[have..span].fill(0);
+            for r in 0..n {
+                f(r0 + r, &buf[r * stride..r * stride + len])?;
+            }
+        }
+        Ok(())
+    })
+}
+
 #[cfg(unix)]
 fn read_at_impl(file: &File, buf: &mut [u8], offset: u64) -> std::io::Result<()> {
     std::os::unix::fs::FileExt::read_exact_at(file, buf, offset)
@@ -105,6 +152,21 @@ fn read_at_impl(file: &File, mut buf: &mut [u8], mut offset: u64) -> std::io::Re
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_rows_in_bands_and_zero_fills_past_the_end() {
+        let data: Vec<u8> = (0..100u8).collect();
+        let mem = Source::Memory(Arc::from(data.as_slice()));
+        let mut got = Vec::new();
+        // Rows of 3 bytes every 10 bytes from 5; data ends at 37.
+        read_rows(&mem, 5, 10, 3, 4, 37, |r, row| {
+            got.push((r, row.to_vec()));
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(got, [(0, vec![5, 6, 7]), (1, vec![15, 16, 17]), (2, vec![25, 26, 27]), (3, vec![35, 36, 0])]);
+        assert!(rows_in_bands(1000, 4000) && !rows_in_bands(100, 4000));
+    }
 
     #[test]
     fn reads_at_offset_and_reports_truncation() {

@@ -23,7 +23,7 @@ use std::fs::File;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use crate::io::read_exact_at;
+use crate::io::{read_exact_at, read_rows, rows_in_bands};
 use crate::pixel::Sink;
 use crate::{Error, Plane, Region, Result, scratch};
 
@@ -146,6 +146,27 @@ impl Strided {
         // A row spans `(w - 1) * sx + 1` elements; with sx > 1 every sx-th is kept.
         let span = ((w as u64 - 1) * self.sx + 1) * e;
         let swap = self.bytes > 1 && self.little != cfg!(target_endian = "little");
+        // Contiguous rows of a file: in bands of rows.
+        if let Data::File { file, offset } = &self.data
+            && self.sx == 1
+            && !self.flip_y
+            && region.height > 1
+            && rows_in_bands(span as usize, (self.sy * e) as usize)
+        {
+            let at = (base + region.y * self.sy + region.x) * e;
+            if at + (region.height - 1) * self.sy * e + span > self.total {
+                return Err(Error::Corrupt(format!("{} read beyond its data", self.what)));
+            }
+            return read_rows(file, offset + at, (self.sy * e) as usize, span as usize, region.height as usize, u64::MAX, |r, row| {
+                sink.write_with(r, 0, w, |d| {
+                    d.copy_from_slice(row);
+                    if swap {
+                        d.chunks_exact_mut(self.bytes).for_each(<[u8]>::reverse);
+                    }
+                    Ok(())
+                })
+            });
+        }
         scratch::with(span as usize, |row| {
             for r in 0..region.height as usize {
                 let y = region.y + r as u64;
