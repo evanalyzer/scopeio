@@ -104,6 +104,8 @@ pub enum FormatId {
     Klb,
     /// AVI video (`.avi`): uncompressed, MSRLE and Motion JPEG.
     Avi,
+    /// AmiraMesh / Avizo lattice (`.am`).
+    AmiraMesh,
 }
 
 /// Identification of the reader that produced the data, for

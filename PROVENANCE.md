@@ -711,6 +711,31 @@ as black-box command-line tools to produce reference output
 - Strided sample reading shared with ICS (own code).
 - Synthetic files written by `tests/scripts/make_nrrd_samples.py`.
 
+## AmiraMesh (`src/formats/amira.rs`)
+
+- Amira 3.1 User's Guide and Reference Manual (ZIB / TGS), chapter
+  "AmiraMesh Format" (`doc/amira/amira_31_user_manual.pdf`): header line,
+  `define`, `Parameters`, data declarations and `@k` blocks, primitive
+  types, uniform / stacked / rectilinear / curvilinear lattices, label
+  fields with `Materials`. The codecs HxByteRLE and HxZip are only named
+  there.
+- T. Weinkauf, "Reading AmiraMesh Files for Scalar and Vector Fields"
+  (KTH, `doc/amira/weinkauf_amiramesh_notes.html`): binary layout (x
+  fastest, interleaved components). Its example C reader is public domain;
+  the reader here is not derived from it.
+- Own analysis of the AmiraMesh samples on the OME sample server
+  (`AmiraMesh/ignacio`, `AmiraMesh/imagesc-50585`,
+  `AmiraMesh/zenodo-18337391`, CC BY 4.0): `# Avizo` headers, `HxZip,0`
+  without size, nested parameter groups, `&key` base64 entries, the
+  `Units { Coordinates }` unit (Latin-1 "Å").
+- HxByteRLE layout (control byte below 128: run, 128 or above: literals)
+  confirmed by running Bio-Formats as a black box on synthetic files: it
+  decodes a single-slice file to the generator's values and rejects the
+  opposite convention; bioformats-rs decodes the multi-slice file.
+- Checked against Bio-Formats and bioformats-rs as black boxes (see
+  `tests/expected/amira_divergences.tsv`).
+- Synthetic files written by `tests/scripts/make_amira_samples.py`.
+
 ## Keller Lab Block (`src/formats/klb.rs`)
 
 - KLB README (F. Amat, Janelia, `doc/klb/`): header items and the block

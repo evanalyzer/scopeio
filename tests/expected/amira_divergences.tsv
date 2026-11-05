@@ -1,0 +1,8 @@
+# Known differences for AmiraMesh.
+file	tool	series	tolerance	ignore	reason
+tests/data/amira/labels.am	bioformats				two byte fields (Labels @1, Probability @2 HxByteRLE) are two channels; Bio-Formats returns the raw file bytes from the @2 marker on as channel 2 instead of decoding its HxByteRLE block (checked in its OME-TIFF output); scopeio matches truth.tsv
+tests/data/amira/labels.am	bioformats-rs				two byte fields are two channels; bioformats-rs returns only the first field (Labels, whose CRC it matches)
+tests/data/amira/stacked_double.am	bioformats				double samples (Amira 3.1 manual: byte, short, int, float, double); the reference readers read them as uint8; scopeio matches truth.tsv
+tests/data/amira/stacked_double.am	bioformats-rs				double samples; the reference readers read them as uint8; scopeio matches truth.tsv
+tests/data/amira/vector3.am	bioformats				float[3]: three interleaved components, read as three float channels; the reference readers read one uint8 channel; scopeio matches truth.tsv
+tests/data/amira/vector3.am	bioformats-rs				float[3]: three interleaved components, read as three float channels; the reference readers read one uint8 channel; scopeio matches truth.tsv

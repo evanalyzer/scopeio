@@ -104,3 +104,10 @@ path = "fuzz_targets/zarr.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "amira"
+path = "fuzz_targets/amira.rs"
+test = false
+doc = false
+bench = false

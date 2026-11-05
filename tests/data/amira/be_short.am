@@ -1,0 +1,13 @@
+# AmiraMesh BINARY 2.1
+define Lattice 7 5
+Parameters {
+    Units {
+        Coordinates "nm"
+    }
+    BoundingBox 10 22 0 8 0 0,
+    CoordType "uniform"
+}
+Lattice { short Data } @1
+# Data section follows
+@1
+ìxïüó€÷úˆşàÀäDçÈëLîĞòTõØÕØŒÜß”ãæœê ÉPÌÔĞXÓÜ×`ÚäŞh½˜ÁÄ È$Ë¨Ï,Ò°

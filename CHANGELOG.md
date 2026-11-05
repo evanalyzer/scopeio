@@ -8,6 +8,10 @@ log.
 
 ### Added
 
+- AmiraMesh / Avizo reader (`amira`): 2D / 3D lattice fields, BINARY
+  (both byte orders) and ASCII data, HxZip and HxByteRLE, all integer and
+  float types, vector components and label fields as channels, pixel size
+  in the file's unit.
 - AVI reader (`avi` feature): uncompressed (8-bit palette, 16/24/32-bit,
   `Y800` gray), MSRLE (RLE8 / RLE4 with delta frames) and Motion JPEG
   (also without Huffman tables) video streams; OpenDML files above 1 GB

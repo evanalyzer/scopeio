@@ -10,6 +10,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+#[cfg(feature = "amira")]
+mod amira;
 #[cfg(feature = "avi")]
 mod avi;
 #[cfg(feature = "bdv")]
@@ -90,7 +92,7 @@ mod scn;
 mod sdt;
 #[cfg(feature = "tiff")]
 mod slide;
-#[cfg(any(feature = "ics", feature = "nrrd"))]
+#[cfg(any(feature = "ics", feature = "nrrd", feature = "amira"))]
 mod strided;
 #[cfg(feature = "svs")]
 mod svs;
@@ -220,6 +222,8 @@ static SUPPORTED: &[FormatInfo] = &[
     klb::FORMAT,
     #[cfg(feature = "avi")]
     avi::FORMAT,
+    #[cfg(feature = "amira")]
+    amira::FORMAT,
     #[cfg(feature = "nifti")]
     nifti::FORMAT,
     #[cfg(feature = "nifti")]
@@ -413,6 +417,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if nrrd::matches(&head) {
         return Ok(Some(FormatId::Nrrd));
     }
+    #[cfg(feature = "amira")]
+    if amira::matches(&head) {
+        return Ok(Some(FormatId::AmiraMesh));
+    }
     #[cfg(feature = "ics")]
     if ics::matches(path, &head) {
         return Ok(Some(FormatId::Ics));
@@ -489,6 +497,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Klb) => Ok(Arc::new(Reader(klb::Klb::open(path)?))),
         #[cfg(feature = "avi")]
         Some(FormatId::Avi) => Ok(Arc::new(Reader(avi::Avi::open(path)?))),
+        #[cfg(feature = "amira")]
+        Some(FormatId::AmiraMesh) => Ok(Arc::new(Reader(amira::Amira::open(path)?))),
         #[cfg(feature = "nifti")]
         Some(FormatId::Nifti | FormatId::Analyze) => Ok(Arc::new(Reader(nifti::Nifti::open(path)?))),
         #[cfg(feature = "mrc")]

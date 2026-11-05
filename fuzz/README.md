@@ -20,6 +20,7 @@ allocations above the limits are findings.
 | `dicom` | DICOM |
 | `zvi` | Compound files: Zeiss ZVI, OIB, Xradia |
 | `avi` | AVI |
+| `amira` | AmiraMesh / Avizo |
 | `zarr` | OME-Zarr v2 / v3 |
 
 The `zarr` input is a sequence of entries `relative path, 0x00, u32 LE

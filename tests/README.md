@@ -49,6 +49,8 @@ python3 -I tests/scripts/fetch_ome_zarr.py https://uk1s3.embassy.ebi.ac.uk/idr/z
 ```
 
 ```sh
+# AmiraMesh: OME samples (CC BY 4.0), three folders
+python3 -I tests/scripts/fetch_ome.py AmiraMesh/ignacio/ AmiraMesh/imagesc-50585/ AmiraMesh/zenodo-18337391/
 # Zenodo records (CC BY 4.0) with LSM files
 python3 -I tests/scripts/fetch_zenodo.py 14510432 10-01.lsm
 python3 -I tests/scripts/fetch_zenodo.py 10046394 "Suppl Fig 1B.lsm" "Fig 4A.lsm"
@@ -105,6 +107,7 @@ python3 -I tests/scripts/make_flex_samples.py     # Opera Flex
 python3 -I tests/scripts/make_cv7000_samples.py   # Yokogawa CV7000 (uses make_micromanager_samples.py)
 python3 -I tests/scripts/make_metaxpress_samples.py # MetaXpress
 python3 -I tests/scripts/make_nrrd_samples.py     # NRRD
+python3 -I tests/scripts/make_amira_samples.py    # AmiraMesh
 python3 -I tests/scripts/make_klb_samples.py      # Keller Lab Block
 python3 -I tests/scripts/make_avi_samples.py      # AVI (--bench DIR: large benchmark files)
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
@@ -298,6 +301,8 @@ N=NRRD; python3 -I tests/scripts/fetch_ome.py $N/glencoe/gzip/ $N/glencoe/versio
 python3 -I tests/scripts/oracle.py nrrd --repeat 3 $N/glencoe/gzip/dt-helix.nrrd.gz $N/glencoe/version4/dt-helix.nhdr \
     $N/gordon/dt-helix.nhdr $N/gordon/gk2-rcc-mask.nhdr $N/gordon/gk2-rcc-mask2.nhdr
 D=tests/data/nrrd; python3 -I tests/scripts/oracle.py nrrd --append --repeat 1 $D/scalar.nrrd $D/rgb.nhdr $D/text.nrrd $D/hex.nhdr $D/tail.nhdr
+# AmiraMesh: the OME samples (fetch_ome.py above) and the synthetic files
+python3 -I tests/scripts/oracle.py amira --repeat 3 tests/reference/ome/AmiraMesh/*/*.am tests/data/amira/*.am
 # KLB: the OME samples; idr0044 files under neutral names, as the reference readers group
 # files named like a time-lapse (TM…/CHN…) and fail when only some are present
 K=KLB; T=$K/idr0044/Mmu_E1_CAGTAG1.TM000000_timeFused_blending/SPM00_TM000000_CM00_CM01

@@ -1,0 +1,11 @@
+file	crc32
+le_ushort.am	8d389d3d
+be_short.am	981f4f44
+ascii_float.am	89a10e85
+vector3.am	ccae3f0d
+zip_int.am	19fd029f
+rle_byte.am	4a8e78bc
+rle_slice.am	ef35ff3e
+zip_nosize.am	5d073b26
+labels.am	f8467881
+stacked_double.am	c38d89cb

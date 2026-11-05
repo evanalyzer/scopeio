@@ -145,6 +145,7 @@ compared, "n/a" means the reader cannot open the format.
 | NRRD | 10 | 4 ms | 4.6 MiB | 192× / 44× | 10.0× / 7.3× | – |
 | Keller Lab Block | 7 | 14 ms | 6.0 MiB | 100× / 15× | 3.1× / 1.8× | – |
 | AVI | 16 | 1 ms | 4.8 MiB | 853× / 24× | 2.2× / 2.3× | – |
+| AmiraMesh | 14 | 1 ms | 5.2 MiB | 604× / 23× | 2.5× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -209,7 +210,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **AIM** | `.aim` |  |
 | **Alicona 3D** | — |  |
 | **Amersham Biosciences Gel** | `.gel` |  |
-| **Amira Mesh** | `.am, .amiramesh, .grey, .hx, .labels` |  |
+| **Amira Mesh** | `.am, .amiramesh, .grey, .hx, .labels` | ✅ |
 | **Amnis FlowSight** | `.cif` |  |
 | **Analyze 7.5** | `.img, .hdr` | ✅ |
 | **Andor Bio-Imaging Division (ABD) TIFF** | `.tif` |  |
@@ -524,6 +525,24 @@ On 1000 frames of 1024 x 1024 scopeio reads a 1 GB uncompressed OpenDML
 file in 0.37 s CPU with 6 MiB RAM (Bio-Formats: 8.7 s and 906 MiB for
 half of the frames) and Motion JPEG in 2.9 s with 17 MiB (Bio-Formats
 12.7 s / 739 MiB, bioformats-rs 8.7 s / 6 GiB); see BENCHMARK.md.
+
+**AmiraMesh.** Regular 2D / 3D `Lattice` fields of AmiraMesh and Avizo
+files (`# AmiraMesh` / `# Avizo` headers): `BINARY` (big endian),
+`BINARY-LITTLE-ENDIAN` and `ASCII` data, `HxZip` and `HxByteRLE`
+compression, the types byte, sbyte, short, ushort, int, uint, float and
+double. Vector fields (`float[3]`) have one channel per component; several
+lattice fields of one type (e.g. `Labels` and `Probability` of a label
+field) are the channels of one series, fields of other types further
+series. Pixel size from the top-level `BoundingBox` of uniform lattices
+(node positions: span over n - 1) or `BoundingBoxXY` of stacked ones, in
+the unit of `Parameters { Units { Coordinates } }` (micrometres if none).
+Raw data is read plane by plane from the file; compressed and ASCII data
+is decoded once on first read. Surfaces and tetrahedral grids are not
+images and are rejected. The reference readers read double and vector
+fields as uint8, and Bio-Formats decodes HxByteRLE of single slices only
+(see `tests/expected/amira_divergences.tsv`). A 227 MB tomogram reads in
+0.08 s CPU with 7 MiB RAM (Bio-Formats: 2.3 s / 332 MiB; bioformats-rs
+fails to open it).
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

@@ -1,0 +1,24 @@
+# AmiraMesh ASCII 1.0
+
+# Dimensions in x-, y-, and z-direction
+define Lattice 7 5 2
+
+Parameters {
+    CoordType "uniform",
+    # BoundingBox is xmin xmax ymin ymax zmin zmax
+    BoundingBox 0 6 0 4 0 1
+}
+
+Lattice { float ScalarField } = @1
+
+@1
+0.0 0.5 1.0 1.5 2.0 2.5 3.0
+-0.25 0.25 0.75 1.25 1.75 2.25 2.75
+-0.5 0.0 0.5 1.0 1.5 2.0 2.5
+-0.75 -0.25 0.25 0.75 1.25 1.75 2.25
+-1.0 -0.5 0.0 0.5 1.0 1.5 2.0
+10.0 10.5 11.0 11.5 12.0 12.5 13.0
+9.75 10.25 10.75 11.25 11.75 12.25 12.75
+9.5 10.0 10.5 11.0 11.5 12.0 12.5
+9.25 9.75 10.25 10.75 11.25 11.75 12.25
+9.0 9.5 10.0 10.5 11.0 11.5 12.0

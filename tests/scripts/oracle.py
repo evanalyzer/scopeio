@@ -200,12 +200,15 @@ def openslide_oracle(src, tmp, crop, level, bounds):
 
 
 def source_little(src):
-    """Byte order of a TIFF source file, None for other formats."""
+    """Byte order of a TIFF or binary AmiraMesh source file, None for other
+    formats."""
     if Path(src).is_dir():
         return None
     with open(src, "rb") as f:
-        magic = f.read(2)
-    return {b"II": True, b"MM": False}.get(magic)
+        head = f.readline(256)
+    if head.startswith((b"# AmiraMesh", b"# Avizo")):
+        return True if b"LITTLE-ENDIAN" in head else False if b"BINARY" in head else None
+    return {b"II": True, b"MM": False}.get(head[:2])
 
 
 def canonical_order(values, axes, sizes):

@@ -32,6 +32,7 @@ FILES = {
     "dicom": (".dcm",),
     "zvi": (".zvi", ".oib", ".xrm", ".txrm", ".txm"),
     "avi": (".avi",),
+    "amira": (".am",),
 }
 
 
