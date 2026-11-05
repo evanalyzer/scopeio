@@ -160,9 +160,12 @@ impl TiffImage {
         if width == 0 || height == 0 {
             return Err(Error::Corrupt(format!("TIFF image size {width}x{height}")));
         }
-        let spp = uint(tag::SAMPLES_PER_PIXEL, 1)?.max(1) as u16;
+        // Both are SHORT in the specification; larger values are corrupt
+        // and would wrap to 0 as u16.
+        let spp = u16::try_from(uint(tag::SAMPLES_PER_PIXEL, 1)?.max(1)).map_err(|_| Error::Corrupt("TIFF SamplesPerPixel above 65535".into()))?;
         let bits_list = tiff.uints(ifd, tag::BITS_PER_SAMPLE)?.unwrap_or_else(|| vec![1]);
-        let bits = *bits_list.first().ok_or_else(|| Error::Corrupt("TIFF BitsPerSample without values".into()))? as u16;
+        let bits = *bits_list.first().ok_or_else(|| Error::Corrupt("TIFF BitsPerSample without values".into()))?;
+        let bits = u16::try_from(bits).map_err(|_| Error::Corrupt(format!("TIFF BitsPerSample {bits}")))?;
         if bits_list.iter().any(|&b| b != bits as u64) {
             return Err(Error::UnsupportedVariant(format!("TIFF with mixed bits per sample {bits_list:?}")));
         }

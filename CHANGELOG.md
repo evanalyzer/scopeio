@@ -49,7 +49,9 @@ log.
 Found by fuzzing; each returned an error before or now no longer panics,
 aborts or allocates without bound:
 
-- TIFF: panic on an empty `BitsPerSample`; out-of-bounds copy when a level
+- TIFF: `SamplesPerPixel` or `BitsPerSample` above 65535 wrapped to 0 and
+  panicked (found by CI fuzzing in a SubIFD pyramid level); panic on an
+  empty `BitsPerSample`; out-of-bounds copy when a level
   or plane IFD has a different pixel layout than its series (also NDPI,
   SVS and the other TIFF-based readers).
 - TIFF: Deflate, LZW and PackBits chunks too small to decode to the rows
