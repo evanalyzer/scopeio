@@ -20,6 +20,9 @@ log.
   Xradia), AVI and OME-Zarr, seeded from `tests/data` (`fuzz/seed.py`).
 - Corrupt-input tests for TIFF, OME-TIFF, ND2, VSI, Operetta and OME-Zarr
   (multi-file datasets through `corrupt_tree_sweep`).
+- CI (`.github/workflows/ci.yml`): format, clippy, tests, every feature on
+  its own (cargo-hack), cargo-deny, a one-minute run of each fuzz target and
+  line coverage.
 - Keller Lab Block reader (`klb`): bzip2 / uncompressed blocks, all
   channels and time points of a file.
 - NRRD reader (`nrrd`): attached and detached headers; raw, gzip, ASCII

@@ -288,6 +288,7 @@ impl Plain {
 
     /// Decodes the whole image into `out` (`samples` native samples per
     /// pixel), for formats without partial decoding.
+    #[cfg_attr(not(feature = "jp2"), allow(unused_variables))]
     fn decode_all(&self, level: usize, out: &mut [u8]) -> Result<()> {
         match self.kind {
             #[cfg(feature = "png")]

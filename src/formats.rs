@@ -112,6 +112,8 @@ use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
 
+// Unused in builds with codec features only.
+#[allow(unused_imports)]
 use crate::reader::Reader;
 use crate::{Error, FormatId, FormatInfo, ImageReader, OpenOptions, Result};
 
