@@ -91,7 +91,8 @@ jobs:
       - name: Run targets
         working-directory: fuzz
         # cargo-fuzz needs nightly, which the toolchain step does not make
-        # the default. Every target runs; the step fails if any of them
+        # the default, and the glibc target: the installed cargo-fuzz is a
+        # musl build and would default to musl, where ASan cannot link. Every target runs; the step fails if any of them
         # crashed (panic, sanitizer error). Inputs that only exceed the time or memory limit
         # (bounded but large decodes claimed by corrupt headers, slow under
         # the sanitizer) are kept as artifacts without failing the run.
@@ -101,7 +102,7 @@ jobs:
           cargo +nightly --version
           for t in $(cargo +nightly fuzz list); do
             echo "::group::$t"
-            if ! cargo +nightly fuzz run -O "$t" "corpus/$t" -- -fork=1 -ignore_timeouts=1 -ignore_ooms=1 -max_total_time=60 -timeout=30 -rss_limit_mb=3072 -malloc_limit_mb=2200 -max_len=1048576 2>&1 | tee "/tmp/fuzz-$t.log"; then
+            if ! cargo +nightly fuzz run -O --target x86_64-unknown-linux-gnu "$t" "corpus/$t" -- -fork=1 -ignore_timeouts=1 -ignore_ooms=1 -max_total_time=60 -timeout=30 -rss_limit_mb=3072 -malloc_limit_mb=2200 -max_len=1048576 2>&1 | tee "/tmp/fuzz-$t.log"; then
               failed="$failed $t"
               # The end of the output as an annotation, visible without the log.
               echo "::error title=fuzz $t::$(tail -c 1500 "/tmp/fuzz-$t.log" | tr '\n' ' ')"
