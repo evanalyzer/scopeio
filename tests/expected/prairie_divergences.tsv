@@ -1,0 +1,14 @@
+# Known differences between scopeio and the reference readers.
+# Timed sequences: every frame is a time point. With several sequences Bio-Formats maps the frames
+# of a sequence to z and the sequences to time; scopeio returns all frames as time points (same
+# planes in the same order, checked: identical pixels).
+# Bidirectional z series: Bio-Formats returns a series per cycle when the z positions of the cycles
+# differ (checked with a variant whose second cycle runs downwards in the same order: one series);
+# scopeio puts the frames of every second cycle back in depth order and returns one series.
+file	tool	series	tolerance	ignore	reason
+tests/reference/gin-ophys/imaging_datasets/BrukerTif/TSeries-02022026-001_multisequence/TSeries-02022026-001_multisequence.xml	bioformats	-			timed sequences: frames are time points (Bio-Formats: z per sequence)
+tests/reference/gin-ophys/imaging_datasets/BrukerTif/TSeries-08162024-1918-002_multisequence/TSeries-08162024-1918-002_multisequence.xml	bioformats	-			timed sequences: frames are time points (Bio-Formats: z per sequence)
+tests/data/prairie/multiseq/multiseq.xml	bioformats	-			timed sequences: frames are time points (reference: z per sequence)
+tests/data/prairie/zseries/zseries.xml	bioformats	-			bidirectional z series: one series of 2 cycles in depth order (reference: a series per cycle, the second deepest first)
+tests/data/prairie/multiseq/multiseq.xml	bioformats-rs	-			timed sequences: frames are time points (reference: z per sequence)
+tests/data/prairie/zseries/zseries.xml	bioformats-rs	-			bidirectional z series: one series of 2 cycles in depth order (reference: a series per cycle, the second deepest first)

@@ -262,13 +262,18 @@ fn format_info_and_probe() {
 #[test]
 fn concurrent_plane_reads_of_cached_readers_are_identical() {
     // Readers with shared caches: HDF5 chunks (BDV, Imaris), SDT regions,
-    // AVI frames; DCIMG reads bands. Threads read planes in different orders.
+    // AVI frames, Prairie View files; DCIMG reads bands. Threads read planes
+    // in different orders.
     for file in [
         "tests/data/bdv/synthetic.xml",
         "tests/data/ims/synthetic.ims",
         "tests/data/sdt/image.sdt",
         "tests/data/avi/mjpeg.avi",
         "tests/data/dcimg/framed_stored/framed_stored.dcimg",
+        // Prairie View keeps open TIFF files in a small cache.
+        "tests/data/prairie/zseries/zseries.xml",
+        "tests/data/scanimage/v3_mroi.tif",
+        "tests/data/philips/synthetic.tiff",
     ] {
         let r = open(file);
         let mut requests = Vec::new();

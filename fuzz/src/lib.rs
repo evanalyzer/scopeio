@@ -43,6 +43,17 @@ pub fn file(data: &[u8], name: &str) {
 /// `relative path, 0x00, u32 LE length, bytes` unpacked below the folder
 /// `root`, which is then opened. Paths leaving the folder are dropped.
 pub fn tree(data: &[u8], root: &str) {
+    exercise(&unpack(data, root));
+}
+
+/// Like [`tree`], for formats opened through a file of the folder: opens
+/// `root/open` (e.g. the XML file of a Prairie View recording).
+pub fn tree_file(data: &[u8], root: &str, open: &str) {
+    exercise(&unpack(data, root).join(open));
+}
+
+/// Unpacks `tree` entries below the folder `root`; returns the folder.
+fn unpack(data: &[u8], root: &str) -> PathBuf {
     let dir = workdir().join(root);
     let mut rest = data;
     while let Some(nul) = rest.iter().position(|&b| b == 0) {
@@ -61,7 +72,7 @@ pub fn tree(data: &[u8], root: &str) {
         }
         let _ = std::fs::write(path, body);
     }
-    exercise(&dir);
+    dir
 }
 
 /// Opens `path` and walks the public API with small reads.

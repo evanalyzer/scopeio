@@ -1,0 +1,11 @@
+# Known differences between scopeio and Bio-Formats (which reads Philips TIFF as plain TIFF).
+# JPEG tiles are YCbCr 4:2:0: decoders upsample the chroma differently. Checked on Philips-1 tile (40, 30)
+# against ImageMagick (libjpeg, black box): samples within 4, channel means within 0.45; Bio-Formats
+# block means within 0.7.
+# Tiles that are not stored (offset and byte count 0): scopeio returns white, the slide background
+# that OpenSlide also renders; Bio-Formats returns black.
+file	tool	series	crop	tolerance	reason
+tests/reference/openslide/Philips-TIFF/Philips-1.tiff	bioformats	0	20000,15000,2048,2048	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Philips-TIFF/Philips-2.tiff	bioformats	0	52736,146944,2048,2048	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Philips-TIFF/Philips-4.tiff	bioformats	0	76800,41472,2048,2048	1.0	JPEG 4:2:0 chroma upsampling
+tests/reference/openslide/Philips-TIFF/Philips-4.tiff	bioformats	0	15360,15360,2048,2048	-	tiles not stored: white (scopeio) vs black (Bio-Formats)

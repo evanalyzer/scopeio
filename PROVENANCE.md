@@ -754,6 +754,61 @@ as black-box command-line tools to produce reference output
 - No Hamamatsu DCAM-API / DCIMG-SDK headers or binaries used.
 - Synthetic files written by `tests/scripts/make_dcimg_samples.py`.
 
+## Philips TIFF (`src/formats/philips.rs`)
+
+- openslide.org Philips format page (prose, CC BY-SA 4.0, saved in
+  `doc/philips-tiff/`): detection, the DPUfsImport XML, padded level
+  sizes, sparse tiles, label / macro as base64 JPEG or TIFF directories,
+  barcode and pixel spacing properties. OpenSlide's C code (LGPL) was not
+  opened.
+- tifffile (BSD-3-Clause, C. Gohlke, see THIRD_PARTY_NOTICES.md),
+  `series_philips` and `TiffPage.is_philips`: the level size correction
+  (full size over the rounded spacing ratio, at most one tile of
+  padding) and the wrong ImageDepth / TileDepth tags of Philips DP v1.1.
+  Read as documentation; the Rust code is our own.
+- Own analysis of the OpenSlide Philips test slides (Philips-1, -2, -4,
+  CC0-1.0, `tests/scripts/fetch_openslide.py`): XML attributes, directory
+  layout, missing tiles.
+- Pixels checked against Bio-Formats as a black box (full-resolution
+  crops) and one JPEG tile against ImageMagick (libjpeg); see
+  `tests/expected/philips_divergences.tsv`.
+- Synthetic file written by `tests/scripts/make_philips_samples.py`.
+
+## ScanImage TIFF (`src/formats/scanimage.rs`)
+
+- ScanImage BigTiff Specification (MBF Bioscience / Vidrio vendor
+  documentation, docs.scanimage.org, saved in `doc/scanimage/`): the
+  static header of file formats 3 and 4 (magic, version, lengths,
+  non-varying frame data, ROI group JSON) and the per-frame tags.
+- tifffile (BSD-3-Clause, see THIRD_PARTY_NOTICES.md),
+  `read_scanimage_metadata`, `series_scanimage` and `is_scanimage`: the
+  detection signatures and the header layout. Read as documentation.
+- Own analysis of the CatalystNeuro ScanImage test files (GIN
+  `CatalystNeuro/ophys_testing_data`, no licence stated: downloaded by
+  `tests/scripts/fetch_gin.py`, not committed) and the prose of their
+  README: which settings decide channels, slices, flyback frames, frames
+  per slice and volumes in each file format and release, the multi-ROI
+  page layout, the format 2 trailer (ROI JSON followed by its length).
+  Their synthetic pixel values confirm the placement of every page.
+- Black-box comparison with Bio-Formats and bioformats-rs (both read
+  ScanImage files as plain TIFF), see
+  `tests/expected/scanimage_divergences.tsv`.
+- No ScanImage MATLAB code or ScanImageTiffReader code used.
+- Synthetic files written by `tests/scripts/make_scanimage_samples.py`.
+
+## Bruker Prairie View (`src/formats/prairie.rs`)
+
+- No public specification (see `doc/_manifest_tiff_wsi_codecs.md`).
+- Own analysis of the CatalystNeuro Bruker test recordings (GIN
+  `CatalystNeuro/ophys_testing_data`, no licence stated: downloaded by
+  `tests/scripts/fetch_gin.py`, not committed) and the prose of their
+  README: the PVScan XML (state shards, sequences, frames, files, pages),
+  sequence types, positions and times.
+- Checked against Bio-Formats as a black box, including a variant of the
+  synthetic bidirectional z series that showed when Bio-Formats splits
+  cycles into series; see `tests/expected/prairie_divergences.tsv`.
+- Synthetic recordings written by `tests/scripts/make_prairie_samples.py`.
+
 ## Keller Lab Block (`src/formats/klb.rs`)
 
 - KLB README (F. Amat, Janelia, `doc/klb/`): header items and the block

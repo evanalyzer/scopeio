@@ -108,6 +108,12 @@ pub enum FormatId {
     AmiraMesh,
     /// Hamamatsu DCIMG camera stream (`.dcimg`).
     Dcimg,
+    /// Philips TIFF whole-slide export (`Philips DP` software tag).
+    PhilipsTiff,
+    /// ScanImage TIFF (laser scanning microscopy, releases 3.x to today).
+    ScanImage,
+    /// Bruker Prairie View recording (`.xml` with its TIFF files).
+    Prairie,
 }
 
 /// Identification of the reader that produced the data, for

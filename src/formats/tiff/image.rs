@@ -112,6 +112,9 @@ pub(crate) struct TiffImage {
     /// Chroma subsampling of uncompressed or lossless YCbCr data to convert.
     ycbcr: Option<Ycbcr>,
     pub significant_bits: u16,
+    /// Byte value of chunks that are not stored (offset or size 0); slide
+    /// formats set their background, e.g. 255 for white.
+    pub empty_fill: u8,
 }
 
 /// Offsets and byte counts of all chunks.
@@ -328,6 +331,7 @@ impl TiffImage {
             jpeg_tables,
             ycbcr,
             significant_bits,
+            empty_fill: 0,
         })
     }
 
@@ -516,7 +520,7 @@ impl TiffImage {
                         sink.write_with(oy(r), ox, n, |dst| {
                             let avail = if offset == 0 { 0 } else { count.saturating_sub(start as u64).min(dst.len() as u64) as usize };
                             read_exact_at(&tiff.file, &mut dst[..avail], offset + start as u64)?;
-                            dst[avail..].fill(0);
+                            dst[avail..].fill(if offset == 0 { self.empty_fill } else { 0 });
                             Ok(())
                         })?;
                     }
@@ -577,7 +581,7 @@ impl TiffImage {
         let row_values = self.chunk_w as usize * samples as usize;
         let (offset, count) = (t.offsets[index], t.counts[index]);
         if offset == 0 || count == 0 {
-            out.fill(0);
+            out.fill(self.empty_fill);
             return Ok(());
         }
         if offset.checked_add(count).is_none_or(|end| end > tiff.len) {

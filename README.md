@@ -147,6 +147,9 @@ compared, "n/a" means the reader cannot open the format.
 | AVI | 16 | 1 ms | 4.8 MiB | 853× / 24× | 2.2× / 2.3× | – |
 | AmiraMesh | 14 | 1 ms | 5.2 MiB | 604× / 23× | 2.5× / 2.3× | – |
 | Hamamatsu DCIMG | 12 | 1 ms | 6.2 MiB | 408× / 25× | 3.6× / 6.0× | – |
+| Philips TIFF | 4 | 32 ms | 19 MiB | 139× / 14× | – | – |
+| ScanImage TIFF | 18 | 1 ms | 5.2 MiB | 1824× / 30× | 6.0× / 2.3× | – |
+| Bruker Prairie View | 14 | 1 ms | 5.7 MiB | 1116× / 21× | 3.0× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -335,12 +338,14 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **PICT (Macintosh Picture)** | `.pict` |  |
 | **PNG (Portable Network Graphics)** | `.png` | ✅ |
 | **Portable Any Map** | `.pbm, .pgm, .ppm` |  |
-| **Prairie Technologies TIFF** | `.tif, .xml, .cfg` |  |
+| **Philips TIFF** | `.tiff` | ✅ |
+| **Prairie Technologies TIFF** (Bruker Prairie View) | `.tif, .xml, .cfg` | ✅ `.xml` |
 | **Princeton Instruments SPE** | `.spe` |  |
 | **Quesant** | — |  |
 | **QuickTime Movie** | — |  |
 | **RHK** | `.sm2, .sm3` |  |
 | **SBIG** | — |  |
+| **ScanImage TIFF** | `.tif` | ✅ |
 | **Seiko** | `.xqd, .xqf` |  |
 | **SimplePCI & HCImage** | `.cxd` |  |
 | **SM Camera** | — |  |
@@ -574,6 +579,57 @@ the frame trailers of version-0x1000000 files and does not restore their
 stored pixels (see `tests/expected/dcimg_divergences.tsv`). A 1.6 GB
 stream of 2000 frames reads in 0.20 s CPU with 6 MiB RAM (Bio-Formats:
 7.8 s / 356 MiB, bioformats-rs: 2.3 s / 3.1 GiB); see BENCHMARK.md.
+
+**Philips TIFF.** Whole-slide exports of the Philips IntelliSite
+pathology solution (Software tag `Philips DP`, `DPUfsImport` XML in the
+first ImageDescription). The TIFF tags give level sizes padded to whole
+tiles; the reduced levels get their true size from the full-resolution
+size and the level's `DICOM_PIXEL_SPACING`, as OpenSlide reports them.
+Tiles that are not stored (sparse slides) read as white, the background
+OpenSlide renders; Bio-Formats returns black. The label and macro images
+come from the base64 JPEGs in the XML or from the `Label` / `Macro` TIFF
+directories; the barcode, the acquisition date and all XML attributes
+(`philips.*`) are in the metadata. Bio-Formats reads these files as plain
+TIFF (full resolution only); its decoder upsamples the 4:2:0 JPEG chroma
+differently (block means within 0.7, see
+`tests/expected/philips_divergences.tsv`). A 2048 × 2048 crop reads in
+0.03 s CPU with 19 MiB RAM (Bio-Formats: 3.3 s / 264 MiB).
+
+**ScanImage TIFF.** Laser scanning recordings of ScanImage 3.x to
+2023 (all five metadata layouts: `state.*`, `scanimage.SI4.*`, file
+format 1 and 2, and the binary header of formats 3 and 4). The pages are
+mapped to channels (saved channels), z and time from the acquisition
+settings: planar recordings as time series, fast z stacks with the
+slices of each volume as z and their flyback frames skipped, motor
+stacks with the saved frames of each slice as time points. Files that
+hold less than one volume (a stack stopped early, a recording split over
+files) keep their complete slices; acquisitions stopped before the first
+frame are rejected. Multi-ROI pages (mesoscopes) are split at the fly-to
+lines into one series per region of interest, named after the ROI.
+Pixel sizes from the TIFF resolution (written in centimetres by recent
+releases), the imaging field of view or the ROI scan fields (calibrations
+giving pixels of a millimetre or more are dropped); arbitrary z stacks
+give each slice's depth, every page its frame time. Each file is read on
+its own; a recording split over files is several readers. The placement
+of every page is checked with the synthetic pixel values of the
+CatalystNeuro test files. Bio-Formats and bioformats-rs read every page
+as a time point of one channel; their pixels equal ours for single-channel
+planar files.
+
+**Bruker Prairie View.** Recordings of Prairie View 5.x (two-photon and
+confocal Ultima / Investigator systems), opened through their XML file.
+Z series map the frames of each cycle to z (bidirectional cycles put back
+in depth order) and the cycles to time; timed and brightness-over-time
+sequences map all frames to time points. Single- and multi-page TIFF files
+(Prairie View 5.7 and later) are read lazily, with a few files kept open;
+a missing file reads as zeros. Pixel size from `micronsPerPixel`, the z
+step from the frame positions, each plane's time from `absoluteTime`,
+channel names, objective and laser wavelength from the settings. The nine
+CatalystNeuro test recordings Bio-Formats opens (it fails on the
+brightness-over-time one) match its pixels and pixel sizes; with several timed sequences Bio-Formats maps the frames to
+z, and it returns a series per cycle for bidirectional z series (see
+`tests/expected/prairie_divergences.tsv`). bioformats-rs cannot open the
+recordings.
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

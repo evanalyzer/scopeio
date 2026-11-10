@@ -28,11 +28,13 @@ DEFAULT = [
     "Mirax/CMU-1-Saved-1_16.zip", "Mirax/Mirax2-Fluorescence-2.zip", "Mirax/CMU-1-Saved-1_2.zip",
     "Leica/Leica-Fluorescence-1.scn", "Leica/Leica-1.scn",
     "Ventana/Ventana-1.bif",
+    "Philips-TIFF/Philips-1.tiff", "Philips-TIFF/Philips-2.tiff", "Philips-TIFF/Philips-4.tiff",
     "DICOM/CMU-1-JP2K-33005.zip", "DICOM/Leica-4.zip", "DICOM/Hamamatsu-2.zip", "DICOM/3DHISTECH-1.zip",
 ]
 # Large files with layouts the default set lacks (NDPI offsets above 4 GiB,
-# MIRAX slide version 2.2, iScan BIF).
-LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi", "Mirax/Mirax2.2-1.zip", "Ventana/OS-2.bif"]
+# MIRAX slide version 2.2, iScan BIF, Philips label and macro as XML and
+# TIFF directories).
+LARGE = ["Hamamatsu/Hamamatsu-1.ndpi", "Hamamatsu/OS-2.ndpi", "Mirax/Mirax2.2-1.zip", "Ventana/OS-2.bif", "Philips-TIFF/Philips-3.tiff"]
 
 
 def sha256(path):

@@ -118,3 +118,24 @@ path = "fuzz_targets/dcimg.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "scanimage"
+path = "fuzz_targets/scanimage.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "philips"
+path = "fuzz_targets/philips.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "prairie"
+path = "fuzz_targets/prairie.rs"
+test = false
+doc = false
+bench = false

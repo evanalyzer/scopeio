@@ -1,0 +1,5 @@
+folder	c_z_t	channels	missing_t
+zseries	2x3x2	1,2	-
+timed	2x1x4	2,3	-
+multiseq	1x1x4	2	-
+missing	1x1x3	1	1

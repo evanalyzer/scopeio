@@ -95,6 +95,13 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     }
     let first = TiffFile::open_first(path)?;
     let description = first.string(&first.ifds[0], tag::IMAGE_DESCRIPTION)?.unwrap_or_default();
+    #[cfg(feature = "scanimage")]
+    {
+        let software = first.string(&first.ifds[0], tag::SOFTWARE)?.unwrap_or_default();
+        if super::scanimage::matches(head, &software, &description) {
+            return Ok(Some(FormatId::ScanImage));
+        }
+    }
     #[cfg(feature = "bif")]
     if super::bif::matches(&first) {
         return Ok(Some(FormatId::Bif));
@@ -102,6 +109,13 @@ pub(super) fn probe(path: &Path, head: &[u8]) -> Result<Option<FormatId>> {
     #[cfg(feature = "scn")]
     if super::scn::matches(&description) {
         return Ok(Some(FormatId::Scn));
+    }
+    #[cfg(feature = "philips")]
+    {
+        let software = first.string(&first.ifds[0], tag::SOFTWARE)?.unwrap_or_default();
+        if super::philips::matches(&software, &description) {
+            return Ok(Some(FormatId::PhilipsTiff));
+        }
     }
     #[cfg(feature = "qptiff")]
     {

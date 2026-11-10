@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PVScan version="5.8.64.800" date="2/2/2026 3:04:05 PM" notes="">
+  <PVStateShard>
+    <PVStateValue key="framePeriod" value="0.25"/>
+    <PVStateValue key="micronsPerPixel">
+      <IndexedValue index="XAxis" value="0.5"/>
+      <IndexedValue index="YAxis" value="0.5"/>
+      <IndexedValue index="ZAxis" value="2"/>
+    </PVStateValue>
+    <PVStateValue key="objectiveLens" value="Nikon 16X"/>
+    <PVStateValue key="objectiveLensMag" value="16"/>
+    <PVStateValue key="objectiveLensNA" value="0.8"/>
+    <PVStateValue key="laserWavelength">
+      <IndexedValue index="0" value="920" description="Excitation 1"/>
+    </PVStateValue>
+  </PVStateShard>
+  <Sequence type="TSeries ZSeries Element" cycle="1" bidirectionalZ="True">
+    <Frame relativeTime="0.0" absoluteTime="3.5" index="1" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00001_Ch1_000001.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00001_Ch2_000001.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="10" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+    <Frame relativeTime="0.25" absoluteTime="3.75" index="2" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00001_Ch1_000002.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00001_Ch2_000002.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="12" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+    <Frame relativeTime="0.5" absoluteTime="4.0" index="3" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00001_Ch1_000003.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00001_Ch2_000003.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="14" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+  </Sequence>
+  <Sequence type="TSeries ZSeries Element" cycle="2" bidirectionalZ="True">
+    <Frame relativeTime="2.0" absoluteTime="5.5" index="1" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00002_Ch1_000001.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00002_Ch2_000001.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="14" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+    <Frame relativeTime="2.25" absoluteTime="5.75" index="2" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00002_Ch1_000002.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00002_Ch2_000002.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="12" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+    <Frame relativeTime="2.5" absoluteTime="6.0" index="3" parameterSet="CurrentSettings">
+      <File channel="1" channelName="Ch1" filename="zseries_Cycle00002_Ch1_000003.tif"/>
+      <File channel="2" channelName="Ch2" filename="zseries_Cycle00002_Ch2_000003.tif"/>
+      <PVStateShard>
+        <PVStateValue key="positionCurrent">
+          <SubindexedValues index="ZAxis">
+            <SubindexedValue subindex="0" value="10" description="Z Focus"/>
+          </SubindexedValues>
+        </PVStateValue>
+      </PVStateShard>
+    </Frame>
+  </Sequence>
+</PVScan>

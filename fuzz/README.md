@@ -22,6 +22,9 @@ allocations above the limits are findings.
 | `avi` | AVI |
 | `amira` | AmiraMesh / Avizo |
 | `dcimg` | Hamamatsu DCIMG |
+| `scanimage` | ScanImage TIFF |
+| `philips` | Philips TIFF |
+| `prairie` | Bruker Prairie View (folder tree, `rec.xml` opened) |
 | `zarr` | OME-Zarr v2 / v3 |
 
 The `zarr` input is a sequence of entries `relative path, 0x00, u32 LE

@@ -103,6 +103,47 @@ pub(crate) fn decode(data: &[u8], tables: Option<&[u8]>, color: Color, out: &mut
     Ok(Info { width: info.width as usize, height: info.height as usize, components })
 }
 
+/// Pixel count from the first SOF marker of a JPEG stream; `None` without
+/// one or above 2^26 pixels (associated images are small; larger sizes come
+/// from corrupt files).
+pub(crate) fn frame_pixels(b: &[u8]) -> Option<usize> {
+    let mut pos = 2;
+    while pos + 9 < b.len() {
+        if b[pos] != 0xFF {
+            pos += 1;
+            continue;
+        }
+        let marker = b[pos + 1];
+        let len = u16::from_be_bytes([b[pos + 2], b[pos + 3]]) as usize;
+        if matches!(marker, 0xC0..=0xCF) && !matches!(marker, 0xC4 | 0xC8 | 0xCC) {
+            let h = u16::from_be_bytes([b[pos + 5], b[pos + 6]]) as usize;
+            let w = u16::from_be_bytes([b[pos + 7], b[pos + 8]]) as usize;
+            return (w > 0 && h > 0 && w * h <= 1 << 26).then_some(w * h);
+        }
+        pos += 2 + len;
+    }
+    None
+}
+
+/// Decodes a complete JPEG stream (an associated image) to RGB or gray.
+///
+/// # Errors
+///
+/// Returns [`Error::Corrupt`] if `src` is not a JPEG of at most 2^26 pixels.
+pub(crate) fn decode_image(src: &[u8]) -> Result<crate::reader::NativeImage> {
+    let pixels = frame_pixels(src).ok_or_else(|| Error::Corrupt("associated image is not a JPEG".into()))?;
+    let mut out = vec![0u8; pixels * 3];
+    let info = decode(src, None, Color::YcbcrToRgb, &mut out)?;
+    out.truncate(info.width * info.height * info.components);
+    Ok(crate::reader::NativeImage {
+        width: info.width as u64,
+        height: info.height as u64,
+        samples_per_pixel: info.components as u8,
+        pixel_type: crate::PixelType::U8,
+        data: out,
+    })
+}
+
 // --- Tests ------------------------------------------------------------------
 
 #[cfg(test)]

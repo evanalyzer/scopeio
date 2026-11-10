@@ -89,6 +89,8 @@ Clean-room rules: nothing was fetched from Bio-Formats (github.com/ome/bioformat
 | Olympus SIS TIFF | No public spec found | |
 | Olympus VSI/ETS official | Vendor spec (v1.3/1.6) not public | Community docs only (see above) |
 | Prairie TIFF (Bruker PrairieView) | No public spec found | |
+| Philips TIFF | philips-tiff/openslide_philips.html (+ .txt) | https://openslide.org/formats/philips/ | OpenSlide project | CC BY-SA 4.0 | prose format page |
+| ScanImage TIFF | scanimage/bigtiff_spec.html (+ .txt) | https://docs.scanimage.org/Appendix/ScanImage%2BBigTiff%2BSpecification.html | MBF Bioscience / Vidrio | vendor documentation | static header of file formats 3/4 |
 | Andor ABD TIFF / Improvision TIFF / Nikon Elements TIFF / Nikon EZ-C1 TIFF | No public specs found | |
 | FEI TIFF (tags 34680 FEI_SFEG / 34682 FEI_HELIOS, INI text) | No vendor spec found | |
 | Ionpath MIBI(tiff) | Vendor spec not public | ionpath/mibilib is source code and was not downloaded |

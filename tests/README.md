@@ -58,6 +58,9 @@ D=DCIMG; python3 -I tests/scripts/fetch_ome.py $D/zenodo-14268554/ $D/zenodo-142
     bead-b:zenodo-14268554/bead_bot4_018/bead_bot4__560_00000_00007 beads1000:zenodo-15150937/Beads_both_560_00000_00000 \
     dense2000:zenodo-16875377/dense_beads_2chunks_2000timepoints/dense_40nm__560_00000_00000; do
     n=${p%%:*}; mkdir -p single/$n && ln -f "${p#*:}.dcimg" single/$n/$n.dcimg; done)
+# ScanImage and Bruker Prairie View: CatalystNeuro optical physiology test files (GIN; no licence
+# stated, contributors may publish them for software building on the formats: download only)
+python3 -I tests/scripts/fetch_gin.py imaging_datasets/ScanImage/ imaging_datasets/BrukerTif/
 # AmiraMesh: OME samples (CC BY 4.0), three folders
 python3 -I tests/scripts/fetch_ome.py AmiraMesh/ignacio/ AmiraMesh/imagesc-50585/ AmiraMesh/zenodo-18337391/
 # Zenodo records (CC BY 4.0) with LSM files
@@ -118,6 +121,9 @@ python3 -I tests/scripts/make_metaxpress_samples.py # MetaXpress
 python3 -I tests/scripts/make_nrrd_samples.py     # NRRD
 python3 -I tests/scripts/make_amira_samples.py    # AmiraMesh
 python3 -I tests/scripts/make_dcimg_samples.py    # Hamamatsu DCIMG
+python3 -I tests/scripts/make_philips_samples.py  # Philips TIFF; needs ImageMagick for the label JPEG
+python3 -I tests/scripts/make_scanimage_samples.py # ScanImage TIFF (all five metadata layouts)
+python3 -I tests/scripts/make_prairie_samples.py  # Bruker Prairie View recordings
 python3 -I tests/scripts/make_klb_samples.py      # Keller Lab Block
 python3 -I tests/scripts/make_avi_samples.py      # AVI (--bench DIR: large benchmark files)
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
@@ -315,6 +321,10 @@ D=tests/data/nrrd; python3 -I tests/scripts/oracle.py nrrd --append --repeat 1 $
 python3 -I tests/scripts/oracle.py amira --repeat 3 tests/reference/ome/AmiraMesh/*/*.am tests/data/amira/*.am
 # DCIMG: the single-file folders (fetch_ome.py above) and the synthetic files
 S=tests/reference/ome/DCIMG/single; python3 -I tests/scripts/oracle.py dcimg --repeat 3 $S/*/*.dcimg tests/data/dcimg/*.dcimg
+# Philips TIFF (OpenSlide test slides), ScanImage and Prairie View (fetch_gin.py above)
+REP=3 sh tests/scripts/oracle_philips.sh
+REP=3 sh tests/scripts/oracle_scanimage.sh
+REP=3 sh tests/scripts/oracle_prairie.sh
 # KLB: the OME samples; idr0044 files under neutral names, as the reference readers group
 # files named like a time-lapse (TM…/CHN…) and fail when only some are present
 K=KLB; T=$K/idr0044/Mmu_E1_CAGTAG1.TM000000_timeFused_blending/SPM00_TM000000_CM00_CM01

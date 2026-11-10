@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PVScan version="5.8.64.800" date="2/2/2026 3:04:05 PM" notes="">
+  <PVStateShard>
+    <PVStateValue key="framePeriod" value="0.25"/>
+    <PVStateValue key="micronsPerPixel">
+      <IndexedValue index="XAxis" value="0.5"/>
+      <IndexedValue index="YAxis" value="0.5"/>
+      <IndexedValue index="ZAxis" value="2"/>
+    </PVStateValue>
+    <PVStateValue key="objectiveLens" value="Nikon 16X"/>
+    <PVStateValue key="objectiveLensMag" value="16"/>
+    <PVStateValue key="objectiveLensNA" value="0.8"/>
+    <PVStateValue key="laserWavelength">
+      <IndexedValue index="0" value="920" description="Excitation 1"/>
+    </PVStateValue>
+  </PVStateShard>
+  <Sequence type="TSeries Timed Element" cycle="1">
+    <Frame relativeTime="0.0" absoluteTime="3.5" index="1" parameterSet="CurrentSettings">
+      <File channel="2" channelName="Ch2" filename="multiseq_Cycle00001_Ch2_000001.tif"/>
+    </Frame>
+    <Frame relativeTime="0.25" absoluteTime="3.75" index="2" parameterSet="CurrentSettings">
+      <File channel="2" channelName="Ch2" filename="multiseq_Cycle00001_Ch2_000002.tif"/>
+    </Frame>
+  </Sequence>
+  <Sequence type="TSeries Timed Element" cycle="2">
+    <Frame relativeTime="10.0" absoluteTime="13.5" index="1" parameterSet="CurrentSettings">
+      <File channel="2" channelName="Ch2" filename="multiseq_Cycle00002_Ch2_000001.tif"/>
+    </Frame>
+    <Frame relativeTime="10.25" absoluteTime="13.75" index="2" parameterSet="CurrentSettings">
+      <File channel="2" channelName="Ch2" filename="multiseq_Cycle00002_Ch2_000002.tif"/>
+    </Frame>
+  </Sequence>
+</PVScan>

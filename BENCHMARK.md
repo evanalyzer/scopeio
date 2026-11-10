@@ -41,6 +41,20 @@ stream in memory and reads frames without their 16-byte trailers.
 
 Full table: `tests/expected/dcimg_bench.md`.
 
+## ScanImage TIFF (2026-11-10, Intel Core Ultra 9 185H, Bio-Formats 8.5.0, bioformats-rs 0.1.8)
+
+Every plane read, median of 3 fresh processes, CPU s / peak RAM MiB.
+
+| Input | scopeio | Bio-Formats | bioformats-rs |
+|---|---:|---:|---:|
+| fast z, 2 channels, 3200 pages of 20 x 20 (CatalystNeuro test file) | 0.007 s / 6.6 | 19.2 s / 458 | 0.44 s / 97 |
+| planar, 2 channels, 50000 pages of 64 x 64, 424 MB (generated, not committed) | 0.16 s / 19 | – | – |
+
+scopeio parses the page directories once and decodes each page on
+request; RAM grows only with the directory list (about 0.3 KiB per page).
+
+Full table: `tests/expected/scanimage_bench.md`.
+
 ## Performance pass (2026-11-05, Intel Core Ultra 9 185H)
 
 The library before and after this pass, same files, median of 3 fresh

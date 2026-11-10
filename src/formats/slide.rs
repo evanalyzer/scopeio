@@ -55,6 +55,15 @@ pub(super) struct SlideSeries {
     pub plane_meta: Vec<PlaneMeta>,
 }
 
+/// An associated image: a TIFF image, or a JPEG stream held in memory
+/// (Philips stores labels and macros as base64 JPEG in its XML).
+#[derive(Debug)]
+pub(super) enum Associated {
+    Tiff(Box<TiffImage>),
+    #[cfg_attr(not(feature = "philips"), allow(dead_code))]
+    Jpeg(Vec<u8>),
+}
+
 /// A TIFF-based slide.
 #[derive(Debug)]
 pub(super) struct Slide {
@@ -63,7 +72,7 @@ pub(super) struct Slide {
     pub metas: Vec<SeriesMeta>,
     pub series: Vec<SlideSeries>,
     pub associated_kinds: Vec<AssociatedKind>,
-    pub associated: Vec<TiffImage>,
+    pub associated: Vec<Associated>,
     pub original: OriginalMeta,
 }
 
@@ -82,6 +91,11 @@ impl Slide {
 
     /// Adds an associated image unless one of the kind exists.
     pub fn add_associated(&mut self, kind: AssociatedKind, image: TiffImage) {
+        self.add(kind, Associated::Tiff(Box::new(image)));
+    }
+
+    /// Adds an associated image unless one of the kind exists.
+    pub fn add(&mut self, kind: AssociatedKind, image: Associated) {
         if !self.associated_kinds.contains(&kind) {
             self.associated_kinds.push(kind);
             self.associated.push(image);
@@ -128,7 +142,13 @@ impl Backend for Slide {
 
     fn read_associated_native(&self, kind: &AssociatedKind) -> Result<NativeImage> {
         let i = self.associated_kinds.iter().position(|k| k == kind).ok_or_else(|| Error::OutOfRange(format!("no associated image {kind:?}")))?;
-        let img = &self.associated[i];
+        let img = match &self.associated[i] {
+            Associated::Tiff(img) => img,
+            #[cfg(feature = "jpeg")]
+            Associated::Jpeg(src) => return crate::codecs::jpeg::decode_image(src),
+            #[cfg(not(feature = "jpeg"))]
+            Associated::Jpeg(_) => return Err(Error::UnsupportedVariant("jpeg compression (enable the `jpeg` feature)".into())),
+        };
         let region = Region::new(0, 0, img.width as u64, img.height as u64);
         let samples = if img.samples_out == 1 { Samples::One(0) } else { Samples::All };
         native_image(region, img.samples_out, img.pixel_type, |sink| img.read_native(&self.tiff, region, samples, sink))

@@ -557,20 +557,9 @@ impl Backend for Mrxs {
         }
         #[cfg(feature = "jpeg")]
         {
-            use crate::codecs::jpeg::{Color, decode};
             let mut src = vec![0u8; blob.len as usize];
             self.read_blob(blob, &mut src)?;
-            // Size from the frame header; up to 64k x 64k.
-            let mut out = vec![0u8; jpeg_pixels(&src).ok_or_else(|| Error::Corrupt("MRXS associated image is not a JPEG".into()))? * 3];
-            let info = decode(&src, None, Color::YcbcrToRgb, &mut out)?;
-            out.truncate(info.width * info.height * info.components);
-            Ok(NativeImage {
-                width: info.width as u64,
-                height: info.height as u64,
-                samples_per_pixel: info.components as u8,
-                pixel_type: PixelType::U8,
-                data: out,
-            })
+            crate::codecs::jpeg::decode_image(&src)
         }
         #[cfg(not(feature = "jpeg"))]
         Err(Error::UnsupportedVariant("jpeg compression (enable the `jpeg` feature)".into()))
@@ -620,28 +609,6 @@ impl Backend for Mrxs {
             Ok(())
         })
     }
-}
-
-/// Pixel count from the first SOF marker of a JPEG stream.
-#[cfg(feature = "jpeg")]
-fn jpeg_pixels(b: &[u8]) -> Option<usize> {
-    let mut pos = 2;
-    while pos + 9 < b.len() {
-        if b[pos] != 0xFF {
-            pos += 1;
-            continue;
-        }
-        let marker = b[pos + 1];
-        let len = u16::from_be_bytes([b[pos + 2], b[pos + 3]]) as usize;
-        if matches!(marker, 0xC0..=0xCF) && !matches!(marker, 0xC4 | 0xC8 | 0xCC) {
-            let h = u16::from_be_bytes([b[pos + 5], b[pos + 6]]) as usize;
-            let w = u16::from_be_bytes([b[pos + 7], b[pos + 8]]) as usize;
-            // Associated images are small; larger sizes come from corrupt files.
-            return (w > 0 && h > 0 && w * h <= 1 << 26).then_some(w * h);
-        }
-        pos += 2 + len;
-    }
-    None
 }
 
 // --- Tests ------------------------------------------------------------------

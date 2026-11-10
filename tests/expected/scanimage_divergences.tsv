@@ -1,0 +1,37 @@
+# Known differences between scopeio and the reference readers, which read ScanImage files as plain
+# TIFF: every page a time point of one channel, flyback frames and the fly-to rows between regions
+# of interest included. scopeio maps the pages to channels, z (slices of a volume) and time from the
+# acquisition settings, skips flyback frames and returns each region of interest as a series; the
+# placement of every page is checked with the synthetic pixel values (tests/scanimage.rs).
+# Bio-Formats reports the 72 dpi placeholder resolution of older releases (352777.778 nm); scopeio
+# takes the pixel size from the imaging field of view or leaves it unknown (legacy releases).
+file	tool	series	tolerance	ignore	reason
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_3/planar/channel_two_only_loop_version_2017b/planar_00001.tif	bioformats	-		phys_x_nm,phys_y_nm	72 dpi placeholder resolution (same pixels)
+tests/reference/gin-ophys/imaging_datasets/ScanImage/legacy/planar/single_channel_int16_version_4_2/planar_001_005.tif	bioformats	-		phys_x_nm,phys_y_nm	72 dpi placeholder resolution (same pixels)
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_1/planar/single_channel_resonant_version_5_1/planar.tif	bioformats	-		phys_x_nm,phys_y_nm	72 dpi placeholder resolution (same pixels)
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_3/planar/two_channels_resonant_version_2016b/planar.tif	bioformats	-			pages split into 2 channels (channelSave [1;2])
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/volumetric/flyback_frames_two_channels_version_2021_0/volume_00001_00001.tif	bioformats	-			fast z: 9 slices + 7 flyback frames per volume, 2 channels; flyback frames skipped
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/multiple_frames_per_slice/frames_saved_channels_one_and_four_version_2023_0/stack.tif	bioformats	-			motor stack: 2 slices, 2 frames per slice, 3 volumes, channels [1 4]
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/multi_roi/planar_eight_rois_version_2023_1/planar_00000_00001.tif	bioformats	-			8 regions of interest of 64 x 64 (fly-to gaps of 4 rows) returned as 8 series
+tests/reference/gin-ophys/imaging_datasets/ScanImage/legacy/multiple_frames_per_slice/frames_averaged_two_channels_version_3_6/stack_001.tif	bioformats	-			3.6 stack: 50 slices (frames averaged), 2 channels
+tests/reference/gin-ophys/imaging_datasets/ScanImage/volumetric_two_channels_single_file/vol_two_ch_single_file_00001_00001.tif	bioformats	-			fast z: 9 slices + 7 flyback frames, 100 volumes, 2 channels
+tests/data/scanimage/f1_slow.tif	bioformats	-			format 1 motor stack: 3 slices, 2 frames per slice
+tests/data/scanimage/f2_json.tif	bioformats	-			format 2: 2 channels
+tests/data/scanimage/si4_planar.tif	bioformats	-			4.x: 2 channels
+tests/data/scanimage/state_stack.tif	bioformats	-			3.x stack: 4 slices, 2 channels
+tests/data/scanimage/v3_mroi.tif	bioformats	-			3 regions of interest (fly-to gaps of 3 rows) returned as 3 series
+tests/data/scanimage/v4_fast_flyback.tif	bioformats	-			fast z: 3 slices + 2 flyback frames, 2 volumes, channels [1 3]
+tests/data/scanimage/v4_stopped.tif	bioformats	-			motor stack stopped in slice 4: 3 complete slices of 2 frames
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_3/planar/two_channels_resonant_version_2016b/planar.tif	bioformats-rs	-			pages split into 2 channels (channelSave [1;2])
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/volumetric/flyback_frames_two_channels_version_2021_0/volume_00001_00001.tif	bioformats-rs	-			fast z: 9 slices + 7 flyback frames per volume, 2 channels; flyback frames skipped
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/multiple_frames_per_slice/frames_saved_channels_one_and_four_version_2023_0/stack.tif	bioformats-rs	-			motor stack: 2 slices, 2 frames per slice, 3 volumes, channels [1 4]
+tests/reference/gin-ophys/imaging_datasets/ScanImage/tiff_format_version_4/multi_roi/planar_eight_rois_version_2023_1/planar_00000_00001.tif	bioformats-rs	-			8 regions of interest of 64 x 64 (fly-to gaps of 4 rows) returned as 8 series
+tests/reference/gin-ophys/imaging_datasets/ScanImage/legacy/multiple_frames_per_slice/frames_averaged_two_channels_version_3_6/stack_001.tif	bioformats-rs	-			3.6 stack: 50 slices (frames averaged), 2 channels
+tests/reference/gin-ophys/imaging_datasets/ScanImage/volumetric_two_channels_single_file/vol_two_ch_single_file_00001_00001.tif	bioformats-rs	-			fast z: 9 slices + 7 flyback frames, 100 volumes, 2 channels
+tests/data/scanimage/f1_slow.tif	bioformats-rs	-			format 1 motor stack: 3 slices, 2 frames per slice
+tests/data/scanimage/f2_json.tif	bioformats-rs	-			format 2: 2 channels
+tests/data/scanimage/si4_planar.tif	bioformats-rs	-			4.x: 2 channels
+tests/data/scanimage/state_stack.tif	bioformats-rs	-			3.x stack: 4 slices, 2 channels
+tests/data/scanimage/v3_mroi.tif	bioformats-rs	-			3 regions of interest (fly-to gaps of 3 rows) returned as 3 series
+tests/data/scanimage/v4_fast_flyback.tif	bioformats-rs	-			fast z: 3 slices + 2 flyback frames, 2 volumes, channels [1 3]
+tests/data/scanimage/v4_stopped.tif	bioformats-rs	-			motor stack stopped in slice 4: 3 complete slices of 2 frames

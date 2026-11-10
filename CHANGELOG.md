@@ -8,6 +8,20 @@ log.
 
 ### Added
 
+- Philips TIFF reader (`philips`): pyramid levels with the tile padding
+  removed (true sizes from the pixel spacings), sparse tiles as white,
+  label and macro from the XML JPEGs or TIFF directories, barcode, date and
+  all XML attributes.
+- ScanImage TIFF reader (`scanimage`): releases 3.x to 2023 (all five
+  metadata layouts); channels, z and time from the acquisition settings,
+  flyback frames skipped, stopped stacks keep their complete slices,
+  multi-ROI pages as one series per region, pixel sizes, frame times.
+- Bruker Prairie View reader (`prairie`): z series, timed and
+  brightness-over-time sequences, single- and multi-page TIFF files,
+  bidirectional z, pixel sizes, z step, frame times.
+- Fuzz targets for the three readers; `tests/scripts/fetch_gin.py` for the
+  CatalystNeuro optical physiology test files.
+
 - Hamamatsu DCIMG reader (`dcimg`): version 7 and 0x1000000 files, frames
   as time points read straight from the file, frame time stamps, camera
   model / serial / sub-array, the ORCA-Flash4.0 stored pixels restored per
@@ -45,6 +59,11 @@ log.
 
 ### Changed
 
+- TIFF images can fill chunks that are not stored with a background
+  value (`TiffImage::empty_fill`); slide associated images may be JPEG
+  streams held in memory.
+- Test harness: a divergence entry that only names ignored fields means
+  "identical apart from these fields".
 - Performance: SDT ZIP blocks are inflated per requested region and kept
   plane by plane (64 x 64 crop of a 2 GB block: 0.10 s / 49 MiB instead of
   0.99 s / 2 GiB; a full read 3.6 s instead of 17 s); compressed HDF5

@@ -82,10 +82,16 @@ mod oir;
 mod omp2info;
 #[cfg(feature = "operetta")]
 mod operetta;
+#[cfg(feature = "philips")]
+mod philips;
 #[cfg(any(feature = "png", feature = "jpg", feature = "jp2"))]
 mod plain;
+#[cfg(feature = "prairie")]
+mod prairie;
 #[cfg(feature = "qptiff")]
 mod qptiff;
+#[cfg(feature = "scanimage")]
+mod scanimage;
 #[cfg(feature = "scanr")]
 mod scanr;
 #[cfg(feature = "scn")]
@@ -176,6 +182,12 @@ static SUPPORTED: &[FormatInfo] = &[
     qptiff::FORMAT,
     #[cfg(feature = "scn")]
     scn::FORMAT,
+    #[cfg(feature = "philips")]
+    philips::FORMAT,
+    #[cfg(feature = "scanimage")]
+    scanimage::FORMAT,
+    #[cfg(feature = "prairie")]
+    prairie::FORMAT,
     #[cfg(feature = "bif")]
     bif::FORMAT,
     #[cfg(feature = "ims")]
@@ -338,6 +350,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     #[cfg(feature = "oif")]
     if oif::matches_oif(path, &head) {
         return Ok(Some(FormatId::Oif));
+    }
+    #[cfg(feature = "prairie")]
+    if prairie::matches(path, &head) {
+        return Ok(Some(FormatId::Prairie));
     }
     #[cfg(feature = "bdv")]
     if bdv::matches(path, &head) {
@@ -541,6 +557,12 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Bif) => Ok(Arc::new(Reader(bif::Bif::open(path, opts)?))),
         #[cfg(feature = "scn")]
         Some(FormatId::Scn) => Ok(Arc::new(Reader(scn::open(path, opts)?))),
+        #[cfg(feature = "philips")]
+        Some(FormatId::PhilipsTiff) => Ok(Arc::new(Reader(philips::open(path, opts)?))),
+        #[cfg(feature = "scanimage")]
+        Some(FormatId::ScanImage) => Ok(Arc::new(Reader(scanimage::ScanImage::open(path)?))),
+        #[cfg(feature = "prairie")]
+        Some(FormatId::Prairie) => Ok(Arc::new(Reader(prairie::Prairie::open(path)?))),
         #[cfg(feature = "qptiff")]
         Some(FormatId::Qptiff) => Ok(Arc::new(Reader(qptiff::open(path, opts)?))),
         #[cfg(feature = "lsm")]

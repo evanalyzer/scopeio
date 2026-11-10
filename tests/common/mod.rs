@@ -315,7 +315,8 @@ fn without_ignored(mut diffs: Vec<String>, fields: Option<&Vec<String>>) -> Vec<
 /// Compares scopeio with all reference rows of a format.
 ///
 /// Reads `tests/expected/<format>.tsv` and `<format>_divergences.tsv`.
-/// A (file, tool) pair listed as divergence without tolerance must differ;
+/// A (file, tool) pair listed as divergence without tolerance must differ
+/// (unless it only names ignored fields: then the rest must match exactly);
 /// with a tolerance, its block means must agree within it (lossy codecs).
 /// Every other successful reference must match exactly. An optional
 /// `ignore` column names metadata fields (e.g. `phys_x_nm,phys_y_nm`) not
@@ -362,6 +363,14 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
             Some(((d["file"].clone(), d["tool"].clone()), fields.split(',').map(|f| f.trim().to_string()).collect()))
         })
         .collect();
+    // General (file, tool) entries that only name ignored fields.
+    let ignore_only: std::collections::HashSet<(String, String)> = divergence_rows
+        .iter()
+        .filter(|d| d.get("ignore").is_some_and(|v| !v.is_empty() && v != "-"))
+        .filter(|d| d.get("tolerance").is_none_or(|v| v.is_empty() || v == "-"))
+        .filter(|d| d.get("series").is_none_or(|s| s.is_empty() || s == "-") && d.get("crop").is_none_or(|c| c.is_empty() || c == "-"))
+        .map(|d| (d["file"].clone(), d["tool"].clone()))
+        .collect();
     let mut failures = Vec::new();
     let mut decoded: HashMap<String, Result<Lazy, String>> = HashMap::new();
     let mut skipped = 0;
@@ -374,9 +383,12 @@ pub fn check_against_oracles(format: &str) -> Vec<String> {
         let key = (r["file"].clone(), r["tool"].clone());
         let series_key = (r["file"].clone(), r["tool"].clone(), r["series"].clone());
         let crop_key = (r["file"].clone(), r["tool"].clone(), r.get("crop").cloned().unwrap_or_default());
-        let entry = crop_divergences.get(&crop_key).or(series_divergences.get(&series_key)).or(divergences.get(&key));
+        let specific = crop_divergences.get(&crop_key).or(series_divergences.get(&series_key));
+        let entry = specific.or(divergences.get(&key));
         let tolerance = entry.copied().flatten();
-        let listed = entry.is_some() && tolerance.is_none();
+        // Without tolerance an entry must differ, unless it is a general
+        // entry that only names ignored fields: then the rest must match.
+        let listed = entry.is_some() && tolerance.is_none() && (specific.is_some() || !ignore_only.contains(&key));
         // A (file, "scopeio") divergence marks files scopeio cannot read yet.
         let unsupported = divergences.contains_key(&(r["file"].clone(), "scopeio".to_string()));
         let cropped =

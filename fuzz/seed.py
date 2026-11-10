@@ -35,6 +35,12 @@ FILES = {
     "amira": (".am",),
     "dcimg": (".dcimg",),
 }
+# Target -> folders of tests/data whose files seed it (TIFF flavours that
+# the suffixes above would give the plain TIFF target).
+DIRS = {"scanimage": ("scanimage",), "philips": ("philips",)}
+# Folder formats opened through one file: target -> (data folder, file
+# suffix of the opened file, name it gets in the input).
+TREES = {"prairie": ("prairie", ".xml", "rec.xml")}
 
 
 def add(target, data):
@@ -43,18 +49,34 @@ def add(target, data):
     (out / hashlib.sha1(data).hexdigest()).write_bytes(data)
 
 
-def pack(folder):
-    """One OME-Zarr folder as a `tree` input, metadata first."""
+def pack(folder, rename=None):
+    """One folder as a `tree` input, metadata first; `rename` = (suffix,
+    name) renames the opened file."""
     files = sorted((p for p in folder.rglob("*") if p.is_file()), key=lambda p: (p.name[0] not in ".z", str(p)))
     out = bytearray()
     for p in files:
         body = p.read_bytes()
-        out += str(p.relative_to(folder)).encode() + b"\0" + struct.pack("<I", len(body)) + body
+        rel = str(p.relative_to(folder))
+        if rename and rel.endswith(rename[0]) and "/" not in rel:
+            rel = rename[1]
+        out += rel.encode() + b"\0" + struct.pack("<I", len(body)) + body
     return bytes(out)
 
 
 def main():
-    counts = dict.fromkeys(list(FILES) + ["zarr"], 0)
+    counts = dict.fromkeys(list(FILES) + list(DIRS) + list(TREES) + ["zarr"], 0)
+    for target, folders in DIRS.items():
+        for folder in folders:
+            for p in sorted((DATA / folder).glob("*")):
+                if p.is_file() and p.suffix in (".tif", ".tiff") and p.stat().st_size <= MAX_SEED:
+                    add(target, p.read_bytes())
+                    counts[target] += 1
+    for target, (folder, suffix, name) in TREES.items():
+        for d in sorted(p for p in (DATA / folder).glob("*") if p.is_dir()):
+            data = pack(d, (suffix, name))
+            if len(data) <= MAX_SEED:
+                add(target, data)
+                counts[target] += 1
     for p in sorted(DATA.rglob("*")):
         if not p.is_file() or p.stat().st_size > MAX_SEED:
             continue
