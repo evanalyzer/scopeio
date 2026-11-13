@@ -659,8 +659,7 @@ impl Avi {
                 // Delta frames apply onto the previous frame from the last key frame.
                 let key = (0..=t).rev().find(|&i| st.frames[i].key).unwrap_or(0);
                 let mut indices = vec![0u8; w * h];
-                for i in key..=t {
-                    let f = st.frames[i];
+                for &f in &st.frames[key..=t] {
                     if f.size > 0 {
                         dib::decode_rle_into(&read(f)?, *bits, w, h, &mut indices);
                     }
