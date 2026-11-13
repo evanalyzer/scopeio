@@ -26,7 +26,7 @@ use scopeio::{FormatId, Plane, Region};
 fn plane(r: &dyn scopeio::ImageReader, p: Plane) -> Vec<u16> {
     let m = r.series_meta(0).unwrap();
     let region = Region::new(0, 0, m.levels[0].size_x, m.levels[0].size_y);
-    common::read(r, 0, 0, p, region).unwrap().chunks_exact(2).map(|b| u16::from_le_bytes([b[0], b[1]])).collect()
+    common::read(r, 0, 0, p, region).unwrap().as_chunks::<2>().0.iter().map(|&b| u16::from_le_bytes(b)).collect()
 }
 
 #[test]
