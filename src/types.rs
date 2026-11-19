@@ -12,6 +12,7 @@
 
 mod buffer;
 mod channel;
+mod experiment;
 mod format;
 mod instrument;
 mod meta;
@@ -26,8 +27,9 @@ mod roi;
 
 pub use buffer::{ImageBuf, OutputShape, PixelBuf, PixelSliceMut, PixelViewMut};
 pub use channel::ChannelMeta;
+pub use experiment::{EnvironmentMeta, ExperimenterMeta};
 pub use format::{FormatId, FormatInfo, OpenOptions, Parallelism};
-pub use instrument::ObjectiveMeta;
+pub use instrument::{DetectorMeta, DichroicMeta, FilterMeta, LightSourceMeta, MicroscopeMeta, ObjectiveMeta};
 pub use meta::{AssociatedKind, LevelMeta, OriginalMeta, PhysicalSize, SeriesMeta};
 pub use pixel_type::PixelType;
 pub use plane::Plane;

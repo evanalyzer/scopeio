@@ -8,6 +8,8 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
+use crate::{DetectorMeta, DichroicMeta, FilterMeta, LightSourceMeta};
+
 /// Acquisition settings of one channel. Fields are `None` if unknown.
 #[derive(Debug, Clone, PartialEq, Default)]
 #[non_exhaustive]
@@ -29,6 +31,15 @@ pub struct ChannelMeta {
     pub detector_offset: Option<f64>,
     /// Detector binning as (x, y).
     pub binning: Option<(u16, u16)>,
+    /// Scan zoom of a confocal or other scanning acquisition.
+    pub zoom: Option<f64>,
+    pub detector: Option<DetectorMeta>,
+    pub light_source: Option<LightSourceMeta>,
+    /// Filters in the excitation path, in light-path order.
+    pub excitation_filters: Vec<FilterMeta>,
+    /// Filters in the emission path, in light-path order.
+    pub emission_filters: Vec<FilterMeta>,
+    pub dichroic: Option<DichroicMeta>,
     /// Display lookup table mapping sample values to 16-bit RGB, e.g. the
     /// gray or single-colour ramp of a palette TIFF. Present only if the
     /// pixel data are the unmapped values.

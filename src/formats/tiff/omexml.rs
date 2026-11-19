@@ -109,7 +109,7 @@ impl OmeXml {
         let xml = String::from_utf8_lossy(raw.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&raw)).into_owned();
         let doc = ome::parse(&xml)?;
         let root = doc.root_element();
-        let (objectives, rois) = ome::document_maps(root);
+        let refs = ome::DocRefs::new(root);
         let mut images = Vec::new();
         let mut metas = Vec::new();
         let mut image_ids = std::collections::HashMap::new();
@@ -160,7 +160,7 @@ impl OmeXml {
                 planes[c + size_c as usize * (z + sz as usize * t)] = Some(data);
             }
             let levels = vec![LevelMeta { size_x: sx as u64, size_y: sy as u64, tile: None, downsample: 1.0 }];
-            let (meta, plane_meta) = ome::describe(image, pixels, (size_c, sz, st), pixel_type, samples, levels, &objectives, &rois);
+            let (meta, plane_meta) = ome::describe(image, pixels, (size_c, sz, st), pixel_type, samples, levels, &refs);
             metas.push(meta);
             images.push(Image { planes, plane_meta });
         }

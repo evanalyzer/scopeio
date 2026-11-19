@@ -8,7 +8,7 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::{ChannelMeta, Error, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
+use crate::{ChannelMeta, EnvironmentMeta, Error, ExperimenterMeta, MicroscopeMeta, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
 
 /// Physical size of one pixel (x, y) and the z-step, in nanometres.
 /// Fields are `None` if unknown.
@@ -87,6 +87,13 @@ pub struct SeriesMeta {
     /// One entry per channel, `len() == size_c`.
     pub channels: Vec<ChannelMeta>,
     pub objective: Option<ObjectiveMeta>,
+    pub microscope: Option<MicroscopeMeta>,
+    pub environment: Option<EnvironmentMeta>,
+    pub experimenter: Option<ExperimenterMeta>,
+    /// Name of the project the series belongs to.
+    pub project: Option<String>,
+    /// Name of the dataset the series belongs to.
+    pub dataset: Option<String>,
     pub stage_position: Option<Position>,
     pub rois: Vec<Roi>,
 }

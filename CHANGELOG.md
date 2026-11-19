@@ -8,6 +8,15 @@ log.
 
 ### Added
 
+- Instrument, environment and owner metadata modelled on OME 2016-06:
+  `SeriesMeta::{microscope, environment, experimenter, project, dataset}`;
+  `ObjectiveMeta::{correction, working_distance_nm, refractive_index}`;
+  `ChannelMeta::{zoom, detector, light_source, excitation_filters,
+  emission_filters, dichroic}`, with the new `MicroscopeMeta`,
+  `DetectorMeta`, `LightSourceMeta`, `FilterMeta`, `DichroicMeta`,
+  `EnvironmentMeta` and `ExperimenterMeta`. Filled from OME-XML (OME-TIFF,
+  companion and standalone OME-XML files); other readers leave them empty
+  for now.
 - Philips TIFF reader (`philips`): pyramid levels with the tile padding
   removed (true sizes from the pixel spacings), sparse tiles as white,
   label and macro from the XML JPEGs or TIFF directories, barcode, date and

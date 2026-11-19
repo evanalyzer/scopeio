@@ -130,6 +130,7 @@ pub(super) fn parse(xml: &str) -> XmlMeta {
             magnification: number(child(o, "NominalMagnification")).filter(|v| *v > 0.0),
             numerical_aperture: number(child(o, "LensNA")).filter(|v| *v > 0.0),
             immersion: text(child(o, "Immersion")),
+            ..Default::default()
         });
     }
     out
