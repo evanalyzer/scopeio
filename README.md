@@ -93,63 +93,63 @@ compared, "n/a" means the reader cannot open the format.
 
 | Format | Ops | scopeio CPU (median) | scopeio RAM (median) | Bio-Formats CPU / RAM | bioformats-rs CPU / RAM | OpenSlide CPU / RAM |
 |---|---:|---:|---:|---:|---:|---:|
-| TIFF | 80 | 1 ms | 2.8 MiB | 1090× / 42× | 3.0× / 4.5× | – |
-| OME-TIFF | 96 | 1 ms | 2.8 MiB | 1231× / 46× | 4.0× / 4.8× | – |
-| OME-Zarr | 14 | 1 ms | 2.9 MiB | n/a | 3.5× / 7.2× | – |
-| Olympus VSI | 6 | 18 ms | 11 MiB | 89× / 26× | 1.7× / 2.4× | – |
-| Nikon ND2 | 11 | 45 ms | 5.3 MiB | 122× / 51× | 2.7× / 5.9× | – |
-| Zeiss CZI | 35 | 7 ms | 5.8 MiB | 494× / 57× | 2.2× / 3.5× | – |
-| Leica LIF | 12 | 7 ms | 4.3 MiB | 1021× / 128× | 0.9× / 8.1× | – |
-| Aperio SVS | 13 | 227 ms | 22 MiB | 6.0× / 2.4× | 13.8× / 2.1× | – |
-| Hamamatsu NDPI | 20 | 86 ms | 43 MiB | 14.5× / 4.7× | 4.3× / 2.9× | – |
-| 3DHistech MRXS | 13 | 7 ms | 6.8 MiB | n/a | n/a | 6.1× / 2.3× |
-| Zeiss LSM | 6 | 10 ms | 4.7 MiB | 156× / 33× | 3.8× / 7.1× | – |
-| Akoya QPTIFF | 9 | 128 ms | 17 MiB | 6.2× / 6.6× | 1.2× / 6.7× | – |
-| Leica SCN | 7 | 225 ms | 32 MiB | 19× / 5.6× | – | – |
-| Ventana BIF | 10 | 1.07 s | 25 MiB | 4.3× / 2.3× | – | 1.0× / 2.9× |
-| Imaris IMS | 4 | 56 ms | 6.8 MiB | 115× / 42× | 3.3× / 18× | – |
-| Windows BMP | 17 | 1 ms | 2.5 MiB | 757× / 37× | 2.0× / 4.9× | – |
+| TIFF | 80 | 1 ms | 5.5 MiB | 1089× / 21× | 3.0× / 2.3× | – |
+| OME-TIFF | 96 | 1 ms | 5.7 MiB | 1198× / 23× | 3.9× / 2.4× | – |
+| OME-Zarr | 14 | 1 ms | 5.2 MiB | n/a | 3.5× / 4.1× | – |
+| Olympus VSI | 6 | 16 ms | 14 MiB | 111× / 22× | 2.2× / 2.1× | – |
+| Nikon ND2 | 11 | 43 ms | 7.9 MiB | 139× / 36× | 3.2× / 4.8× | – |
+| Zeiss CZI | 35 | 7 ms | 7.7 MiB | 462× / 44× | 2.0× / 2.7× | – |
+| Leica LIF | 12 | 4 ms | 6.8 MiB | 1619× / 79× | 2.2× / 5.0× | – |
+| Aperio SVS | 13 | 217 ms | 25 MiB | 5.8× / 2.2× | 11.3× / 1.9× | – |
+| Hamamatsu NDPI | 20 | 96 ms | 28 MiB | 11.7× / 4.4× | 5.4× / 3.6× | – |
+| 3DHistech MRXS | 13 | 8 ms | 8.7 MiB | n/a | n/a | 4.7× / 1.9× |
+| Zeiss LSM | 6 | 8 ms | 7.0 MiB | 229× / 24× | 5.3× / 5.1× | – |
+| Akoya QPTIFF | 9 | 190 ms | 19 MiB | 5.7× / 5.9× | 1.3× / 5.8× | – |
+| Leica SCN | 7 | 227 ms | 35 MiB | 19.3× / 5.1× | – | – |
+| Ventana BIF | 10 | 889 ms | 28 MiB | 4.2× / 2.1× | – | 1.1× / 2.6× |
+| Imaris IMS | 4 | 42 ms | 8.8 MiB | 147× / 33× | 4.9× / 14.0× | – |
+| Windows BMP | 17 | 1 ms | 4.4 MiB | 757× / 22× | 2.0× / 2.9× | – |
 | PNG | 12 | 1 ms | 3.6 MiB | 374× / 22× | 2.3× / 3.1× | – |
 | JPEG | 3 | 1 ms | 3.4 MiB | 228× / 16× | 1.9× / 2.5× | – |
 | JPEG 2000 | 3 | 1 ms | 3.7 MiB | 147× / 10× | 2.2× / 2.0× | – |
-| Olympus OIB/OIF | 3 | 1 ms | 3.7 MiB | 244× / 64× | 7.0× / 4.3× | – |
-| Olympus OIR | 15 | 18 ms | 11 MiB | 244× / 51× | 2.8× / 6.1× | – |
-| DICOM | 17 | 55 ms | 18 MiB | 38× / 10× | 2.6× / 2.5× | – |
-| Zeiss ZVI | 14 | 8 ms | 6.7 MiB | 230× / 33× | 3.2× / 5.0× | – |
-| Leica LOF/XLEF | 65 | 49 ms | 6.6 MiB | 122× / 50× | 2.5× / 14× | – |
-| MetaMorph STK/ND | 4 | 23 ms | 5.0 MiB | 228× / 66× | 4.1× / 15× | – |
-| DeltaVision | 7 | 2 ms | 4.2 MiB | 398× / 62× | 2.6× / 9.2× | – |
-| PerkinElmer Operetta | 7 | 66 ms | 19 MiB | 22× / 15× | 1.2× / 1.3× | – |
-| MRC | 7 | 1 ms | 4.1 MiB | 897× / 30× | 2.8× / 3.0× | – |
-| Olympus SIS TIFF | 4 | 7 ms | 13 MiB | 460× / 17× | 4.0× / 2.2× | – |
-| Olympus FluoView TIFF | 2 | 1 ms | 4.3 MiB | 1377× / 26× | 3.5× / 2.3× | – |
-| NIfTI | 16 | 3 ms | 4.1 MiB | 471× / 40× | 4.1× / 3.8× | – |
-| Olympus scan^R | 2 | 302 ms | 6.4 MiB | 154× / 35× | see below | – |
-| Nikon NIS-Elements TIFF | 5 | 5 ms | 12 MiB | 332× / 16× | 4.1× / 2.2× | – |
-| Nikon NEF (uncompressed) | 2 | 17 ms | 16 MiB | 235× / 22× | 6.0× / 4.4× | – |
-| Olympus OMP2INFO | 1 | 1.22 s | 96 MiB | 295× / 6.2× | 153× / 65× | – |
-| Micro-Manager | 11 | 1 ms | 4.6 MiB | 547× / 37× | 3.5× / 6.6× | – |
-| BigDataViewer XML/HDF5 | 3 | 9.55 s | 59.1 MiB | n/a | 4.0× / 18× | – |
-| Analyze 7.5 | 4 | 1 ms | 4.2 MiB | 985× / 25× | 3.0× / 2.9× | – |
-| Hamamatsu VMS | 4 | 470 ms | 18.3 MiB | 8.7× / 11× | n/a | – |
-| OME-XML | 46 | 1 ms | 4.6 MiB | 995× / 30× | 2.7× / 2.4× | – |
-| Zeiss Xradia XRM | 3 | 1 ms | 4.4 MiB | 207× / 40× | n/a | – |
-| ICS | 5 | 1 ms | 4.6 MiB | 387× / 22× | 4.0× / 3.9× | – |
-| Imspector OBF | 6 | 20 ms | 6.6 MiB | 130× / 24× | 2.0× / 4.2× | – |
-| IN Cell Analyzer | 4 | 66 ms | 5.8 MiB | 50× / 59× | n/a | – |
-| Becker & Hickl SDT | 4 | 52 ms | 27.4 MiB | 277× / 20× | 3.0× / 2.4× | – |
-| Gatan DigitalMicrograph | 6 | 4 ms | 8.4 MiB | 358× / 16× | 2.3× / 2.3× | – |
-| Opera Flex | 4 | 13 ms | 7.5 MiB | 194× / 30× | 1.8× / 4.3× | – |
-| Yokogawa CV7000 | 4 | 24 ms | 7.1 MiB | 100× / 27× | n/a | – |
-| MetaXpress | 6 | 10 ms | 7.5 MiB | 174× / 28× | 0.8× / 2.9× | – |
-| NRRD | 10 | 4 ms | 4.6 MiB | 192× / 44× | 10.0× / 7.3× | – |
-| Keller Lab Block | 7 | 14 ms | 6.0 MiB | 100× / 15× | 3.1× / 1.8× | – |
-| AVI | 16 | 1 ms | 4.8 MiB | 853× / 24× | 2.2× / 2.3× | – |
-| AmiraMesh | 14 | 1 ms | 5.2 MiB | 604× / 23× | 2.5× / 2.3× | – |
-| Hamamatsu DCIMG | 12 | 1 ms | 6.2 MiB | 408× / 25× | 3.6× / 6.0× | – |
-| Philips TIFF | 4 | 32 ms | 19 MiB | 139× / 14× | – | – |
-| ScanImage TIFF | 18 | 1 ms | 5.2 MiB | 1824× / 30× | 6.0× / 2.3× | – |
-| Bruker Prairie View | 14 | 1 ms | 5.7 MiB | 1116× / 21× | 3.0× / 2.3× | – |
+| Olympus OIB/OIF | 3 | 1 ms | 5.6 MiB | 270× / 55× | 7.3× / 3.1× | – |
+| Olympus OIR | 15 | 18 ms | 12 MiB | 252× / 46× | 2.9× / 5.6× | – |
+| DICOM | 17 | 56 ms | 20 MiB | 39× / 9.2× | 2.6× / 1.9× | – |
+| Zeiss ZVI | 14 | 7 ms | 8.1 MiB | 227× / 27× | 3.1× / 4.2× | – |
+| Leica LOF/XLEF | 65 | 29 ms | 8.3 MiB | 157× / 42× | 4.2× / 10.9× | – |
+| MetaMorph STK/ND | 4 | 16 ms | 6.7 MiB | 378× / 51× | 6.8× / 11.4× | – |
+| DeltaVision | 7 | 2 ms | 5.5 MiB | 353× / 49× | 2.3× / 7.3× | – |
+| PerkinElmer Operetta | 7 | 64 ms | 20 MiB | 22× / 14.0× | 1.2× / 1.3× | – |
+| MRC | 7 | 1 ms | 5.0 MiB | 868× / 24× | 2.7× / 2.4× | – |
+| Olympus SIS TIFF | 4 | 6 ms | 15 MiB | 478× / 14.8× | 4.2× / 1.9× | – |
+| Olympus FluoView TIFF | 2 | 1 ms | 5.5 MiB | 1377× / 19.6× | 3.5× / 1.8× | – |
+| NIfTI | 16 | 3 ms | 5.1 MiB | 436× / 33× | 3.8× / 3.1× | – |
+| Olympus scan^R | 2 | 157 ms | 8.0 MiB | 214× / 28× | see below | – |
+| Nikon NIS-Elements TIFF | 5 | 5 ms | 13 MiB | 333× / 14.7× | 4.1× / 1.9× | – |
+| Nikon NEF (uncompressed) | 2 | 18 ms | 17 MiB | 224× / 18.3× | 5.8× / 3.8× | – |
+| Olympus OMP2INFO | 1 | 927 ms | 96 MiB | 387× / 6.2× | 201× / 65× | – |
+| Micro-Manager | 11 | 2 ms | 5.6 MiB | 456× / 31× | 2.9× / 5.5× | – |
+| BigDataViewer XML/HDF5 | 3 | 9.62 s | 60 MiB | n/a | 4.0× / 18.1× | – |
+| Analyze 7.5 | 4 | 1 ms | 5.0 MiB | 985× / 21× | 3.0× / 2.4× | – |
+| Hamamatsu VMS | 4 | 358 ms | 19 MiB | 13.9× / 11.0× | n/a | – |
+| OME-XML | 46 | 1 ms | 5.6 MiB | 986× / 25× | 2.6× / 2.0× | – |
+| Zeiss Xradia XRM | 3 | 1 ms | 5.1 MiB | 211× / 38× | n/a | – |
+| ICS | 5 | 1 ms | 5.2 MiB | 404× / 20× | 4.1× / 3.5× | – |
+| Imspector OBF | 6 | 19 ms | 7.2 MiB | 140× / 22× | 2.2× / 3.9× | – |
+| IN Cell Analyzer | 4 | 46 ms | 6.8 MiB | 94× / 53× | n/a | – |
+| Becker & Hickl SDT | 4 | 51 ms | 28 MiB | 284× / 19.5× | 3.0× / 2.2× | – |
+| Gatan DigitalMicrograph | 6 | 5 ms | 9.0 MiB | 334× / 14.5× | 2.1× / 2.1× | – |
+| Opera Flex | 4 | 9 ms | 8.4 MiB | 261× / 27× | 2.4× / 3.8× | – |
+| Yokogawa CV7000 | 4 | 12 ms | 7.8 MiB | 158× / 25× | n/a | – |
+| MetaXpress | 6 | 13 ms | 8.1 MiB | 165× / 26× | 0.8× / 2.7× | – |
+| NRRD | 10 | 4 ms | 5.2 MiB | 213× / 40× | 11.2× / 6.6× | – |
+| Keller Lab Block | 7 | 15 ms | 6.6 MiB | 98× / 14.6× | 3.0× / 1.7× | – |
+| AVI | 16 | 1 ms | 5.2 MiB | 853× / 24× | 2.2× / 2.3× | – |
+| AmiraMesh | 14 | 1 ms | 5.3 MiB | 655× / 22× | 2.5× / 2.3× | – |
+| Hamamatsu DCIMG | 12 | 1 ms | 6.2 MiB | 416× / 24× | 3.7× / 5.8× | – |
+| Philips TIFF | 4 | 29 ms | 20 MiB | 148× / 14.1× | – | – |
+| ScanImage TIFF | 18 | 1 ms | 5.5 MiB | 1840× / 28× | 6.0× / 2.2× | – |
+| Bruker Prairie View | 14 | 1 ms | 5.6 MiB | 1116× / 21× | 3.0× / 2.3× | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -157,9 +157,9 @@ compared, "n/a" means the reader cannot open the format.
 - The reference readers also write the pixels to disk (ICS output);
   scopeio only decodes.
 - bioformats-rs failed on 98 of the ops that scopeio read.
-- Large plain images (24-megapixel RGB): PNG 0.31 s / 72 MiB (Bio-Formats
-  1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.29 s / 145 MiB
-  (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 4.9 s / 577 MiB
+- Large plain images (24-megapixel RGB): PNG 0.22 s / 74 MiB (Bio-Formats
+  1.95 s / 354 MiB, bioformats-rs 0.57 s / 216 MiB), JPEG 0.16 s / 147 MiB
+  (3.89 s / 601 MiB, 0.50 s / 220 MiB), lossless JPEG 2000 2.9 s / 579 MiB
   (14.5 s / 716 MiB, 4.6 s / 401 MiB).
 - Operetta: bioformats-rs converts only the first series of the 29-series
   omer export (108 of 3132 planes), so its factor is from the export it reads
@@ -197,6 +197,9 @@ compared, "n/a" means the reader cannot open the format.
   512 x 512 x 4096 sample) and needs about twice Bio-Formats' RAM there.
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
+- scopeio rows re-measured 2026-11-20 (reference rows from their original
+  runs). The RAM floor of about 5 MiB on small files includes the pages of
+  the executable itself, which vary by about 1 MiB with the page cache.
 
 Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 [tests/README.md](tests/README.md).

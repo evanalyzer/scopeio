@@ -4,6 +4,7 @@ Generated 2026-11-05 by `tests/scripts/oracle.py`.
 
 - Machine: Intel(R) Core(TM) Ultra 9 185H, 22 threads, Linux 7.0.0-38-generic
 - Bio-Formats 8.5.0 (bftools, Java 21.0.11), bioformats-rs 0.1.8
+- scopeio rows re-measured 2026-11-20 (hayro-jpeg2000 0.5, pyramid levels and associated images as in `ours_series`).
 - Median of 1 runs, each a fresh process.
 - scopeio: `scopeio_info --no-checksum` example, reads every plane of every series.
 - CPU time and peak RAM via `tests/scripts/measure.rs` (wait4); its own footprint of about 2 MiB is included. Runs above 8192 MiB RSS are killed.
@@ -11,12 +12,12 @@ Generated 2026-11-05 by `tests/scripts/oracle.py`.
 
 | File | Size | Reader | Status | CPU s | Wall s | Peak RAM MiB |
 |---|---:|---|---|---:|---:|---:|
-| tests/reference/ome/BDV/samples/drosophila.xml | 3 KiB | scopeio | ok | 11.119 | 11.243 | 59.1 |
+| tests/reference/ome/BDV/samples/drosophila.xml | 3 KiB | scopeio | ok | 11.287 | 11.296 | 60.2 |
 | tests/reference/ome/BDV/samples/drosophila.xml | 3 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 92.442 | 91.995 | 453.6 |
 | tests/reference/ome/BDV/samples/drosophila.xml | 3 KiB | bioformats-rs | ok | 58.511 | 58.566 | 3040.3 |
-| tests/reference/ome/BDV/samples/HisYFP-SPIM.xml | 10 KiB | scopeio | ok | 9.546 | 9.855 | 71.2 |
+| tests/reference/ome/BDV/samples/HisYFP-SPIM.xml | 10 KiB | scopeio | ok | 9.616 | 9.636 | 71.1 |
 | tests/reference/ome/BDV/samples/HisYFP-SPIM.xml | 10 KiB | bioformats | error: java.lang.IllegalArgumentException: Invalid plane ind | 28.920 | 28.106 | 433.7 |
 | tests/reference/ome/BDV/samples/HisYFP-SPIM.xml | 10 KiB | bioformats-rs | ok | 29.537 | 29.554 | 458.9 |
-| tests/data/bdv/synthetic.xml | 2 KiB | scopeio | ok | 0.002 | 0.002 | 5.4 |
+| tests/data/bdv/synthetic.xml | 2 KiB | scopeio | ok | 0.001 | 0.003 | 5.9 |
 | tests/data/bdv/synthetic.xml | 2 KiB | bioformats | error: hdf.hdf5lib.exceptions.HDF5HeapException: Bad value [ | 0.858 | 0.462 | 108.4 |
 | tests/data/bdv/synthetic.xml | 2 KiB | bioformats-rs | error: Error reading plane 0: Format error: HDF5 read: Inval | 0.005 | 0.006 | 13.2 |

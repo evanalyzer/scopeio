@@ -83,3 +83,45 @@ The bioformats-rs factors in the README understate scopeio on files with
 several series: bioformats-rs converts only the first series (e.g. one of
 29 Operetta wells, where its 1.2 s are for 108 of the 3132 planes scopeio
 reads in 25 s).
+
+## Full re-measurement and hayro-jpeg2000 0.5 (2026-11-20, Intel Core Ultra 9 185H)
+
+All 756 scopeio rows of `tests/expected/*_bench.md` re-measured with the
+command `tests/scripts/oracle.py` runs for them (series, pyramid level from
+the `ours_series` column of `<format>.tsv`, crop), median of 3 fresh
+processes of `scopeio_info --no-checksum`. Reference rows keep their
+original measurements; the README table is recomputed from these files.
+
+48 rows had been recorded when pyramid levels and associated images were
+separate series; they now read the level they name. Rows for an
+associated image (`assoc:<kind>` in the TSV) time a read of the whole file,
+because `scopeio_info` has no option for associated images; those
+multi-gigabyte reads vary by up to 30 % between runs.
+
+hayro-jpeg2000 0.5 against 0.4.1 (CPU s, median of 5 alternating runs):
+
+| Input | 0.4.1 | 0.5 |
+|---|---:|---:|
+| `photo_rgb8.jp2`, 24 Mpx lossless, whole image | 3.41 | 2.92 |
+| Aperio 33003 (`JP2K-33003-1.svs`), 2048 x 2048 crop | 0.25 | 0.22 |
+| Aperio 33003 (`77928.svs`), 2048 x 2048 crop | 0.31 | 0.28 |
+| Aperio / DICOM 33005, 2048 x 2048 crops | 0.15–0.18 | unchanged (±3 %) |
+
+0.5 converts raw codestreams with subsampled chroma (Aperio 33003) from
+YCbCr to RGB itself; the TIFF reader skips its own conversion for those.
+
+Differences to the earlier rows that are not code changes:
+
+- Rows slower than recorded (Xradia TXM 0.25 → 0.44 s, raw AVI 0.37 →
+  0.48 s) take the same time with alpha.4 built and measured today.
+- The RAM floor on small files is about 5 MiB instead of 2.5–2.8 MiB. Peak
+  RSS includes the executable's own pages, so it rises by up to 1 MiB when
+  the binary is fully in the page cache (e.g. right after a build): the same
+  binary measured 4.7 MiB before and 5.3 MiB after `cat binary > /dev/null`.
+
+CPU by format (sum over all rows, 624 s in total): DICOM 178, SVS 111,
+Keller Lab Block 108, NDPI 42, Operetta 41, CZI 35, QPTIFF 26, BIF 22,
+BigDataViewer 21; every other format below 10 s. For the slide formats
+(DICOM, SVS, NDPI, CZI, QPTIFF, BIF) this is almost all whole-file reads of
+the associated-image rows; among the regular reads KLB (bzip2) and Operetta
+(3132 planes) dominate and are the candidates for further work.
