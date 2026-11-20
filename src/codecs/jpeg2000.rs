@@ -52,6 +52,23 @@ pub(crate) fn info_at(data: &[u8], reduce: u8) -> Result<(Info, u8)> {
     Ok((Info { width: image.width() as usize, height: image.height() as usize, components }, image.original_bit_depth()))
 }
 
+/// Returns `true` if `data` is a raw codestream (no JP2 boxes) whose decoded
+/// samples come back as RGB although they are stored as YCbCr: three
+/// components with the last two subsampled alike and more coarsely than
+/// the first. hayro-jpeg2000 (since 0.5) takes those for sYCC and converts
+/// them; other raw codestreams are returned as stored.
+///
+/// Reads the SIZ marker segment (ITU-T T.800 A.5.1), which follows SOC.
+pub(crate) fn converts_ycc(data: &[u8]) -> bool {
+    // SOC, SIZ, Lsiz, Rsiz, 8 x 32-bit sizes, Csiz: 42 bytes, then 3 bytes per component.
+    if data.len() < 42 + 9 || data[..4] != [0xFF, 0x4F, 0xFF, 0x51] || u16::from_be_bytes([data[40], data[41]]) != 3 {
+        return false;
+    }
+    let sub = |c: usize| (data[42 + 3 * c + 1], data[42 + 3 * c + 2]);
+    let (y, cb, cr) = (sub(0), sub(1), sub(2));
+    cb == cr && cb != y && cb.0 >= y.0 && cb.1 >= y.1
+}
+
 /// Decodes a JPEG 2000 codestream (or JP2 file) into `out`: interleaved
 /// components as native samples of `pixel_type` (`U8` or `U16`).
 ///
@@ -96,4 +113,31 @@ pub(crate) fn decode_at(data: &[u8], pixel_type: PixelType, out: &mut [u8], redu
         }
     }
     Ok(Info { width, height, components: n })
+}
+
+// --- Tests ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// SOC and a SIZ segment with three components of the given subsampling.
+    fn siz(sub: [(u8, u8); 3]) -> Vec<u8> {
+        let mut d = vec![0xFF, 0x4F, 0xFF, 0x51, 0, 47, 0, 0];
+        d.extend([0u8; 32]);
+        d.extend(3u16.to_be_bytes());
+        for (x, y) in sub {
+            d.extend([7, x, y]);
+        }
+        d
+    }
+
+    #[test]
+    fn detects_subsampled_chroma() {
+        assert!(converts_ycc(&siz([(1, 1), (2, 2), (2, 2)])));
+        assert!(converts_ycc(&siz([(1, 1), (2, 1), (2, 1)])));
+        assert!(!converts_ycc(&siz([(1, 1), (1, 1), (1, 1)])));
+        assert!(!converts_ycc(&siz([(1, 1), (2, 2), (1, 1)])));
+        assert!(!converts_ycc(&[0xFF, 0x4F]));
+    }
 }

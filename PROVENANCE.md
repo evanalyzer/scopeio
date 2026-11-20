@@ -891,6 +891,14 @@ rounding; dicom-toolkit differs more. Block means of decoded tiles agree with
 Bio-Formats within 0.05 of 65535. openjp2 (BSD-2, Rust port of OpenJPEG) was
 not benchmarked.
 
+hayro-jpeg2000 0.5 (2026-11-20, same machine, median of 5 alternating runs
+against 0.4.1): a 24-Mpx JP2 photo 2.92 s instead of 3.41 s CPU; Aperio
+33003 crops of 2048 x 2048 0.22 s instead of 0.25 s; 33005 and DICOM crops
+unchanged within 3 %. Since 0.5 the decoder converts raw codestreams with
+subsampled chroma (Aperio 33003) from YCbCr to RGB itself, so the TIFF reader
+converts only codestreams without subsampling. Built without default
+features (no `image` / `moxcms` dependencies).
+
 | JPEG XR | openreadout-jpegxr | BSD-2-Clause (port of Microsoft jxrlib) | see below |
 
 JPEG XR benchmark (2026-10-24, one thread, 40 subblocks of 1504 x 2048

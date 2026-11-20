@@ -6,7 +6,7 @@ authors = ["Joachim Danmayr"]
 description = "Fast, low-footprint reader for microscopy and whole-slide image formats (TIFF/OME-TIFF, OME-Zarr, CZI, ND2, LIF, VSI, SVS, NDPI, MRXS and more)"
 # AGPL-3.0-only with the EVAnalyzer exception (LICENSE-EXCEPTION).
 license = "AGPL-3.0-only"
-repository = "https://github.com/joda01/scopeio"
+repository = "https://github.com/evanalyzer/scopeio"
 documentation = "https://docs.rs/scopeio"
 readme = "README.md"
 keywords = ["microscopy", "bioimage", "tiff", "whole-slide", "ome"]
@@ -28,7 +28,7 @@ include = [
 
 [dependencies]
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"], optional = true }
-hayro-jpeg2000 = { version = "0.4", optional = true }
+hayro-jpeg2000 = { version = "0.5", default-features = false, features = ["simd"], optional = true }
 openreadout-jpegxr = { version = "0.4", optional = true }
 png = { version = "0.18", optional = true }
 bzip2-rs = { version = "0.1", optional = true }

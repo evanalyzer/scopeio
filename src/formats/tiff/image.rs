@@ -737,7 +737,8 @@ impl TiffImage {
                     if info.components != comps {
                         return Err(Error::Corrupt(format!("JPEG 2000 has {} components, TIFF {comps}", info.components)));
                     }
-                    if self.compression == compression::JP2K_YCBCR && comps == 3 && bytes == 1 {
+                    // Codestreams with subsampled chroma are already RGB from the decoder.
+                    if self.compression == compression::JP2K_YCBCR && comps == 3 && bytes == 1 && !codecs::jpeg2000::converts_ycc(src) {
                         for px in buf[..info.width * info.height * 3].as_chunks_mut::<3>().0.iter_mut() {
                             let (y, cb, cr) = (px[0] as f32, px[1] as f32 - 128.0, px[2] as f32 - 128.0);
                             px[0] = (y + 1.402 * cr).round().clamp(0.0, 255.0) as u8;

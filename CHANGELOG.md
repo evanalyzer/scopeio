@@ -6,6 +6,14 @@ log.
 
 ## Unreleased
 
+### Changed
+
+- hayro-jpeg2000 0.5 (built without default features, dropping the `image`
+  and `moxcms` dependencies): large JPEG 2000 images decode about 14 %
+  faster, Aperio 33003 tiles about 12 %. The decoder now converts YCbCr
+  codestreams with subsampled chroma itself; the TIFF reader no longer
+  converts those a second time.
+
 ### Added
 
 - Instrument, environment and owner metadata modelled on OME 2016-06:
