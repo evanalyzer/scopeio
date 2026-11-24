@@ -292,9 +292,14 @@ fn dtype(descr: &str) -> Result<(PixelType, bool)> {
 fn npy_text(b: &[u8]) -> Result<String> {
     let h = parse_npy(b)?;
     let data = b.get(h.data_at as usize..).unwrap_or_default();
-    let (order, kind) = h.descr.split_at(h.descr.len().min(1));
+    // An optional byte-order character, then the kind (`descr` is
+    // untrusted text: split only after an ASCII character).
+    let (order, kind) = match h.descr.as_bytes().first() {
+        Some(&o @ (b'<' | b'>' | b'|' | b'=')) => (o, &h.descr[1..]),
+        _ => (b'=', h.descr.as_str()),
+    };
     let text = if kind.starts_with('U') {
-        let little = order != ">";
+        let little = order != b'>';
         data.as_chunks::<4>()
             .0
             .iter()
@@ -623,6 +628,30 @@ mod tests {
         assert_eq!(dtype("<u2").unwrap(), (PixelType::U16, true));
         assert_eq!(dtype(">f4").unwrap(), (PixelType::F32, false));
         assert!(dtype("<c8").is_err());
+    }
+
+    /// A 0-d text array with `descr` and `data` (the header padded as NumPy does).
+    fn text_npy(descr: &[u8], data: &[u8]) -> Vec<u8> {
+        let mut h = b"{'descr': '".to_vec();
+        h.extend_from_slice(descr);
+        h.extend_from_slice(b"', 'fortran_order': False, 'shape': (), }\n");
+        let mut b = b"\x93NUMPY\x01\x00".to_vec();
+        b.extend_from_slice(&(h.len() as u16).to_le_bytes());
+        b.extend_from_slice(&h);
+        b.extend_from_slice(data);
+        b
+    }
+
+    #[test]
+    fn reads_text_arrays() {
+        assert_eq!(npy_text(&text_npy(b"<U2", b"h\0\0\0i\0\0\0")).unwrap(), "hi");
+        assert_eq!(npy_text(&text_npy(b">U2", b"\0\0\0h\0\0\0i")).unwrap(), "hi");
+        // Without a byte-order character.
+        assert_eq!(npy_text(&text_npy(b"U1", b"h\0\0\0")).unwrap(), "h");
+        assert_eq!(npy_text(&text_npy(b"|S3", b"abc")).unwrap(), "abc");
+        // A non-ASCII first character (fuzzer finding: a panic slicing inside it).
+        assert!(npy_text(&text_npy(b"\xff\xff4", b"")).is_err());
+        assert!(npy_text(&text_npy("é4".as_bytes(), b"")).is_err());
     }
 
     /// A stored archive of one entry with a ZIP64 central directory: the

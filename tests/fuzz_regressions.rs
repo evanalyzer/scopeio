@@ -31,6 +31,7 @@ const TARGETS: &[(&str, &str)] = &[
     ("ims", "f.ims"),
     ("dicom", "f.dcm"),
     ("avi", "f.avi"),
+    ("prz", "f.prz"),
 ];
 
 /// Reads metadata and 256 x 256 corners of every level and plane corner,
