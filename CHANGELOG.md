@@ -114,6 +114,9 @@ log.
 
 ### Fixed
 
+- Gatan DM3 / DM4: tag names and 8-bit strings that are not UTF-8 are read
+  as Latin-1 (`Emission Current (µA)` came out as `Emission Current (�A)`).
+
 Found by fuzzing; each returned an error before or now no longer panics,
 aborts or allocates without bound:
 

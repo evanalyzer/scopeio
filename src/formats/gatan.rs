@@ -122,6 +122,16 @@ impl Node {
     }
 }
 
+/// Text of a tag name or 8-bit string: UTF-8 if valid, else Latin-1
+/// (Windows code page bytes such as `0xB5` for `µ` in `Emission Current
+/// (µA)`, observed in the DM4 samples).
+fn text(b: &[u8]) -> String {
+    match std::str::from_utf8(b) {
+        Ok(s) => s.to_string(),
+        Err(_) => b.iter().map(|&c| c as char).collect(),
+    }
+}
+
 /// Size in bytes of a scalar tag type.
 fn type_size(t: u64) -> Option<u64> {
     Some(match t {
@@ -207,7 +217,7 @@ impl Parser<'_> {
             }
             let kind = self.be(1)?;
             let name_len = self.be(2)? as usize;
-            let name = String::from_utf8_lossy(self.bytes(name_len)?).into_owned();
+            let name = text(self.bytes(name_len)?);
             let tag_len = if self.dm4 { Some(self.be(8)?) } else { None };
             let start = self.at;
             let node = match kind {
@@ -246,7 +256,7 @@ impl Parser<'_> {
                 if l > 1 << 20 {
                     return Err(corrupt("string tag too long"));
                 }
-                Value::Text(String::from_utf8_lossy(self.bytes(l)?).into_owned())
+                Value::Text(text(self.bytes(l)?))
             }
             // Struct: name length, field count, (name length, type) pairs.
             15 => {
@@ -525,5 +535,18 @@ impl Backend for Gatan {
             })?;
         }
         Ok(())
+    }
+}
+
+// --- Tests ------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decodes_latin1_names() {
+        assert_eq!(text(b"Emission Current (\xb5A)"), "Emission Current (µA)");
+        assert_eq!(text("Field of View (µm)".as_bytes()), "Field of View (µm)");
     }
 }
