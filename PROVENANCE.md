@@ -652,7 +652,13 @@ as black-box command-line tools to produce reference output
 - Own analysis of the DM4 samples on the OME sample server
   (`Gatan/imagesc-36590`, CC BY 4.0).
 - Checked against Bio-Formats and bioformats-rs as black boxes (see
-  `tests/expected/gatan_divergences.tsv`).
+  `tests/expected/gatan_divergences.tsv`), and against RosettaSciIO 0.15.0
+  (GPL-3.0-or-later) as a black box like for Panta Rhei
+  (`tests/scripts/oracle_rsciio.py gatan`): pixels and the `Microscope
+  Info` tag values behind `electron_microscopy`.
+- `Microscope Info` keys and the mode combinations TEM / IMAGING and
+  SEM / SCANNING from the OME samples (FEI Tecnai and Zeiss SEM / 3View);
+  8-bit tag names (`0xB5` for `µ`) observed there.
 - Synthetic files written by `tests/scripts/make_gatan_samples.py`.
 
 ## Opera Flex (`src/formats/flex.rs`)

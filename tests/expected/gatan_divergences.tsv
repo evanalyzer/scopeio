@@ -1,4 +1,7 @@
 # Known differences for Gatan DigitalMicrograph.
+# RosettaSciIO (tool rsciio) fails on the synthetic tests/data/gatan/rgba.dm4 ("cannot reshape array of size 140 into
+# shape (5,7)"): the file stores the RGBA data as 140 one-byte elements, RosettaSciIO expects one element per pixel. Which
+# layout DigitalMicrograph writes is open: no real RGBA DM file is available.
 file	tool	series	tolerance	ignore	reason
 tests/data/gatan/stack.dm3	bioformats	-			Bio-Formats returns only the last ImageList image (the spectrum image, its eV axis as z); scopeio returns both images as series, the energy axis as channels (same samples: Bio-Formats' CRC equals scopeio's series 1 read plane by plane); bioformats-rs returns only the first image, the z stack, which matches scopeio series 0
 tests/data/gatan/rgba.dm4	bioformats	-			both reference readers skip the RGBA image and return the uint16 sequence as z planes; scopeio returns the RGBA image as series 0 and the sequence (Meta Data.IsSequence) as time points in series 1

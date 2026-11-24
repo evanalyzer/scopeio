@@ -1,6 +1,6 @@
 //! # electron
 //!
-//! Electron microscope settings of a series (TEM / STEM), with field
+//! Electron microscope settings of a series (TEM / STEM / SEM), with field
 //! choice and meaning following the NeXus `NXem` application definition
 //! and the HyperSpy metadata conventions (prose only).
 //!
@@ -22,6 +22,9 @@ pub enum ElectronMicroscopyMode {
     Stem,
     /// Electron diffraction (the back focal plane is imaged).
     Diffraction,
+    /// Scanning electron microscopy: a focused probe scanned over the
+    /// specimen surface, recording backscattered or secondary electrons.
+    Sem,
 }
 
 /// Electron microscope settings of a series. Fields are `None` if unknown
@@ -46,4 +49,8 @@ pub struct ElectronMicroscopyMeta {
     /// Detector conversion: electrons per recorded count at the used
     /// accelerating voltage (dose calibration).
     pub electrons_per_count: Option<f64>,
+    /// SEM working distance (final lens to specimen surface) in millimetres.
+    pub working_distance_mm: Option<f64>,
+    /// Beam current on the specimen in nanoamperes.
+    pub probe_current_na: Option<f64>,
 }

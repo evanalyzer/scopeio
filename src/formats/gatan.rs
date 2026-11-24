@@ -42,7 +42,10 @@ use std::path::Path;
 use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
-use crate::{ChannelMeta, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType, Plane, Region, Result, SeriesMeta};
+use crate::{
+    ChannelMeta, ElectronMicroscopyMeta, ElectronMicroscopyMode, Error, FormatId, FormatInfo, LevelMeta, OriginalMeta, PhysicalSize, PixelType,
+    Plane, Region, Result, SeriesMeta,
+};
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::Gatan, "Gatan DigitalMicrograph", "1").extensions(&["dm3", "dm4"]);
 
@@ -403,7 +406,8 @@ impl Gatan {
         for i in indices {
             let entry = &entries[i].1;
             match image(entry, len) {
-                Ok((img, meta)) => {
+                Ok((img, mut meta)) => {
+                    meta.electron_microscopy = entry.path("ImageTags.Microscope Info").and_then(electron_microscopy);
                     images.push(img);
                     metas.push(meta);
                     let mut pairs = Vec::new();
@@ -425,6 +429,35 @@ impl Gatan {
 }
 
 /// Geometry and metadata of one `ImageList` entry.
+/// Electron microscope settings from `ImageTags.Microscope Info`. Only the
+/// mode combinations observed in the sample files are classified:
+/// `Illumination Mode` `TEM` with `Operation Mode` `IMAGING` (FEI Tecnai)
+/// and `SEM` with `SCANNING` (Zeiss SEM, 3View). The nominal magnification
+/// (`Indicated Magnification`), working distance (`WD (mm)`) and probe
+/// current (`SEM Probe Current (nA)`) are filled only for a classified
+/// mode; voltage (`Voltage`, V) and `Spot Size` in every mode. Zeros mean
+/// "not set" in the samples and are skipped.
+fn electron_microscopy(info: &Node) -> Option<ElectronMicroscopyMeta> {
+    let num = |k: &str| info.get(k).and_then(Node::num).filter(|v| v.is_finite() && *v > 0.0);
+    let text = |k: &str| info.get(k).and_then(Node::text).map(str::trim);
+    let mode = match (text("Illumination Mode"), text("Operation Mode")) {
+        (Some("TEM"), Some("IMAGING")) => Some(ElectronMicroscopyMode::Tem),
+        (Some("SEM"), Some("SCANNING")) => Some(ElectronMicroscopyMode::Sem),
+        _ => None,
+    };
+    let sem = mode == Some(ElectronMicroscopyMode::Sem);
+    let em = ElectronMicroscopyMeta {
+        accelerating_voltage_v: num("Voltage"),
+        magnification: num("Indicated Magnification").filter(|_| mode.is_some()),
+        mode,
+        spot_size: num("Spot Size").filter(|v| v.fract() == 0.0 && *v <= u32::MAX as f64).map(|v| v as u32),
+        working_distance_mm: num("WD (mm)").filter(|_| sem),
+        probe_current_na: num("SEM Probe Current (nA)").filter(|_| sem),
+        ..Default::default()
+    };
+    (em != ElectronMicroscopyMeta::default()).then_some(em)
+}
+
 fn image(entry: &Node, file_len: u64) -> Result<(Image, SeriesMeta)> {
     let data = entry.get("ImageData").ok_or_else(|| corrupt("image without ImageData"))?;
     let data_type = data.get("DataType").and_then(Node::num).ok_or_else(|| corrupt("image without DataType"))? as u32;

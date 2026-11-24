@@ -493,8 +493,14 @@ LZ4-compressed blocks are not supported yet.
 the thumbnails is a series (the reference readers return one image per
 file). A third dimension is channels for an energy axis (spectrum images),
 z planes for a length axis, else time points (`Meta Data.IsSequence`).
-RGBA images keep their four samples. Not supported: complex, packed
-complex and RGB (type 8) data, and DM5 (HDF5) files.
+RGBA images keep their four samples. Electron microscope settings from
+`Microscope Info`: voltage, nominal magnification and spot size; the mode
+for the observed combinations TEM / IMAGING (TEM) and SEM / SCANNING (SEM),
+with working distance and probe current for SEM. RosettaSciIO 0.15.0 (black
+box) returns the same pixels for every image it reads and the same
+`Microscope Info` values, but maps none of them to its own structured
+metadata; it fails on the synthetic RGBA file. Not supported: complex,
+packed complex and RGB (type 8) data, and DM5 (HDF5) files.
 
 **Opera Flex.** The `.flex` files of a folder are the wells of a plate:
 any of them opens all, one series per well and field (as Bio-Formats

@@ -18,6 +18,13 @@ named in Thumbnails[*].ImageIndex are thumbnails.
 - rgba.dm4: DM4, big-endian values: an RGBA (type 23) 7 x 5 image and a
   uint16 sequence 7 x 5 x 2 (IsSequence, time points).
 
+- sem.dm4: DM4, little-endian values: one uint16 7 x 5 image.
+
+ImageTags.Microscope Info as in the OME samples (key names observed there,
+values invented): the z stack TEM imaging at 200 kV, sem.dm4 SEM scanning
+at 5 kV with working distance and probe current. Both carry the 8-bit
+(Latin-1) name `Emission Current (\xb5A)`.
+
 Also writes truth.tsv with the CRC-32 of each series in the layout of
 tests/common/mod.rs `decode_level()`. Output in tests/data/gatan/ is
 committed.
@@ -44,7 +51,8 @@ class Writer:
         return struct.pack(">Q" if self.dm4 else ">I", v)
 
     def tag(self, name, body, kind):
-        n = name.encode()
+        # Names are UTF-8 text, or raw bytes for 8-bit (Latin-1) names.
+        n = name if isinstance(name, bytes) else name.encode()
         head = bytes([kind]) + struct.pack(">H", len(n)) + n
         return head + (struct.pack(">Q", len(body)) if self.dm4 else b"") + body
 
@@ -94,7 +102,12 @@ def main():
     thumb = w.image("thumb", 6, [4, 4], bytes(range(16)), "u1", [(1, ""), (1, "")])
     v = lambda x, y, z: x * 301 - y * 77 + z * 1000
     raw = b"".join(struct.pack("<h", v(x, y, z)) for z in range(3) for y in range(H) for x in range(W))
-    stack = w.image("z stack", 1, [W, H, 3], raw, "i2", [(0.5, "nm"), (0.5, "nm"), (2.0, "nm")])
+    tem = w.group("Microscope Info", [
+        w.text("Illumination Mode", "TEM"), w.text("Operation Mode", "IMAGING"), w.text("Imaging Mode", "IMAGING"),
+        w.scalar("Voltage", "f8", 200000.0), w.scalar("Indicated Magnification", "f8", 5000.0),
+        w.scalar("Actual Magnification", "f8", 7100.0), w.scalar("Spot Size", "i4", 3),
+        w.scalar(b"Emission Current (\xb5A)", "f8", 0.0), w.text("Name", "Synthetic TEM")])
+    stack = w.image("z stack", 1, [W, H, 3], raw, "i2", [(0.5, "nm"), (0.5, "nm"), (2.0, "nm")], [tem])
     f = lambda x, y, c: x * 0.5 + y * 0.25 + c * 10.0
     raw2 = b"".join(struct.pack("<f", f(x, y, c)) for c in range(4) for y in range(H) for x in range(W))
     si = w.image("spectrum image", 2, [W, H, 4], raw2, "f4", [(1.5, "µm"), (1.5, "µm"), (0.25, "eV")],
@@ -113,6 +126,19 @@ def main():
     (OUT / "rgba.dm4").write_bytes(w.file([img, seq], []))
     truth.append(("rgba.dm4", 0, zlib.crc32(rgba)))
     truth.append(("rgba.dm4", 1, zlib.crc32(b"".join(struct.pack("<H", u(x, y, t)) for t in range(2) for y in range(H) for x in range(W)))))
+
+    # sem: one uint16 image with SEM settings (own file, readable by RosettaSciIO).
+    w = Writer(True, True)
+    raw4 = b"".join(struct.pack("<H", (x * 900 + y * 31) % 65536) for y in range(H) for x in range(W))
+    sem = w.group("Microscope Info", [
+        w.text("Illumination Mode", "SEM"), w.text("Operation Mode", "SCANNING"),
+        w.scalar("Voltage", "f8", 5000.0), w.scalar("Indicated Magnification", "f8", 1200.0),
+        w.scalar("Spot Size", "i4", 2), w.scalar("WD (mm)", "f8", 7.5),
+        w.scalar("SEM Probe Current (nA)", "f8", 0.4), w.scalar("Probe Current (nA)", "f8", 0.0),
+        w.scalar(b"Emission Current (\xb5A)", "f8", 0.0), w.text("Name", "Synthetic SEM")])
+    img = w.image("sem", 10, [W, H], raw4, "u2", [(20.0, "nm"), (20.0, "nm")], [sem])
+    (OUT / "sem.dm4").write_bytes(w.file([img], []))
+    truth.append(("sem.dm4", 0, zlib.crc32(raw4)))
 
     with open(OUT / "truth.tsv", "w") as out:
         out.write("file\tseries\tcrc32\n")

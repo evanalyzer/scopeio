@@ -19,9 +19,14 @@ log.
 - Electron microscope settings: `SeriesMeta::electron_microscopy` with the
   new `ElectronMicroscopyMeta` (accelerating voltage, nominal
   magnification, camera length, convergence semi-angle, mode, spot size,
-  defocus, electrons per count) and `ElectronMicroscopyMode` (TEM, STEM,
-  diffraction); fields follow NeXus `NXem` and the HyperSpy conventions.
-  Filled by the Panta Rhei reader; other readers leave it empty for now.
+  defocus, electrons per count, SEM working distance and probe current)
+  and `ElectronMicroscopyMode` (TEM, STEM, diffraction, SEM); fields follow
+  NeXus `NXem` and the HyperSpy conventions. Filled by the Panta Rhei and
+  Gatan DM3 / DM4 readers (`Microscope Info`: voltage, nominal
+  magnification, spot size; TEM imaging and SEM scanning modes, SEM working
+  distance and probe current); other readers leave it empty for now.
+- RosettaSciIO is a black-box oracle for Gatan DM3 / DM4 too (pixels and
+  the `Microscope Info` tag values).
 - CEOS Panta Rhei reader (`prz`): electron microscopy `.prz` files (ZIP of
   NumPy arrays with JSON metadata); stored, deflated and ZIP64 archives,
   2-D images and frame stacks, pixel size from the device calibration,

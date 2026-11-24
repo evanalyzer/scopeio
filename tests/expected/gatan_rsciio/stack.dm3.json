@@ -1,0 +1,204 @@
+[
+ {
+  "axes": [
+   {
+    "index_in_array": 0,
+    "name": "z",
+    "navigate": true,
+    "offset": -0.0,
+    "scale": 2.0,
+    "size": 3,
+    "units": "nm"
+   },
+   {
+    "index_in_array": 1,
+    "name": "y",
+    "navigate": false,
+    "offset": -0.0,
+    "scale": 0.5,
+    "size": 5,
+    "units": "nm"
+   },
+   {
+    "index_in_array": 2,
+    "name": "x",
+    "navigate": false,
+    "offset": -0.0,
+    "scale": 0.5,
+    "size": 7,
+    "units": "nm"
+   }
+  ],
+  "dtype": "int16",
+  "metadata": {
+   "General": {
+    "original_filename": "stack.dm3",
+    "title": "z stack"
+   },
+   "Signal": {
+    "signal_type": ""
+   }
+  },
+  "original_metadata": {
+   "ImageList": {
+    "TagGroup0": {
+     "ImageData": {
+      "Calibrations": {
+       "Dimension": {
+        "TagGroup0": {
+         "Origin": 0.0,
+         "Scale": 0.5,
+         "Units": "nm"
+        },
+        "TagGroup1": {
+         "Origin": 0.0,
+         "Scale": 0.5,
+         "Units": "nm"
+        },
+        "TagGroup2": {
+         "Origin": 0.0,
+         "Scale": 2.0,
+         "Units": "nm"
+        }
+       }
+      },
+      "Data": {
+       "endian": "little",
+       "offset": 819,
+       "size": 105,
+       "size_bytes": 210
+      },
+      "DataType": 1,
+      "Dimensions": {
+       "Data0": 7,
+       "Data1": 5,
+       "Data2": 3
+      }
+     },
+     "ImageTags": {
+      "Microscope Info": {
+       "Actual Magnification": 7100.0,
+       "Emission Current (µA)": 0.0,
+       "Illumination Mode": "TEM",
+       "Imaging Mode": "IMAGING",
+       "Indicated Magnification": 5000.0,
+       "Name": "Synthetic TEM",
+       "Operation Mode": "IMAGING",
+       "Spot Size": 3,
+       "Voltage": 200000.0
+      }
+     },
+     "Name": "z stack"
+    }
+   },
+   "Thumbnails": {
+    "TagGroup0": {
+     "ImageIndex": 0
+    }
+   },
+   "root": {}
+  },
+  "shape": [
+   3,
+   5,
+   7
+  ]
+ },
+ {
+  "axes": [
+   {
+    "index_in_array": 0,
+    "name": "z",
+    "navigate": true,
+    "offset": -0.0,
+    "scale": 0.25,
+    "size": 4,
+    "units": "eV"
+   },
+   {
+    "index_in_array": 1,
+    "name": "y",
+    "navigate": false,
+    "offset": -0.0,
+    "scale": 1.5,
+    "size": 5,
+    "units": "µm"
+   },
+   {
+    "index_in_array": 2,
+    "name": "x",
+    "navigate": false,
+    "offset": -0.0,
+    "scale": 1.5,
+    "size": 7,
+    "units": "µm"
+   }
+  ],
+  "dtype": "float32",
+  "metadata": {
+   "General": {
+    "original_filename": "stack.dm3",
+    "title": "spectrum image"
+   },
+   "Signal": {
+    "signal_type": ""
+   }
+  },
+  "original_metadata": {
+   "ImageList": {
+    "TagGroup0": {
+     "ImageData": {
+      "Calibrations": {
+       "Dimension": {
+        "TagGroup0": {
+         "Origin": 0.0,
+         "Scale": 1.5,
+         "Units": "µm"
+        },
+        "TagGroup1": {
+         "Origin": 0.0,
+         "Scale": 1.5,
+         "Units": "µm"
+        },
+        "TagGroup2": {
+         "Origin": 0.0,
+         "Scale": 0.25,
+         "Units": "eV"
+        }
+       }
+      },
+      "Data": {
+       "endian": "little",
+       "offset": 1968,
+       "size": 140,
+       "size_bytes": 560
+      },
+      "DataType": 2,
+      "Dimensions": {
+       "Data0": 7,
+       "Data1": 5,
+       "Data2": 4
+      }
+     },
+     "ImageTags": {
+      "Meta Data": {
+       "Format": "Spectrum image"
+      }
+     },
+     "Name": "spectrum image"
+    }
+   },
+   "Thumbnails": {
+    "TagGroup0": {
+     "ImageIndex": 0
+    }
+   },
+   "root": {}
+  },
+  "shape": [
+   4,
+   5,
+   7
+  ]
+ }
+]

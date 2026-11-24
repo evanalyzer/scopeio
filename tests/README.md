@@ -35,19 +35,21 @@ cd ../..
 # bioformats-rs 0.1.8 (crate `bioformats`), only its CLI binary
 cargo install bioformats --version 0.1.8 --locked --root tests/tools/bioformats-rs
 
-# RosettaSciIO 0.15.0 (GPL-3.0, Python), oracle for CEOS Panta Rhei only
+# RosettaSciIO 0.15.0 (GPL-3.0, Python), oracle for CEOS Panta Rhei and Gatan DM3 / DM4
 python3 -m venv tests/tools/rsciio
 tests/tools/rsciio/bin/pip install rosettasciio==0.15.0
 ```
 
-RosettaSciIO has no command-line tool: `scripts/oracle_rsciio.py` calls its
-documented reader API in a separate Python process and adds `rsciio` rows
-to `expected/prz.tsv` plus metadata dumps in `expected/prz_rsciio/` (synthetic
-files; real samples go to the uncommitted `reference/prz_rsciio/`). Run it
-after `oracle.py prz`, which rewrites `prz.tsv` without the `rsciio` rows:
+RosettaSciIO has no command-line tool: `scripts/oracle_rsciio.py FORMAT`
+(`prz` or `gatan`) calls its documented reader API in a separate Python
+process and adds `rsciio` rows to `expected/FORMAT.tsv` plus metadata dumps
+in `expected/FORMAT_rsciio/` (synthetic files; real samples go to the
+uncommitted `reference/FORMAT_rsciio/`). Run it after `oracle.py FORMAT`,
+which rewrites `FORMAT.tsv` without the `rsciio` rows:
 
 ```sh
-tests/tools/rsciio/bin/python -I tests/scripts/oracle_rsciio.py tests/external/panta_rhei_01.prz tests/data/prz/*.prz
+tests/tools/rsciio/bin/python -I tests/scripts/oracle_rsciio.py prz tests/external/panta_rhei_01.prz tests/data/prz/*.prz
+tests/tools/rsciio/bin/python -I tests/scripts/oracle_rsciio.py gatan tests/data/gatan/*.dm* tests/reference/ome/Gatan/imagesc-36590/*.dm4
 ```
 
 ## Downloaded samples
