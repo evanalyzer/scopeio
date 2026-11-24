@@ -150,6 +150,7 @@ compared, "n/a" means the reader cannot open the format.
 | Philips TIFF | 4 | 29 ms | 20 MiB | 148× / 14.1× | – | – |
 | ScanImage TIFF | 18 | 1 ms | 5.5 MiB | 1840× / 28× | 6.0× / 2.2× | – |
 | Bruker Prairie View | 14 | 1 ms | 5.6 MiB | 1116× / 21× | 3.0× / 2.3× | – |
+| CEOS Panta Rhei | 6 | 1 ms | 5.6 MiB | n/a | n/a | – |
 
 - Bio-Formats' large factors on small files are mostly JVM start-up (about
   8 s CPU and 550 MB per process); on whole-slide formats it needs 4–19×
@@ -195,6 +196,10 @@ compared, "n/a" means the reader cannot open the format.
 - Becker & Hickl SDT: a ZIP-compressed image block stores the time bins
   fastest, so scopeio decompresses it once into memory (2 GiB for the
   512 x 512 x 4096 sample) and needs about twice Bio-Formats' RAM there.
+- CEOS Panta Rhei: Bio-Formats and bioformats-rs cannot open the format.
+  The one real sample (2048 x 2048 uint16, 8 MiB) reads in 6 ms CPU and
+  13.8 MiB; RosettaSciIO 0.15.0 needs 14 ms for the read alone, plus 1.9 s
+  CPU to import, and 72 MiB peak (`tests/expected/prz_rsciio_bench.md`).
 - Peaks above the medians (up to a few GB) come from reading a whole
   gigapixel level into one output buffer, not from the reader itself.
 - scopeio rows re-measured 2026-11-20 (reference rows from their original
@@ -241,6 +246,7 @@ Per-file numbers: `tests/expected/*_bench.md`; how to regenerate them:
 | **Burleigh** | — |  |
 | **Canon DNG** | `.cr2, .crw` |  |
 | **CellH5** | `.ch5` |  |
+| **CEOS Panta Rhei** | `.prz` | ✅ |
 | **Cellomics** | — |  |
 | **CellVoyager** | `.xml, .tif` |  |
 | **CV7000** | `.wpi, .tif` | ✅ |
@@ -633,6 +639,28 @@ brightness-over-time one) match its pixels and pixel sizes; with several timed s
 z, and it returns a series per cycle for bidirectional z series (see
 `tests/expected/prairie_divergences.tsv`). bioformats-rs cannot open the
 recordings.
+
+**CEOS Panta Rhei.** A `.prz` file is a ZIP archive of NumPy arrays:
+`data.npy` holds the image (2-D, or 3-D with the frames returned as time
+points; any byte order, C or Fortran order) and `meta_data_json.npy` the
+metadata as JSON (a list with one object per frame). Stored entries are
+read in place, deflated ones decoded into memory on first read; ZIP64
+archives are supported. The pixel size is `value * pixel_factor` of the
+`device.calib` entries (x first; the unbinned specimen pixel times the
+binning); acquisition time, exposure, stage position, microscope name,
+camera (detector model) and acquisition session (`repo_id` as dataset) are
+mapped, each frame of a stack gets its own time, exposure and stage position
+(plane metadata, plus the frame interval when evenly spaced), and every
+metadata key of every frame is kept in the original metadata. The pickled `meta_data.npy` / `data_model.npy` copies are never
+read. Bio-Formats and bioformats-rs cannot open the format; RosettaSciIO
+0.15.0 (run as a black box) returns the same pixels, shape, pixel type and
+pixel sizes for all test files, and every original-metadata value it reports.
+Differences: RosettaSciIO keeps only frame 0's metadata of a stack, stores
+`device.calib` (without its trailing `null`) and `ref_size` reversed (y, x), takes the title
+from `repo_id` (scopeio: the file name, which is unique per image) and maps
+beam energy, convergence angle and magnification to structured fields
+(scopeio: original metadata only, as `SeriesMeta` has no such fields); it
+does not map acquisition time, exposure or stage position.
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

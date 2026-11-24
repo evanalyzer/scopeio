@@ -34,6 +34,7 @@ FILES = {
     "avi": (".avi",),
     "amira": (".am",),
     "dcimg": (".dcimg",),
+    "prz": (".prz",),
 }
 # Target -> folders of tests/data whose files seed it (TIFF flavours that
 # the suffixes above would give the plain TIFF target).

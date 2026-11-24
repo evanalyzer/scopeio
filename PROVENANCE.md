@@ -853,6 +853,33 @@ as black-box command-line tools to produce reference output
 - Synthetic files (including a small baseline JPEG encoder with the
   T.81 K.1 / K.3 tables) written by `tests/scripts/make_avi_samples.py`.
 
+## CEOS Panta Rhei (`src/formats/prz.rs`)
+
+- PKWARE ZIP File Format Specification (APPNOTE.TXT 6.3): local and
+  central directory headers, end of central directory, ZIP64 records and
+  extra field (own code, no ZIP crate).
+- NumPy `.npy` format description (numpy.lib.format documentation and
+  NEP 1; NumPy is BSD-3, only the prose was used): magic, versions 1-3,
+  header dictionary, `descr`, `fortran_order`, `shape`.
+- Own reverse engineering of one sample file (TVIPS camera on a JEOL TEM,
+  file format version 8): entry names, JSON metadata in 0-d UTF-32 arrays,
+  `device.calib` (pixel size = `value * pixel_factor`, checked against
+  `camera.pixel_size`, `camera.binning`, `projector.magnification` and
+  `camera.magnification_factor`). The pickled entries are not parsed.
+- RosettaSciIO 0.15.0 (GPL-3.0-or-later) run as a black box only:
+  installed in the uncommitted `tests/tools/rsciio`, called in a separate
+  process through its documented `rsciio.pantarhei.file_reader` by
+  `tests/scripts/oracle_rsciio.py`; its source code was not read. Only its
+  outputs for the synthetic files are committed (`tests/expected/prz.tsv`
+  rows `rsciio`, `tests/expected/prz_rsciio/`); dumps of real samples stay
+  in the uncommitted `tests/reference/prz_rsciio/`. Its results confirmed the x-first order
+  of `device.calib` and the frames-first layout of stacks; it also showed
+  the metadata JSON is a list of objects (synthetic samples changed to
+  that layout).
+- Bio-Formats 8.5.0 and bioformats-rs 0.1.8 run as black boxes: neither
+  opens the file (Bio-Formats: unknown format).
+- Synthetic files written by `tests/scripts/make_prz_samples.py`.
+
 ## Blosc (`src/codecs/blosc.rs`)
 
 - c-blosc1 `README_CHUNK_FORMAT.rst` (`doc/codecs/blosc/`). Observed on

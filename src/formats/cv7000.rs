@@ -39,6 +39,7 @@ use std::path::{Path, PathBuf};
 
 use roxmltree::{Document, Node};
 
+use super::iso::iso_seconds;
 use super::tiff::ifd::TiffFile;
 use super::tiff::image::{Samples, TiffImage};
 use crate::pixel::Sink;
@@ -96,32 +97,6 @@ fn index(n: Node, name: &str) -> u32 {
 
 fn elements<'a, 'i>(n: Node<'a, 'i>, name: &'a str) -> impl Iterator<Item = Node<'a, 'i>> + 'a {
     n.descendants().filter(move |c| c.tag_name().name() == name)
-}
-
-/// Seconds since 1970 of an ISO 8601 time `YYYY-MM-DDThh:mm:ss[.f][Z|±hh:mm]`.
-fn iso_seconds(s: &str) -> Option<f64> {
-    let (date, time) = s.split_once('T')?;
-    let mut d = date.splitn(3, '-').map(|v| v.parse::<i64>().ok());
-    let (y, m, day) = (d.next()??, d.next()??, d.next()??);
-    let split = time.find(['Z', '+']).or_else(|| time.rfind('-')).unwrap_or(time.len());
-    let (clock, zone) = time.split_at(split);
-    let mut c = clock.splitn(3, ':');
-    let (h, min, sec): (f64, f64, f64) = (c.next()?.parse().ok()?, c.next()?.parse().ok()?, c.next()?.parse().ok()?);
-    let offset = match zone.as_bytes().first() {
-        Some(b'+' | b'-') => {
-            let (oh, om) = zone[1..].split_once(':').unwrap_or((&zone[1..], "0"));
-            let v = oh.parse::<f64>().ok()? * 3600.0 + om.parse::<f64>().ok()? * 60.0;
-            if zone.starts_with('-') { -v } else { v }
-        }
-        _ => 0.0,
-    };
-    // Days from civil (proleptic Gregorian).
-    let (y, m) = if m <= 2 { (y - 1, m + 9) } else { (y, m - 3) };
-    let era = y.div_euclid(400);
-    let yoe = y - era * 400;
-    let doy = (153 * m + 2) / 5 + day - 1;
-    let days = era * 146097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719468;
-    Some(days as f64 * 86400.0 + h * 3600.0 + min * 60.0 + sec - offset)
 }
 
 /// ISO 8601 time without fraction and zone, as written by the instrument.

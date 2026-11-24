@@ -22,6 +22,7 @@ allocations above the limits are findings.
 | `avi` | AVI |
 | `amira` | AmiraMesh / Avizo |
 | `dcimg` | Hamamatsu DCIMG |
+| `prz` | CEOS Panta Rhei |
 | `scanimage` | ScanImage TIFF |
 | `philips` | Philips TIFF |
 | `prairie` | Bruker Prairie View (folder tree, `rec.xml` opened) |

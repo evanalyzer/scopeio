@@ -139,3 +139,10 @@ path = "fuzz_targets/prairie.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "prz"
+path = "fuzz_targets/prz.rs"
+test = false
+doc = false
+bench = false

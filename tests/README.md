@@ -19,8 +19,8 @@ sample files that are not present locally are skipped.
 
 ## Reference readers
 
-Both are used strictly as black boxes: only their command-line tools are run
-as separate processes. They are never linked or distributed, and their source
+All are used strictly as black boxes: only their command-line tools (for
+RosettaSciIO its reader API) are run as separate processes. They are never linked or distributed, and their source
 code must not be read (see the licence notes in the project instructions).
 
 Pinned versions, installed into `tests/tools/`:
@@ -34,6 +34,20 @@ cd ../..
 
 # bioformats-rs 0.1.8 (crate `bioformats`), only its CLI binary
 cargo install bioformats --version 0.1.8 --locked --root tests/tools/bioformats-rs
+
+# RosettaSciIO 0.15.0 (GPL-3.0, Python), oracle for CEOS Panta Rhei only
+python3 -m venv tests/tools/rsciio
+tests/tools/rsciio/bin/pip install rosettasciio==0.15.0
+```
+
+RosettaSciIO has no command-line tool: `scripts/oracle_rsciio.py` calls its
+documented reader API in a separate Python process and adds `rsciio` rows
+to `expected/prz.tsv` plus metadata dumps in `expected/prz_rsciio/` (synthetic
+files; real samples go to the uncommitted `reference/prz_rsciio/`). Run it
+after `oracle.py prz`, which rewrites `prz.tsv` without the `rsciio` rows:
+
+```sh
+tests/tools/rsciio/bin/python -I tests/scripts/oracle_rsciio.py tests/external/panta_rhei_01.prz tests/data/prz/*.prz
 ```
 
 ## Downloaded samples
@@ -125,6 +139,7 @@ python3 -I tests/scripts/make_philips_samples.py  # Philips TIFF; needs ImageMag
 python3 -I tests/scripts/make_scanimage_samples.py # ScanImage TIFF (all five metadata layouts)
 python3 -I tests/scripts/make_prairie_samples.py  # Bruker Prairie View recordings
 python3 -I tests/scripts/make_klb_samples.py      # Keller Lab Block
+python3 -I tests/scripts/make_prz_samples.py      # CEOS Panta Rhei (.prz)
 python3 -I tests/scripts/make_avi_samples.py      # AVI (--bench DIR: large benchmark files)
 python3 -I tests/scripts/make_mrxs_samples.py   # needs ImageMagick
 python3 -I tests/scripts/make_lsm_samples.py

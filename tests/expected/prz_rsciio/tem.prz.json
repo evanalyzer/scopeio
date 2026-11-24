@@ -1,0 +1,135 @@
+[
+ {
+  "axes": [
+   {
+    "name": "Y",
+    "navigate": false,
+    "offset": 0.0,
+    "scale": 5.833333333333333e-10,
+    "size": 6,
+    "units": "m"
+   },
+   {
+    "name": "X",
+    "navigate": false,
+    "offset": 0.0,
+    "scale": 5.833333333333333e-10,
+    "size": 8,
+    "units": "m"
+   }
+  ],
+  "dtype": "uint16",
+  "metadata": {
+   "Acquisition_instrument": {
+    "TEM": {
+     "acquisition_mode": "TEM",
+     "beam_energy": 300.0,
+     "convergence_angle": 12.5,
+     "magnification": 20000
+    }
+   },
+   "General": {
+    "original_filename": "tem.prz",
+    "title": "synthetic_session"
+   }
+  },
+  "original_metadata": {
+   "camera.area_offset": [
+    0,
+    0
+   ],
+   "camera.binning": [
+    1,
+    1
+   ],
+   "camera.camc_parameters": {
+    "BurstNumImages": 1,
+    "HT": 300000,
+    "ReadoutMode": 1,
+    "exposure_time_ms": 500
+   },
+   "camera.camera_length_angle": 0.0,
+   "camera.camera_length_factor": 1.1,
+   "camera.detector_size": [
+    8,
+    6
+   ],
+   "camera.electrons_per_count": {
+    "300000": 0.025
+   },
+   "camera.exposure_time": 0.500125,
+   "camera.intensity_factor": 1,
+   "camera.magnification_angle": 0.0,
+   "camera.magnification_factor": 1.2,
+   "camera.min_exposure_time": 0.01,
+   "camera.parameters": {
+    "gain_mode": 1,
+    "high_tension": 300000,
+    "integration_method": "Average",
+    "next_index": 1,
+    "readout_mode": 1,
+    "trigger_mode": "Internal"
+   },
+   "camera.pixel_size": 1.4e-05,
+   "camera.requested_exposure_time": 0.5,
+   "camera.start_time": "2026-01-15T09:30:00.250000",
+   "condenser.convergence_semi_angle": 0.0125,
+   "condenser.mode": "TEM_1",
+   "condenser.spotsize": 3,
+   "device.calib": [
+    {
+     "fixed_prefix": null,
+     "name": "Length",
+     "offset": 0.0,
+     "pixel_factor": 1,
+     "unit": "m",
+     "use_prefix": true,
+     "value": 5.833333333333333e-10
+    },
+    {
+     "fixed_prefix": null,
+     "name": "Length",
+     "offset": 0.0,
+     "pixel_factor": 1,
+     "unit": "m",
+     "use_prefix": true,
+     "value": 5.833333333333333e-10
+    }
+   ],
+   "electron_gun.voltage": 300000,
+   "electron_gun.voltage_offset": 0.0,
+   "image_size": [
+    8,
+    6
+   ],
+   "microscope.name": "SyntheticTEM",
+   "objective.mode": "MAG",
+   "projector.magnification": 20000,
+   "projector.mode": "MAG",
+   "projector.spectrum_mode": false,
+   "ref_size": [
+    6,
+    8
+   ],
+   "repo_id": "synthetic_session.3",
+   "source.flip_geometry": false,
+   "source.geometry": 0,
+   "source.last_frame_info": {
+    "buffer_index": 0,
+    "missed_event": false
+   },
+   "source.name": "SyntheticCam",
+   "source.type": "camera",
+   "stage.tilt_x": 0.1,
+   "stage.tilt_y": 0.0,
+   "stage.x": 1.25e-05,
+   "stage.y": -3.5e-06,
+   "stage.z": 2e-07,
+   "type": "2D"
+  },
+  "shape": [
+   6,
+   8
+  ]
+ }
+]

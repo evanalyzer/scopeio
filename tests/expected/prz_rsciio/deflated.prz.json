@@ -1,0 +1,76 @@
+[
+ {
+  "axes": [
+   {
+    "name": "Index",
+    "navigate": true,
+    "size": 3
+   },
+   {
+    "name": "Y",
+    "navigate": false,
+    "offset": 0.0,
+    "scale": 6e-10,
+    "size": 5,
+    "units": "m"
+   },
+   {
+    "name": "X",
+    "navigate": false,
+    "offset": 0.0,
+    "scale": 5e-10,
+    "size": 7,
+    "units": "m"
+   }
+  ],
+  "dtype": "float32",
+  "metadata": {
+   "General": {
+    "original_filename": "deflated.prz"
+   }
+  },
+  "original_metadata": {
+   "camera.binning": [
+    2,
+    2
+   ],
+   "camera.exposure_time": 1.5,
+   "camera.start_time": "2026-10-02T11:43:51.000000",
+   "device.calib": [
+    null,
+    {
+     "fixed_prefix": null,
+     "name": "Length",
+     "offset": 0.0,
+     "pixel_factor": 2,
+     "unit": "m",
+     "use_prefix": true,
+     "value": 3e-10
+    },
+    {
+     "fixed_prefix": null,
+     "name": "Length",
+     "offset": 0.0,
+     "pixel_factor": 2,
+     "unit": "m",
+     "use_prefix": true,
+     "value": 2.5e-10
+    }
+   ],
+   "image_size": [
+    7,
+    5
+   ],
+   "microscope.name": "TEM",
+   "stage.x": 1e-06,
+   "stage.y": -2e-06,
+   "stage.z": 0.0,
+   "type": "3D"
+  },
+  "shape": [
+   3,
+   5,
+   7
+  ]
+ }
+]

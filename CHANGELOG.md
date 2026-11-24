@@ -16,6 +16,12 @@ log.
 
 ### Added
 
+- CEOS Panta Rhei reader (`prz`): electron microscopy `.prz` files (ZIP of
+  NumPy arrays with JSON metadata); stored, deflated and ZIP64 archives,
+  2-D images and frame stacks, pixel size from the device calibration,
+  acquisition time, exposure, stage position, microscope, camera and
+  acquisition session; per-frame time, exposure and stage position as
+  plane metadata. Checked against RosettaSciIO as a black box.
 - Instrument, environment and owner metadata modelled on OME 2016-06:
   `SeriesMeta::{microscope, environment, experimenter, project, dataset}`;
   `ObjectiveMeta::{correction, working_distance_nm, refractive_index}`;

@@ -1,0 +1,27 @@
+[
+ {
+  "axes": [
+   {
+    "name": "Y",
+    "navigate": false,
+    "size": 5
+   },
+   {
+    "name": "X",
+    "navigate": false,
+    "size": 7
+   }
+  ],
+  "dtype": "uint8",
+  "metadata": {
+   "General": {
+    "original_filename": "zip64.prz"
+   }
+  },
+  "original_metadata": {},
+  "shape": [
+   5,
+   7
+  ]
+ }
+]

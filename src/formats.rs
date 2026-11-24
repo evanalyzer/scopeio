@@ -46,6 +46,8 @@ mod ics;
 mod ims;
 #[cfg(feature = "incell")]
 mod incell;
+#[cfg(any(feature = "cv7000", feature = "prz"))]
+mod iso;
 #[cfg(feature = "klb")]
 mod klb;
 #[cfg(feature = "lif")]
@@ -88,6 +90,8 @@ mod philips;
 mod plain;
 #[cfg(feature = "prairie")]
 mod prairie;
+#[cfg(feature = "prz")]
+mod prz;
 #[cfg(feature = "qptiff")]
 mod qptiff;
 #[cfg(feature = "scanimage")]
@@ -100,7 +104,7 @@ mod scn;
 mod sdt;
 #[cfg(feature = "tiff")]
 mod slide;
-#[cfg(any(feature = "ics", feature = "nrrd", feature = "amira"))]
+#[cfg(any(feature = "ics", feature = "nrrd", feature = "amira", feature = "prz"))]
 mod strided;
 #[cfg(feature = "svs")]
 mod svs;
@@ -232,6 +236,8 @@ static SUPPORTED: &[FormatInfo] = &[
     metaxpress::FORMAT,
     #[cfg(feature = "nrrd")]
     nrrd::FORMAT,
+    #[cfg(feature = "prz")]
+    prz::FORMAT,
     #[cfg(feature = "klb")]
     klb::FORMAT,
     #[cfg(feature = "avi")]
@@ -433,6 +439,10 @@ pub fn probe(path: &Path) -> Result<Option<FormatId>> {
     if klb::matches(path, &head) {
         return Ok(Some(FormatId::Klb));
     }
+    #[cfg(feature = "prz")]
+    if prz::matches(path, &head) {
+        return Ok(Some(FormatId::PantaRhei));
+    }
     #[cfg(feature = "nrrd")]
     if nrrd::matches(&head) {
         return Ok(Some(FormatId::Nrrd));
@@ -515,6 +525,8 @@ pub fn open_with(path: &Path, opts: &OpenOptions) -> Result<Arc<dyn ImageReader>
         Some(FormatId::Obf) => Ok(Arc::new(Reader(obf::Obf::open(path)?))),
         #[cfg(feature = "ics")]
         Some(FormatId::Ics) => Ok(Arc::new(Reader(ics::Ics::open(path)?))),
+        #[cfg(feature = "prz")]
+        Some(FormatId::PantaRhei) => Ok(Arc::new(Reader(prz::PantaRhei::open(path)?))),
         #[cfg(feature = "nrrd")]
         Some(FormatId::Nrrd) => Ok(Arc::new(Reader(nrrd::Nrrd::open(path)?))),
         #[cfg(feature = "klb")]

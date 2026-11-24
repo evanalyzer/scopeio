@@ -114,6 +114,8 @@ pub enum FormatId {
     ScanImage,
     /// Bruker Prairie View recording (`.xml` with its TIFF files).
     Prairie,
+    /// CEOS Panta Rhei electron microscopy image (`.prz`, ZIP of NumPy arrays).
+    PantaRhei,
 }
 
 /// Identification of the reader that produced the data, for

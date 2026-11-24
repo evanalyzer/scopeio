@@ -1,0 +1,5 @@
+# Known differences for CEOS Panta Rhei. Bio-Formats and bioformats-rs cannot open the format.
+# RosettaSciIO (tool rsciio) matches pixels, shape, type and pixel size of every file. Metadata
+# differences are checked in tests/prz.rs (metadata_matches_rsciio): it keeps only frame 0 of a
+# stack, stores device.calib (without the trailing null) and ref_size reversed (y, x), and titles a file by repo_id.
+file	tool	series	tolerance	reason
