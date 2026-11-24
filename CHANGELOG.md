@@ -16,6 +16,12 @@ log.
 
 ### Added
 
+- Electron microscope settings: `SeriesMeta::electron_microscopy` with the
+  new `ElectronMicroscopyMeta` (accelerating voltage, nominal
+  magnification, camera length, convergence semi-angle, mode, spot size,
+  defocus, electrons per count) and `ElectronMicroscopyMode` (TEM, STEM,
+  diffraction); fields follow NeXus `NXem` and the HyperSpy conventions.
+  Filled by the Panta Rhei reader; other readers leave it empty for now.
 - CEOS Panta Rhei reader (`prz`): electron microscopy `.prz` files (ZIP of
   NumPy arrays with JSON metadata); stored, deflated and ZIP64 archives,
   2-D images and frame stacks, pixel size from the device calibration,

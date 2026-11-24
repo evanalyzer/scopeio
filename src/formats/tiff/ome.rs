@@ -369,6 +369,8 @@ pub(super) fn describe(
         microscope,
         environment: child(image, "ImagingEnvironment").map(environment),
         experimenter,
+        // The OME data model has no electron microscope settings.
+        electron_microscopy: None,
         project: project.and_then(|p| text_attr(p, "Name")),
         dataset: dataset.and_then(|d| text_attr(d, "Name")),
         stage_position,

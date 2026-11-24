@@ -16,7 +16,8 @@
 //!   Per frame: time since frame 0 from `camera.start_time`, exposure from
 //!   `camera.exposure_time`, stage position from `stage.x/y/z` (metres).
 //!   `source.name` is the camera (detector model), `repo_id` the
-//!   acquisition session (dataset).
+//!   acquisition session (dataset); gun, condenser and projector keys give
+//!   the electron microscope settings (see `electron_microscopy`).
 //! - `data_model_json.npy`: JSON of the same kind (kept as a document).
 //! - `file_format_version.npy`: a 0-d `<i8`.
 //! - `meta_data.npy`, `data_model.npy`: Python pickles of the same
@@ -51,8 +52,8 @@ use crate::io::read_exact_at;
 use crate::pixel::Sink;
 use crate::reader::Backend;
 use crate::{
-    ChannelMeta, DetectorMeta, Error, FormatId, FormatInfo, LevelMeta, MicroscopeMeta, OriginalMeta, PhysicalSize, PixelType, Plane, PlaneMeta,
-    Position, Region, Result, SeriesMeta,
+    ChannelMeta, DetectorMeta, ElectronMicroscopyMeta, ElectronMicroscopyMode, Error, FormatId, FormatInfo, LevelMeta, MicroscopeMeta, OriginalMeta,
+    PhysicalSize, PixelType, Plane, PlaneMeta, Position, Region, Result, SeriesMeta,
 };
 
 pub(super) static FORMAT: FormatInfo = FormatInfo::new(FormatId::PantaRhei, "CEOS Panta Rhei", "1").extensions(&["prz"]);
@@ -377,6 +378,38 @@ fn stage(m: &Value) -> Option<Position> {
     (p.x_nm.is_some() || p.y_nm.is_some()).then_some(p)
 }
 
+/// Electron microscope settings of frame 0. Only values whose meaning is
+/// certain from the sample files are filled:
+///
+/// - accelerating voltage from `electron_gun.voltage` (V);
+/// - convergence semi-angle from `condenser.convergence_semi_angle` (rad;
+///   RosettaSciIO reports the same value in mrad);
+/// - spot size from `condenser.spotsize`;
+/// - mode TEM and the nominal magnification `projector.magnification` only
+///   for `projector.mode` `MAG` with a `TEM*` condenser mode (other mode
+///   strings have not been observed);
+/// - electrons per count from `camera.electrons_per_count`, a map keyed by
+///   the voltage in V, only if it has an entry for the used voltage.
+fn electron_microscopy(m: &Value) -> Option<ElectronMicroscopyMeta> {
+    let text = |k: &str| m.get(k).and_then(Value::as_str);
+    let voltage = number(m, "electron_gun.voltage").filter(|&v| v > 0.0);
+    let imaging = text("projector.mode") == Some("MAG") && text("condenser.mode").is_some_and(|c| c.starts_with("TEM"));
+    let electrons_per_count = voltage.and_then(|v| {
+        let map = m.get("camera.electrons_per_count")?.as_object()?;
+        map.iter().find(|(k, _)| k.trim().parse::<f64>().is_ok_and(|kv| (kv - v).abs() < 0.5)).and_then(|(_, x)| x.as_f64())
+    });
+    let em = ElectronMicroscopyMeta {
+        accelerating_voltage_v: voltage,
+        magnification: number(m, "projector.magnification").filter(|&v| imaging && v > 0.0),
+        convergence_semi_angle_mrad: number(m, "condenser.convergence_semi_angle").map(|v| v * 1e3),
+        mode: imaging.then_some(ElectronMicroscopyMode::Tem),
+        spot_size: m.get("condenser.spotsize").and_then(Value::as_u64).and_then(|v| u32::try_from(v).ok()),
+        electrons_per_count: electrons_per_count.filter(|v| v.is_finite() && *v > 0.0),
+        ..Default::default()
+    };
+    (em != ElectronMicroscopyMeta::default()).then_some(em)
+}
+
 /// Per-frame metadata: time since frame 0 (from `camera.start_time`),
 /// exposure and stage position of each frame's metadata object.
 fn plane_metas(v: Option<&Value>, frames: usize) -> Vec<PlaneMeta> {
@@ -526,6 +559,7 @@ impl PantaRhei {
             channels: vec![channel],
             microscope: text("microscope.name").map(|model| MicroscopeMeta { model: Some(model), ..Default::default() }),
             stage_position: m.and_then(stage),
+            electron_microscopy: m.and_then(electron_microscopy),
             // The acquisition session; the series name stays the file name.
             dataset: text("repo_id"),
             ..Default::default()

@@ -24,7 +24,7 @@ fn matches_reference_readers() {
 }
 
 use common::{crc, decode_level, read_tsv, root};
-use scopeio::{FormatId, PixelType, Plane, PlaneMeta};
+use scopeio::{ElectronMicroscopyMode, FormatId, PixelType, Plane, PlaneMeta};
 
 fn sample(name: &str) -> std::path::PathBuf {
     root().join("tests/data/prz").join(name)
@@ -87,6 +87,17 @@ fn synthetic_metadata() {
     let m = scopeio::open(&sample("tem.prz")).unwrap().series_meta(0).unwrap().clone();
     assert_eq!(m.channels[0].detector.as_ref().and_then(|d| d.model.as_deref()), Some("SyntheticCam"));
     assert_eq!((m.name.as_deref(), m.dataset.as_deref()), (Some("tem"), Some("synthetic_session.3")));
+
+    // Electron microscope settings.
+    let em = m.electron_microscopy.unwrap();
+    assert_eq!(
+        (em.accelerating_voltage_v, em.magnification, em.mode, em.spot_size),
+        (Some(300000.0), Some(20000.0), Some(ElectronMicroscopyMode::Tem), Some(3))
+    );
+    assert!((em.convergence_semi_angle_mrad.unwrap() - 12.5).abs() < 1e-9);
+    assert_eq!((em.electrons_per_count, em.camera_length_mm, em.defocus_nm), (Some(0.025), None, None));
+    // No gun, condenser or projector keys: no section.
+    assert_eq!(scopeio::open(&sample("plain.prz")).unwrap().series_meta(0).unwrap().electron_microscopy, None);
 }
 
 #[test]
@@ -143,14 +154,13 @@ fn same(ours: &str, theirs: &serde_json::Value) -> bool {
 /// - Every `original_metadata` value of RosettaSciIO is in scopeio's
 ///   original metadata with the same value. RosettaSciIO keeps only frame 0
 ///   of a stack; scopeio keeps all frames under `[i].` keys.
-/// - RosettaSciIO's structured TEM fields have no `SeriesMeta` counterpart;
-///   they are derived from keys scopeio keeps: beam energy (kV) from
-///   `electron_gun.voltage` (V), convergence angle (mrad) from
-///   `condenser.convergence_semi_angle` (rad), magnification from
-///   `projector.magnification`.
-/// - Not compared (documented divergences): RosettaSciIO's title is
-///   `repo_id` without its last `.` suffix, scopeio's name the file stem;
-///   RosettaSciIO's `acquisition_mode` is its own classification.
+/// - RosettaSciIO's structured TEM fields match `electron_microscopy`:
+///   beam energy (kV) the accelerating voltage (V), convergence angle the
+///   convergence semi-angle (both mrad), magnification, and its
+///   `acquisition_mode` "TEM" the mode.
+/// - Not compared (documented divergence): RosettaSciIO's title is
+///   `repo_id` without its last `.` suffix; scopeio's name is the file stem
+///   and `repo_id` is the dataset.
 ///
 /// Dumps of the committed synthetic files are in `tests/expected/prz_rsciio/`;
 /// `tem.prz` carries the full key set of a real TEM file with invented
@@ -193,21 +203,25 @@ fn metadata_matches_rsciio() {
                 None => panic!("{name}: {k} missing in scopeio (rsciio {v})"),
             }
         }
-        let num = |k: &str| get(k).and_then(|v| v.parse::<f64>().ok());
+        let em = r.series_meta(0).unwrap().electron_microscopy.clone().unwrap_or_default();
         let tem = &signal["metadata"]["Acquisition_instrument"]["TEM"];
         let close = |a: Option<f64>, b: Option<f64>| {
             assert!(matches!((a, b), (Some(a), Some(b)) if (a - b).abs() <= 1e-9 * a.abs()), "{name}: {a:?} vs {b:?}")
         };
         if let Some(kv) = tem["beam_energy"].as_f64() {
-            close(num("electron_gun.voltage").map(|v| v / 1e3), Some(kv));
+            close(em.accelerating_voltage_v.map(|v| v / 1e3), Some(kv));
             tem_fields += 1;
         }
         if let Some(mrad) = tem["convergence_angle"].as_f64() {
-            close(num("condenser.convergence_semi_angle").map(|v| v * 1e3), Some(mrad));
+            close(em.convergence_semi_angle_mrad, Some(mrad));
             tem_fields += 1;
         }
         if let Some(mag) = tem["magnification"].as_f64() {
-            close(num("projector.magnification"), Some(mag));
+            close(em.magnification, Some(mag));
+            tem_fields += 1;
+        }
+        if let Some(mode) = tem["acquisition_mode"].as_str() {
+            assert_eq!((mode, em.mode), ("TEM", Some(ElectronMicroscopyMode::Tem)), "{name}: mode");
             tem_fields += 1;
         }
         if name == "tem.prz" {
@@ -217,8 +231,8 @@ fn metadata_matches_rsciio() {
             assert_eq!(theirs.len(), ours_json, "tem.prz: every scopeio JSON key is also in RosettaSciIO's original metadata");
         }
     }
-    // The committed tem.prz alone exercises all three structured fields.
-    assert!(tem_fields >= 3, "TEM fields compared: {tem_fields}");
+    // The committed tem.prz alone exercises all four structured fields.
+    assert!(tem_fields >= 4, "TEM fields compared: {tem_fields}");
 }
 
 #[test]

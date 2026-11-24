@@ -657,10 +657,13 @@ read. Bio-Formats and bioformats-rs cannot open the format; RosettaSciIO
 pixel sizes for all test files, and every original-metadata value it reports.
 Differences: RosettaSciIO keeps only frame 0's metadata of a stack, stores
 `device.calib` (without its trailing `null`) and `ref_size` reversed (y, x), takes the title
-from `repo_id` (scopeio: the file name, which is unique per image) and maps
-beam energy, convergence angle and magnification to structured fields
-(scopeio: original metadata only, as `SeriesMeta` has no such fields); it
-does not map acquisition time, exposure or stage position.
+from `repo_id` (scopeio: the file name, which is unique per image; `repo_id`
+is the dataset) and does not map acquisition time, exposure or stage
+position. Its beam energy, convergence angle, magnification and mode agree
+with scopeio's `electron_microscopy` (accelerating voltage, convergence
+semi-angle, nominal magnification, TEM mode, spot size and electrons per
+count at the used voltage; mode and magnification only for the observed
+`MAG` / `TEM*` mode strings).
 
 **NRRD.** Attached (`.nrrd`) and detached (`.nhdr`) headers with one data
 file; raw, gzip, ASCII and hex encodings, line / byte skip (also `-1`).

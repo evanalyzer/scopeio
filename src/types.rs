@@ -12,6 +12,7 @@
 
 mod buffer;
 mod channel;
+mod electron;
 mod experiment;
 mod format;
 mod instrument;
@@ -27,6 +28,7 @@ mod roi;
 
 pub use buffer::{ImageBuf, OutputShape, PixelBuf, PixelSliceMut, PixelViewMut};
 pub use channel::ChannelMeta;
+pub use electron::{ElectronMicroscopyMeta, ElectronMicroscopyMode};
 pub use experiment::{EnvironmentMeta, ExperimenterMeta};
 pub use format::{FormatId, FormatInfo, OpenOptions, Parallelism};
 pub use instrument::{DetectorMeta, DichroicMeta, FilterMeta, LightSourceMeta, MicroscopeMeta, ObjectiveMeta};

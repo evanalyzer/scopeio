@@ -8,7 +8,10 @@
 //! Licensed under the **AGPL-3.0-only** with the EVAnalyzer exception.
 //! See LICENSE and LICENSE-EXCEPTION.
 
-use crate::{ChannelMeta, EnvironmentMeta, Error, ExperimenterMeta, MicroscopeMeta, ObjectiveMeta, PixelType, Plane, Position, Region, Result, Roi};
+use crate::{
+    ChannelMeta, ElectronMicroscopyMeta, EnvironmentMeta, Error, ExperimenterMeta, MicroscopeMeta, ObjectiveMeta, PixelType, Plane, Position, Region,
+    Result, Roi,
+};
 
 /// Physical size of one pixel (x, y) and the z-step, in nanometres.
 /// Fields are `None` if unknown.
@@ -90,6 +93,8 @@ pub struct SeriesMeta {
     pub microscope: Option<MicroscopeMeta>,
     pub environment: Option<EnvironmentMeta>,
     pub experimenter: Option<ExperimenterMeta>,
+    /// Electron microscope settings (TEM / STEM formats).
+    pub electron_microscopy: Option<ElectronMicroscopyMeta>,
     /// Name of the project the series belongs to.
     pub project: Option<String>,
     /// Name of the dataset the series belongs to.
