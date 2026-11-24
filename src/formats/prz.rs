@@ -162,7 +162,7 @@ fn entries(file: &File, len: u64) -> Result<Vec<Entry>> {
             let (id, l) = (u16_at(extra, x), u16_at(extra, x + 2) as usize);
             let body = extra.get(x + 4..x + 4 + l).unwrap_or_default();
             if id == 1 {
-                let mut vals = body.chunks_exact(8).map(|v| u64_at(v, 0));
+                let mut vals = body.as_chunks::<8>().0.iter().map(|v| u64::from_le_bytes(*v));
                 for f in [&mut size, &mut compressed, &mut local] {
                     if *f == 0xffff_ffff {
                         *f = vals.next().ok_or_else(|| corrupt("short ZIP64 extra field"))?;
@@ -295,8 +295,10 @@ fn npy_text(b: &[u8]) -> Result<String> {
     let (order, kind) = h.descr.split_at(h.descr.len().min(1));
     let text = if kind.starts_with('U') {
         let little = order != ">";
-        data.chunks_exact(4)
-            .map(|c| if little { u32::from_le_bytes([c[0], c[1], c[2], c[3]]) } else { u32::from_be_bytes([c[0], c[1], c[2], c[3]]) })
+        data.as_chunks::<4>()
+            .0
+            .iter()
+            .map(|&c| if little { u32::from_le_bytes(c) } else { u32::from_be_bytes(c) })
             .take_while(|&c| c != 0)
             .map(|c| char::from_u32(c).unwrap_or(char::REPLACEMENT_CHARACTER))
             .collect()
